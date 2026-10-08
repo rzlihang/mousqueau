@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
   App as AntApp,
@@ -1235,6 +1242,10 @@ export default function App() {
   const [dark, setDark] = useState(
     () => localStorage.getItem("mousqueau-theme") === "dark",
   );
+  useLayoutEffect(() => {
+    // WebKit uses the document background outside the page during overscroll.
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+  }, [dark]);
   return (
     <ConfigProvider
       button={{ autoInsertSpace: false }}

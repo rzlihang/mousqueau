@@ -49,6 +49,12 @@ Verified on 2026-10-08 on macOS arm64 with Ant Design 6.6.5, React 18.3.1, Node 
 
 This browser smoke does not verify the macOS desktop WebView, native dialogs, media playback, or live analysis/downloads. Remote CI has not run for this upgrade.
 
+## macOS overscroll preview
+
+On 2026-10-08, a user reported white strips at the top/bottom of the native window during trackpad scrolling. The outer document previously had neither scroll containment nor a theme background; only the internal `.shell` clipped overflow.
+
+The fix anchors the body to the viewport, prevents document overscroll and pane scroll chaining, and synchronizes the light/dark theme to the document background before paint. Typecheck, all 7 frontend tests, the production frontend build, and native macOS compilation passed. A separate native `Mousqueau Scroll Preview` app loaded the demo and rendered in dark mode; simulated upward/downward scrolling showed no white strips in the captured result. The user then tested physical trackpad scrolling in that native preview and confirmed the white strips had disappeared. The original preview window was preserved. This confirms the reported issue on this Mac, not the full Mac acceptance checklist below.
+
 ## Mac acceptance checklist (still outstanding)
 
 1. Follow README setup on a real Mac. Confirm `wails3 dev` opens a desktop window and badges reflect `PATH`/key configuration.
