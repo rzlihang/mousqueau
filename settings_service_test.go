@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"mousqueau/internal/media"
 	"mousqueau/internal/project"
 	"mousqueau/internal/settings"
@@ -11,8 +14,78 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
+
+// memoryKeys stands in for the keychain so tests never touch the real one.
+type memoryKeys struct {
+	mu    sync.Mutex
+	key   string
+	fail  bool
+	calls int
+}
+
+func (m *memoryKeys) Available() bool { return true }
+func (m *memoryKeys) Get(context.Context) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.key, nil
+}
+func (m *memoryKeys) Set(_ context.Context, key string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.calls++
+	if m.fail {
+		return errors.New("keychain locked")
+	}
+	m.key = key
+	return nil
+}
+func (m *memoryKeys) Delete(context.Context) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.calls++
+	if m.fail {
+		return errors.New("keychain locked")
+	}
+	m.key = ""
+	return nil
+}
+
+func TestCredentialChangesStayConsistentWithTheStore(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "")
+	keys := &memoryKeys{}
+	s := &EditorService{settings: settings.Default(), keys: keys}
+	view, err := s.SaveAPIKey("  sk-first  ")
+	if err != nil || view.KeySource != "keychain" || keys.key != "sk-first" || s.apiKey() != "sk-first" {
+		t.Fatalf("save: %+v %v", view, err)
+	}
+	keys.fail = true
+	if _, err := s.SaveAPIKey("sk-second"); err == nil || s.apiKey() != "sk-first" {
+		t.Fatal("failed save changed the key in use")
+	}
+	if view, err := s.RemoveAPIKey(); err == nil || !view.KeyStored || s.apiKey() != "sk-first" {
+		t.Fatal("failed removal dropped the key in use")
+	}
+	keys.fail = false
+	var wg sync.WaitGroup
+	for i := 0; i < 40; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			if i%2 == 0 {
+				s.SaveAPIKey(fmt.Sprintf("sk-%d", i))
+			} else {
+				s.RemoveAPIKey()
+			}
+		}(i)
+	}
+	wg.Wait()
+	if s.apiKey() != keys.key || s.GetSettings().KeyStored != (keys.key != "") {
+		t.Fatalf("cached key %q differs from stored key %q", s.apiKey(), keys.key)
+	}
+}
 
 func TestSettingsPersistAndNeverExposeTheKey(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "settings.json")
@@ -76,6 +149,18 @@ func TestToolPathFollowsSettings(t *testing.T) {
 	if view, _ = s.SetToolPath("ffmpeg", ""); view.FFmpeg.Custom {
 		t.Fatalf("automatic detection not restored: %+v", view.FFmpeg)
 	}
+
+	// A location that could not be saved must not take effect either.
+	s.SetToolPath("ffmpeg", tool)
+	blocker := filepath.Join(dir, "blocker")
+	os.WriteFile(blocker, nil, 0600)
+	s.settingsPath = filepath.Join(blocker, "settings.json")
+	other := filepath.Join(dir, "other-ffmpeg")
+	os.WriteFile(other, []byte("#!/bin/sh\n"), 0700)
+	view, err = s.SetToolPath("ffmpeg", other)
+	if path, _ := media.Tool("ffmpeg"); err == nil || path != tool || view.FFmpeg.Path != tool {
+		t.Fatalf("unsaved location in use: %q %+v %v", path, view.FFmpeg, err)
+	}
 }
 
 func TestUpdateCheckSetupActionAndLastProject(t *testing.T) {
@@ -125,7 +210,7 @@ func TestUpdateCheckSetupActionAndLastProject(t *testing.T) {
 		if err := saved.Save(target); err != nil {
 			t.Fatal(err)
 		}
-		next := &EditorService{}
+		next := &EditorService{keys: &memoryKeys{}}
 		next.loadSettings()
 		return next
 	}

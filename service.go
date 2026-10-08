@@ -47,8 +47,10 @@ type EditorService struct {
 	waveformCancel context.CancelFunc
 
 	settings       settings.Settings
-	settingsPath   string // empty in tests: nothing is written
-	storedKey      string // from the keychain; stays in Go
+	settingsPath   string          // empty in tests: nothing is written
+	keys           credentialStore // nil: the system keychain
+	keyMu          sync.Mutex      // serializes keychain changes
+	storedKey      string          // from the keychain; stays in Go
 	update         update.Release
 	updateEndpoint string
 	updateCancel   context.CancelFunc

@@ -50,6 +50,29 @@ type SettingsView struct {
 	UpdateVersion     string     `json:"updateVersion"`
 }
 
+// credentialStore is the keychain, or a stand-in under test.
+type credentialStore interface {
+	Available() bool
+	Get(context.Context) (string, error)
+	Set(context.Context, string) error
+	Delete(context.Context) error
+}
+type systemKeychain struct{}
+
+func (systemKeychain) Available() bool                         { return keychain.Available() }
+func (systemKeychain) Get(ctx context.Context) (string, error) { return keychain.Get(ctx) }
+func (systemKeychain) Set(ctx context.Context, key string) error {
+	return keychain.Set(ctx, key)
+}
+func (systemKeychain) Delete(ctx context.Context) error { return keychain.Delete(ctx) }
+
+func (s *EditorService) keyStore() credentialStore {
+	if s.keys != nil {
+		return s.keys
+	}
+	return systemKeychain{}
+}
+
 func toolStatus(name, custom string) ToolStatus {
 	path, ready := media.Tool(name)
 	return ToolStatus{Path: path, Custom: custom != "", Ready: ready}
@@ -68,7 +91,7 @@ func (s *EditorService) settingsView() SettingsView {
 	view := SettingsView{
 		Theme: s.settings.Theme, OpenLastProject: s.settings.OpenLastProject, SetupDone: s.settings.SetupDone,
 		FFmpeg: toolStatus("ffmpeg", s.settings.FFmpegPath), YTDLP: toolStatus("yt-dlp", s.settings.YTDLPPath),
-		KeyStored: s.storedKey != "", KeychainAvailable: keychain.Available(),
+		KeyStored: s.storedKey != "", KeychainAvailable: s.keyStore().Available(),
 		AutoUpdate: s.settings.AutoUpdate, Beta: s.settings.Beta,
 		Version: version, UpdateVersion: s.update.Version,
 	}
@@ -96,7 +119,7 @@ func (s *EditorService) loadSettings() {
 	media.SetToolPath("yt-dlp", s.settings.YTDLPPath)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	s.storedKey, _ = keychain.Get(ctx)
+	s.storedKey, _ = s.keyStore().Get(ctx)
 	if !s.settings.OpenLastProject || !s.settings.SetupDone || s.settings.LastProject == "" {
 		return
 	}
@@ -130,12 +153,20 @@ func (s *EditorService) notify() {
 		s.app.Event.Emit("settings")
 	}
 }
-func (s *EditorService) change(apply func(*settings.Settings) error) (SettingsView, error) {
+
+// change edits the settings and saves them; applied runs only once they are
+// saved, so a failed save leaves the running application as it was.
+func (s *EditorService) change(apply func(*settings.Settings) error, applied ...func()) (SettingsView, error) {
 	s.mu.Lock()
 	next := s.settings
 	err := apply(&next)
 	if err == nil {
 		err = s.persistLocked(next)
+	}
+	if err == nil {
+		for _, f := range applied {
+			f()
+		}
 	}
 	view := s.settingsView()
 	s.mu.Unlock()
@@ -186,9 +217,8 @@ func (s *EditorService) SetToolPath(name, path string) (SettingsView, error) {
 		default:
 			return fmt.Errorf("unknown external tool")
 		}
-		media.SetToolPath(name, path)
 		return nil
-	})
+	}, func() { media.SetToolPath(name, path) })
 }
 func (s *EditorService) ChooseToolPath(name string) (SettingsView, error) {
 	dialog := s.app.Dialog.OpenFile().SetTitle("Choose the " + name + " executable")
@@ -209,9 +239,13 @@ func (s *EditorService) ChooseToolPath(name string) (SettingsView, error) {
 // on; no method returns it to the frontend.
 func (s *EditorService) SaveAPIKey(key string) (SettingsView, error) {
 	key = strings.TrimSpace(key)
+	// One credential change at a time, so the cached key always matches the
+	// keychain even when two windows act at once.
+	s.keyMu.Lock()
+	defer s.keyMu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := keychain.Set(ctx, key); err != nil {
+	if err := s.keyStore().Set(ctx, key); err != nil {
 		return s.GetSettings(), err
 	}
 	s.mu.Lock()
@@ -222,9 +256,11 @@ func (s *EditorService) SaveAPIKey(key string) (SettingsView, error) {
 	return view, nil
 }
 func (s *EditorService) RemoveAPIKey() (SettingsView, error) {
+	s.keyMu.Lock()
+	defer s.keyMu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := keychain.Delete(ctx); err != nil {
+	if err := s.keyStore().Delete(ctx); err != nil {
 		return s.GetSettings(), err
 	}
 	s.mu.Lock()

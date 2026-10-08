@@ -65,6 +65,8 @@ Verified on 2026-10-08 on macOS arm64 with Go 1.27.1, Node 24.21.0, pnpm 12.10.1
 - Headless Chrome against the real Go service in server mode, with an isolated home directory: the settings window (760×540) and welcome window (760×520) rendered in light and dark without overflow or runtime errors; sidebar scroll tracking, section jumps, search filtering, theme switching, the four welcome steps, the missing-key warning, and the "载入示例" hand-over to the editor all worked. The editor's environment popover shows the settings link and no longer has a theme switch.
 - The `/usr/bin/security` commands the keychain package uses were round-tripped once by hand with a throwaway item (add through stdin, read, delete, exit status 44 when absent).
 
+A later review of this branch found four problems, since fixed with tests: a tool location that failed to save still took effect, concurrent key saves and removals could leave the cached key out of step with the keychain, a service test read the real keychain (it now uses an in-memory store), and the welcome window's "offline only" option claimed more than it did when a key already existed (it is now labelled as keeping the current configuration). The service suite has 32 tests.
+
 Not verified: anything that needs native windows. Server mode has no windows, menus, or file dialogs, so the hidden editor during first launch, the welcome window's close behaviour, ⌘, and the 设置… menu item, fixed window sizes and disabled buttons, the "选择…" tool dialog, saving a real key from the app, opening the release page, and a live GitHub check are all untested.
 
 ## Mac acceptance checklist (still outstanding)

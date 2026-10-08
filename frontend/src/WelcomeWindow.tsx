@@ -275,7 +275,13 @@ export default function WelcomeWindow({
                     value: "key",
                     disabled: !settings.keychainAvailable,
                   },
-                  { label: "暂不配置，仅离线编辑", value: "none" },
+                  {
+                    // Skipping never removes a key that is already in place.
+                    label: configured
+                      ? "保持现有配置，不做更改"
+                      : "暂不配置，仅离线编辑",
+                    value: "none",
+                  },
                 ]}
               />
               {choice === "key" && (
