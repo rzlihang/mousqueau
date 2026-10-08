@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { messagesFor } from "./i18n";
 import {
+  fontStack,
   formatChecked,
   languageChoice,
+  languageOptions,
   matchSettings,
   resolveDark,
   themeChoice,
@@ -22,7 +24,22 @@ describe("preferences", () => {
     expect(themeChoice("neon")).toBe("system");
     expect(themeChoice(null)).toBe("system");
     expect(languageChoice("en-US")).toBe("en-US");
-    expect(languageChoice("zh-TW")).toBe("system");
+    expect(languageChoice("zh-TW")).toBe("zh-TW");
+    expect(languageChoice("zh-HK")).toBe("system");
+    expect(languageOptions(en).map((o) => o.value)).toEqual([
+      "system",
+      "zh-CN",
+      "zh-TW",
+      "en-US",
+    ]);
+  });
+
+  it("builds the subtitle font stack", () => {
+    const ui = 'system-ui, -apple-system, "Noto Sans TC", sans-serif';
+    expect(fontStack("")).toBe(ui);
+    expect(fontStack("  ")).toBe(ui);
+    expect(fontStack("PingFang TC")).toBe(`"PingFang TC", ${ui}`);
+    expect(fontStack("serif")).toBe(`serif, ${ui}`);
   });
 
   it("distinguishes a wrong tool location from a missing tool", () => {
@@ -64,6 +81,9 @@ describe("preferences", () => {
     expect(matchSettings("Keychain").rows).toEqual(key.rows);
     expect(matchSettings("语言").rows.language).toBe(true);
     expect(matchSettings("language").sections.general).toBe(true);
+    expect(matchSettings("字體").rows.font).toBe(true);
+    expect(matchSettings("字体").rows.font).toBe(true);
+    expect(matchSettings("金鑰").rows.provOpenai).toBe(true);
 
     expect(matchSettings("没有这个设置").any).toBe(false);
   });

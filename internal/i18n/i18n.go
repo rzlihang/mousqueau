@@ -13,9 +13,12 @@ import (
 type Locale string
 
 const (
-	English Locale = "en-US"
-	Chinese Locale = "zh-CN"
+	English     Locale = "en-US"
+	Chinese     Locale = "zh-CN" // Simplified, mainland usage
+	Traditional Locale = "zh-TW" // Traditional, Taiwan usage
 )
+
+var locales = []Locale{English, Chinese, Traditional}
 
 // System is the language choice that follows the operating system.
 const System = "system"
@@ -34,16 +37,40 @@ func Current() Locale {
 
 // ValidChoice accepts "system" or one of the supported locales.
 func ValidChoice(choice string) bool {
-	return choice == System || choice == string(English) || choice == string(Chinese)
+	return choice == System || supported(choice)
+}
+
+func supported(choice string) bool {
+	for _, l := range locales {
+		if choice == string(l) {
+			return true
+		}
+	}
+	return false
 }
 
 // Match maps a language tag such as "zh-Hans-CN", "zh_TW.UTF-8" or "en-GB"
-// to a supported locale. Every Chinese variant uses Simplified Chinese, the
-// only Chinese translation.
+// to a supported locale. Traditional script, or a Taiwan, Hong Kong or Macau
+// region without a script, means Traditional Chinese; any other Chinese
+// means Simplified.
 func Match(tag string) (Locale, bool) {
 	tag = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(tag), "_", "-"))
 	switch {
 	case tag == "zh" || strings.HasPrefix(tag, "zh-"):
+		parts := strings.Split(tag, "-")[1:]
+		for _, part := range parts {
+			switch part {
+			case "hant":
+				return Traditional, true
+			case "hans":
+				return Chinese, true
+			}
+		}
+		for _, part := range parts {
+			if part == "tw" || part == "hk" || part == "mo" {
+				return Traditional, true
+			}
+		}
 		return Chinese, true
 	case tag == "en" || strings.HasPrefix(tag, "en-"):
 		return English, true
@@ -54,7 +81,7 @@ func Match(tag string) (Locale, bool) {
 // Resolve picks the locale for a choice. "system" takes the first preferred
 // language that is supported, and English when none is.
 func Resolve(choice string, preferred []string) Locale {
-	if choice == string(English) || choice == string(Chinese) {
+	if supported(choice) {
 		return Locale(choice)
 	}
 	for _, tag := range preferred {
@@ -108,4 +135,4 @@ func (e *Error) Unwrap() []error {
 	return wrapped
 }
 
-var catalogs = map[Locale]map[string]string{Chinese: zhCN}
+var catalogs = map[Locale]map[string]string{Chinese: zhCN, Traditional: zhTW}

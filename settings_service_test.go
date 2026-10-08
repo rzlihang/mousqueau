@@ -141,6 +141,13 @@ func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
 		t.Fatalf("phase not in Chinese: %q", s.GetStatus().Phase)
 	}
 	s.finish()
+	s.languages = []string{"zh-Hant-TW"}
+	if view, err = s.SetLanguage("system"); err != nil || view.Locale != "zh-TW" {
+		t.Fatalf("Taiwan: %+v %v", view, err)
+	}
+	if _, err := s.EditCue(subtitle.Cue{}); err == nil || err.Error() != "請先匯入 SRT 字幕" {
+		t.Fatalf("error not in Traditional Chinese: %v", err)
+	}
 	view, err = s.SetLanguage("en-US")
 	if err != nil || view.Language != "en-US" || view.Locale != "en-US" {
 		t.Fatalf("English: %+v %v", view, err)
@@ -150,6 +157,24 @@ func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
 	}
 	if saved, _ := settings.Load(path); saved.Language != "en-US" {
 		t.Fatalf("language not saved: %+v", saved)
+	}
+}
+
+func TestSubtitleFont(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	s := &EditorService{settings: settings.Default(), settingsPath: path}
+	view, err := s.SetSubtitleFont("  PingFang TC ")
+	if err != nil || view.SubtitleFont != "PingFang TC" {
+		t.Fatalf("font: %+v %v", view, err)
+	}
+	if _, err := s.SetSubtitleFont(`x"; color: red`); err == nil || s.GetSettings().SubtitleFont != "PingFang TC" {
+		t.Fatal("unsafe font name accepted")
+	}
+	if saved, _ := settings.Load(path); saved.SubtitleFont != "PingFang TC" {
+		t.Fatalf("font not saved: %+v", saved)
+	}
+	if view, _ := s.SetSubtitleFont(""); view.SubtitleFont != "" {
+		t.Fatal("font not reset")
 	}
 }
 

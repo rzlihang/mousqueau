@@ -13,7 +13,7 @@ export interface SettingsView {
     "theme": string;
 
     /**
-     * "system", "zh-CN" or "en-US"
+     * "system", "zh-CN", "zh-TW" or "en-US"
      */
     "language": string;
 
@@ -21,6 +21,7 @@ export interface SettingsView {
      * the language in use
      */
     "locale": string;
+    "subtitleFont": string;
     "openLastProject": boolean;
     "setupDone": boolean;
     "ffmpeg": ToolStatus;

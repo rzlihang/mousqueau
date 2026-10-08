@@ -24,12 +24,20 @@ func TestResolve(t *testing.T) {
 	}{
 		{"system", []string{"en-US", "zh-Hans-CN"}, English},
 		{"system", []string{"zh-Hans-CN", "en-US"}, Chinese},
-		{"system", []string{"zh-Hant-TW"}, Chinese},
+		{"system", []string{"zh-Hant-TW"}, Traditional},
+		{"system", []string{"zh-Hant-HK"}, Traditional},
+		{"system", []string{"zh-Hant"}, Traditional},
+		{"system", []string{"zh_TW"}, Traditional},
+		{"system", []string{"zh-HK"}, Traditional},
+		{"system", []string{"zh-Hans-TW"}, Chinese},
+		{"system", []string{"zh-SG"}, Chinese},
+		{"system", []string{"zh"}, Chinese},
 		{"system", []string{"zh_CN"}, Chinese},
 		{"system", []string{"ja-JP", "en-GB"}, English},
 		{"system", []string{"fr-FR"}, English},
 		{"system", nil, English},
 		{"zh-CN", []string{"en-US"}, Chinese},
+		{"zh-TW", []string{"zh-Hans"}, Traditional},
 		{"en-US", []string{"zh-Hans"}, English},
 		{"klingon", []string{"zh-Hans"}, Chinese},
 	} {
@@ -37,12 +45,12 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Resolve(%q, %v) = %s, want %s", c.choice, c.preferred, got, c.want)
 		}
 	}
-	for _, choice := range []string{"system", "zh-CN", "en-US"} {
+	for _, choice := range []string{"system", "zh-CN", "zh-TW", "en-US"} {
 		if !ValidChoice(choice) {
 			t.Errorf("%q rejected", choice)
 		}
 	}
-	if ValidChoice("zh-TW") || ValidChoice("") {
+	if ValidChoice("zh-HK") || ValidChoice("") {
 		t.Error("unsupported choice accepted")
 	}
 }
@@ -86,6 +94,10 @@ func TestErrorsFollowTheCurrentLocale(t *testing.T) {
 	if T("Quit %[1]s", "Mousqueau") != "退出 Mousqueau" || T("Not in the catalog") != "Not in the catalog" {
 		t.Fatal("T")
 	}
+	SetCurrent(Traditional)
+	if err.Error() != "專案 JSON 無效：找不到 SRT 字幕" {
+		t.Fatalf("Traditional: %q", err)
+	}
 }
 
 var verb = regexp.MustCompile(`%(\[\d+\])?[-+# 0]*\d*(\.\d+)?[a-zA-Z%]`)
@@ -100,8 +112,8 @@ func verbs(format string) []string {
 	return found
 }
 
-// Every string Go hands to i18n has a Chinese translation with the same
-// formatting verbs, and the catalog holds nothing that is no longer used.
+// Every string Go hands to i18n has a translation in every catalog with the
+// same formatting verbs, and no catalog holds anything no longer used.
 func TestCatalogCoversTheSource(t *testing.T) {
 	used := map[string]bool{}
 	root := filepath.Join("..", "..")
@@ -151,17 +163,22 @@ func TestCatalogCoversTheSource(t *testing.T) {
 	if len(used) < 50 {
 		t.Fatalf("found only %d strings; is the scan broken?", len(used))
 	}
-	for s := range used {
-		zh, ok := zhCN[s]
-		if !ok {
-			t.Errorf("missing Chinese for %q", s)
-		} else if !slices.Equal(verbs(s), verbs(zh)) {
-			t.Errorf("verbs differ: %q → %q", s, zh)
+	for l, catalog := range catalogs {
+		for s := range used {
+			translated, ok := catalog[s]
+			if !ok {
+				t.Errorf("%s: missing %q", l, s)
+			} else if !slices.Equal(verbs(s), verbs(translated)) {
+				t.Errorf("%s: verbs differ: %q → %q", l, s, translated)
+			}
+		}
+		for s := range catalog {
+			if !used[s] {
+				t.Errorf("%s: unused translation %q", l, s)
+			}
 		}
 	}
-	for s := range zhCN {
-		if !used[s] {
-			t.Errorf("unused translation %q", s)
-		}
+	if len(catalogs) != len(locales)-1 {
+		t.Errorf("%d catalogs for %d translated locales", len(catalogs), len(locales)-1)
 	}
 }

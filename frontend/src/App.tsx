@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -39,6 +40,7 @@ import {
 } from "./workspace";
 import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
+import zhTW from "antd/locale/zh_TW";
 import {
   type Locale,
   I18nProvider,
@@ -48,7 +50,7 @@ import {
   messagesFor,
   useT,
 } from "./i18n";
-import { resolveDark, themeChoice } from "./preferences";
+import { fontStack, resolveDark, themeChoice } from "./preferences";
 import SettingsWindow from "./SettingsWindow";
 import SuggestionCard, { SpeakerTag, SpeakerTags } from "./SuggestionCard";
 import Timeline from "./Timeline";
@@ -813,6 +815,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                   <label className="field">
                     {t.inspector.text}
                     <Input.TextArea
+                      className="subtitle-text"
                       disabled={busy}
                       autoSize={{ minRows: 2, maxRows: 5 }}
                       value={draft.text}
@@ -1274,7 +1277,7 @@ const DARK_FIXES = { colorError: "#ff7875" };
 // Each native window loads this bundle and says which one it is.
 const windowKind = new URLSearchParams(window.location.search).get("window");
 
-const ANTD_LOCALES = { "zh-CN": zhCN, "en-US": enUS };
+const ANTD_LOCALES = { "zh-CN": zhCN, "zh-TW": zhTW, "en-US": enUS };
 
 export default function App() {
   const [settings, setSettings] = useSettings();
@@ -1287,6 +1290,10 @@ export default function App() {
     ),
   );
   const locale: Locale = matchLocale(settings?.locale) ?? cachedLocale;
+  const [cachedFont] = useState(
+    () => localStorage.getItem("mousqueau-subtitle-font") ?? "",
+  );
+  const subtitleFont = settings ? settings.subtitleFont : cachedFont;
   const t = messagesFor(locale);
   // The last theme is cached so a window opens in it before Go has answered.
   const [cached] = useState(() =>
@@ -1300,6 +1307,7 @@ export default function App() {
     if (!settings) return;
     localStorage.setItem("mousqueau-theme", settings.theme);
     localStorage.setItem("mousqueau-locale", locale);
+    localStorage.setItem("mousqueau-subtitle-font", settings.subtitleFont);
   }, [settings, locale]);
   useLayoutEffect(() => {
     // WebKit uses the document background outside the page during overscroll.
@@ -1323,7 +1331,12 @@ export default function App() {
     >
       <I18nProvider value={t}>
         <AntApp>
-          <div data-theme={dark ? "dark" : "light"}>
+          <div
+            data-theme={dark ? "dark" : "light"}
+            style={
+              { "--subtitle-font": fontStack(subtitleFont) } as CSSProperties
+            }
+          >
             {windowKind === "settings" ? (
               settings && (
                 <SettingsWindow

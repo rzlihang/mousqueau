@@ -39,8 +39,9 @@ type ToolStatus struct {
 // contains the API key, only where one comes from.
 type SettingsView struct {
 	Theme             string     `json:"theme"`
-	Language          string     `json:"language"` // "system", "zh-CN" or "en-US"
+	Language          string     `json:"language"` // "system", "zh-CN", "zh-TW" or "en-US"
 	Locale            string     `json:"locale"`   // the language in use
+	SubtitleFont      string     `json:"subtitleFont"`
 	OpenLastProject   bool       `json:"openLastProject"`
 	SetupDone         bool       `json:"setupDone"`
 	FFmpeg            ToolStatus `json:"ffmpeg"`
@@ -94,7 +95,7 @@ func (s *EditorService) apiKey() string { s.mu.Lock(); defer s.mu.Unlock(); retu
 
 func (s *EditorService) settingsView() SettingsView {
 	view := SettingsView{
-		Theme: s.settings.Theme, Language: s.settings.Language, Locale: string(i18n.Current()), OpenLastProject: s.settings.OpenLastProject, SetupDone: s.settings.SetupDone,
+		Theme: s.settings.Theme, Language: s.settings.Language, Locale: string(i18n.Current()), SubtitleFont: s.settings.SubtitleFont, OpenLastProject: s.settings.OpenLastProject, SetupDone: s.settings.SetupDone,
 		FFmpeg: toolStatus("ffmpeg", s.settings.FFmpegPath), YTDLP: toolStatus("yt-dlp", s.settings.YTDLPPath),
 		KeyStored: s.storedKey != "", KeychainAvailable: s.keyStore().Available(),
 		AutoUpdate: s.settings.AutoUpdate, Beta: s.settings.Beta,
@@ -201,6 +202,7 @@ func (s *EditorService) SetTheme(theme string) (SettingsView, error) {
 }
 
 // SetLanguage switches every window, the menu and Go's messages at once.
+// choice is "system", "zh-CN", "zh-TW" or "en-US".
 func (s *EditorService) SetLanguage(choice string) (SettingsView, error) {
 	view, err := s.change(func(next *settings.Settings) error {
 		if !i18n.ValidChoice(choice) {
@@ -213,6 +215,19 @@ func (s *EditorService) SetLanguage(choice string) (SettingsView, error) {
 		s.relabel()
 	}
 	return view, err
+}
+
+// SetSubtitleFont sets the font family subtitle text is shown in; an empty
+// name returns to the interface font. Exports are unaffected.
+func (s *EditorService) SetSubtitleFont(name string) (SettingsView, error) {
+	name = strings.TrimSpace(name)
+	return s.change(func(next *settings.Settings) error {
+		if err := settings.ValidateFont(name); err != nil {
+			return err
+		}
+		next.SubtitleFont = name
+		return nil
+	})
 }
 func (s *EditorService) SetOpenLastProject(enabled bool) (SettingsView, error) {
 	return s.change(func(next *settings.Settings) error { next.OpenLastProject = enabled; return nil })
@@ -483,7 +498,8 @@ func (s *EditorService) openWindows() {
 	s.app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { go s.autoCheck() })
 }
 
-// menu is the default macOS menu plus the conventional Settings item.
+// menu is the default macOS menu, without Help, plus the conventional
+// Settings item.
 func (s *EditorService) menu() *application.Menu {
 	menu := application.NewMenu()
 	app := menu.AddSubmenu("Mousqueau")
@@ -502,15 +518,12 @@ func (s *EditorService) menu() *application.Menu {
 	menu.AddRole(application.EditMenu)
 	menu.AddRole(application.ViewMenu)
 	menu.AddRole(application.WindowMenu)
-	menu.AddRole(application.HelpMenu)
+	// No Help menu: Wails' only item there opens wails.io in the editor window.
 	// Wails labels its standard items in English only.
 	for _, item := range roleLabels {
 		if found := menu.FindByRole(item.role); found != nil {
 			found.SetLabel(i18n.T(item.label, "Mousqueau"))
 		}
-	}
-	if found := menu.FindByLabel("Learn More"); found != nil {
-		found.SetLabel(i18n.T("Learn More"))
 	}
 	return menu
 }
@@ -553,5 +566,4 @@ var roleLabels = []struct {
 	{application.Minimise, i18n.N("Minimize")},
 	{application.Zoom, i18n.N("Zoom")},
 	{application.Front, i18n.N("Bring All to Front")},
-	{application.HelpMenu, i18n.N("Help")},
 }

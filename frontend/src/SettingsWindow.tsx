@@ -1,6 +1,7 @@
 import { type UIEvent, useEffect, useRef, useState } from "react";
 import {
   App as AntApp,
+  AutoComplete,
   Button,
   Input,
   Popconfirm,
@@ -15,8 +16,10 @@ import type { SettingsView, ToolStatus } from "../bindings/mousqueau/models";
 import { LANGUAGE_NAMES, errorText, matchLocale, useT } from "./i18n";
 import { ICON_PATHS, PathIcon } from "./icons";
 import {
+  FONT_PRESETS,
   SECTIONS,
   type SectionId,
+  fontStack,
   formatChecked,
   languageChoice,
   languageOptions,
@@ -90,6 +93,57 @@ function ToolCard({
         </Button>
       </div>
       <span className="set-hint">{hint}</span>
+    </div>
+  );
+}
+
+// Mixed scripts so a font's coverage of each shows at a glance.
+const FONT_SAMPLE = "字幕預覽 字幕预览 Subtitle 0123";
+
+function FontRow({ font, apply }: { font: string; apply: Apply }) {
+  const t = useT();
+  const [draft, setDraft] = useState(font);
+  useEffect(() => setDraft(font), [font]);
+  const commit = (value: string) => {
+    if (value.trim() !== font)
+      void apply(() => Editor.SetSubtitleFont(value)).then(
+        (ok) => ok || setDraft(font),
+      );
+  };
+  return (
+    <div className="set-row">
+      <div className="set-label">
+        <span>{t.settings.subtitleFont}</span>
+        <span className="set-hint">{t.settings.subtitleFontHint}</span>
+        <span
+          className="font-preview"
+          style={{ fontFamily: fontStack(draft) }}
+          aria-hidden="true"
+        >
+          {FONT_SAMPLE}
+        </span>
+        <span className="set-hint">{t.settings.fontMissing}</span>
+      </div>
+      <AutoComplete
+        size="small"
+        allowClear
+        aria-label={t.settings.subtitleFont}
+        placeholder={t.settings.fontDefault}
+        value={draft}
+        options={FONT_PRESETS.map((name) => ({
+          value: name,
+          label: <span style={{ fontFamily: fontStack(name) }}>{name}</span>,
+        }))}
+        filterOption={(input, option) =>
+          String(option?.value).toLowerCase().includes(input.toLowerCase())
+        }
+        onChange={setDraft}
+        onSelect={(value: string) => commit(value)}
+        onClear={() => commit("")}
+        onBlur={() => commit(draft)}
+        onKeyDown={(e) => e.key === "Enter" && commit(draft)}
+        style={{ width: 180 }}
+      />
     </div>
   );
 }
@@ -242,6 +296,9 @@ export default function SettingsWindow({
                       style={{ width: 128 }}
                     />
                   </div>
+                )}
+                {rows.font && (
+                  <FontRow font={settings.subtitleFont} apply={apply} />
                 )}
                 {rows.startup && (
                   <div className="set-row">
