@@ -1,7 +1,8 @@
-// Run from repository root after npm ci (frontend) and go mod download.
+// Run from repository root after pnpm install --frozen-lockfile (frontend) and go mod download.
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
+import { productionDependencyPaths } from "./frontend-dependencies.mjs";
 const chunks = [
   "Mousqueau v0.1 third-party notices\n\nExternal yt-dlp and FFmpeg binaries are not bundled. See docs/licensing.md.\n",
 ];
@@ -28,13 +29,18 @@ function append(name, version, directory) {
       `\n--- ${file} ---\n${readFileSync(join(directory, file), "utf8")}\n`,
     );
 }
-const lock = JSON.parse(readFileSync("frontend/package-lock.json", "utf8"));
-for (const [path, entry] of Object.entries(lock.packages).sort(([a], [b]) =>
-  a.localeCompare(b),
-)) {
-  if (!path || entry.dev) continue;
-  const dir = join("frontend", path);
+const projects = JSON.parse(execFileSync(
+  "pnpm", ["list", "--prod", "--depth", "Infinity", "--json"],
+  { cwd: "frontend", encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
+));
+const frontendPackages = new Map();
+for (const dir of productionDependencyPaths(projects)) {
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+  frontendPackages.set(`${pkg.name}@${pkg.version}`, { pkg, dir });
+}
+for (const { pkg, dir } of [...frontendPackages.values()].sort((a, b) =>
+  a.pkg.name.localeCompare(b.pkg.name) || a.pkg.version.localeCompare(b.pkg.version),
+)) {
   append(pkg.name, pkg.version, dir);
 }
 // Collect modules actually imported by each desktop target, not Wails CLI tooling.

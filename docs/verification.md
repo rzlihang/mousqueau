@@ -25,6 +25,18 @@ The editor-layout redesign (waveform, bindings, Go and frontend tests, Chromium 
 
 The initial headless HTTP test required permission to open local test ports in the sandbox; rerunning with local networking enabled passed. Browser smoke exercised the real Go service through generated Wails bindings, not a frontend-only mock. Native dialogs cannot be exercised in Wails server mode.
 
+## pnpm migration verification
+
+Verified on 2026-10-08 on macOS arm64 using Go 1.27.1, Node 24.21.0, pnpm 12.10.1, and installed FFmpeg:
+
+- `pnpm install --frozen-lockfile`, `pnpm run typecheck`, `pnpm test` (7 tests), and `pnpm run build` passed in `frontend`. The existing bundle-size advisory remains.
+- Compared both lockfiles before removing `package-lock.json`: all 149 package/version identities, including platform-specific optional packages, are unchanged. The pnpm workspace config exempts only the imported Rolldown 1.2.13 release and its platform bindings from pnpm's release-age policy, because they were under one day old during migration.
+- `node --test scripts/frontend-dependencies.test.mjs` passed (3 tests). Regenerating with `node scripts/notices.mjs` produced a byte-identical `THIRD_PARTY_NOTICES.txt`.
+- `go test ./internal/...` and `CGO_ENABLED=0 go test -tags server ./...` passed. `go build -tags production -o /private/tmp/mousqueau-pnpm-check .` compiled the native macOS binary after the final frontend build.
+- GitHub Actions configuration now installs the pinned pnpm and caches its store. Docker cross-build configuration uses Node 24 and the pinned pnpm. Neither the remote CI jobs nor the Docker image build were executed during this migration.
+
+These checks do not cover Wails CLI development/packaging or macOS GUI behavior; the acceptance checklist below remains outstanding.
+
 ## Mac acceptance checklist (still outstanding)
 
 1. Follow README setup on a real Mac. Confirm `wails3 dev` opens a desktop window and badges reflect `PATH`/key configuration.

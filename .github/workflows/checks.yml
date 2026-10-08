@@ -10,15 +10,20 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: go test -race ./internal/...
-      - run: npm ci && npm run typecheck && npm test && npm run build
+      - run: pnpm install --frozen-lockfile && pnpm run typecheck && pnpm test && pnpm run build
         working-directory: frontend
+      - run: node --test scripts/frontend-dependencies.test.mjs
+      - run: node scripts/notices.mjs && git diff --exit-code -- THIRD_PARTY_NOTICES.txt
       - run: CGO_ENABLED=0 go test -tags server ./...
       - run: CGO_ENABLED=0 go build -tags server -o /tmp/mousqueau-headless .
   macos-build:
@@ -28,12 +33,15 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci && npm run build
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile && pnpm run build
         working-directory: frontend
       - run: go test ./...
       - run: go build -tags production -o /tmp/mousqueau .

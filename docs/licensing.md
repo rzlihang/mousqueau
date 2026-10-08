@@ -22,6 +22,6 @@ Sources checked on 2026-10-08: [yt-dlp LICENSE](https://github.com/yt-dlp/yt-dlp
 
 FFmpeg is also a user-installed external command. Its actual license depends on build configuration (commonly LGPL, potentially GPL, and nonfree builds may not be redistributable). v0.1 does not bundle FFmpeg. Revisit compliance before including any FFmpeg build in an installer.
 
-Wails, its runtime, React, and Ant Design use MIT licenses; the `diff` library uses BSD-3-Clause. Production dependency texts are in `THIRD_PARTY_NOTICES.txt`. Regenerate them after dependency changes using `node scripts/notices.mjs` after `npm ci` in `frontend` and `go mod download` at the root. Include that file with distributed builds. Build-time tools retain their own licenses.
+Wails, its runtime, React, and Ant Design use MIT licenses; the `diff` library uses BSD-3-Clause. Production dependency texts are in `THIRD_PARTY_NOTICES.txt`. Regenerate them after dependency changes using `node scripts/notices.mjs` after `pnpm install --frozen-lockfile` in `frontend` and `go mod download` at the root. The script reads the installed pnpm production dependency tree, including transitive and optional dependencies, and collects each package/version once. Include that file with distributed builds. Build-time tools retain their own licenses.
 
 Software licensing does not grant rights to download a video or its audio/subtitles. The audio download action asks users to confirm their authorization. API use is additionally subject to provider terms.

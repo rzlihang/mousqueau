@@ -6,7 +6,9 @@ A Wails v3 desktop application for correcting **existing SRT subtitles** and rev
 
 ## Develop on macOS
 
-Requirements: Go **1.25+**, Node **24 LTS**, Xcode Command Line Tools, and optionally FFmpeg / yt-dlp. No API key is required for editing.
+Requirements: Go **1.25+**, Node **24 LTS**, pnpm **12.10.1** (pinned in `frontend/package.json`), Xcode Command Line Tools, and optionally FFmpeg / yt-dlp. No API key is required for editing.
+
+If Vite+ manages your environment, it reads the pnpm pin in `frontend/package.json`; run `vp install --frozen-lockfile` from `frontend`. A global Vite+ installation is optional: the Wails tasks and CI invoke pnpm directly. To install the pinned pnpm with Node/npm, run `npm install --global pnpm@12.10.1`.
 
 ```sh
 xcode-select --install
@@ -17,7 +19,7 @@ brew install yt-dlp
 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
 # Ensure $(go env GOPATH)/bin is on PATH.
 cd frontend
-npm ci
+pnpm install --frozen-lockfile
 cd ..
 wails3 dev
 ```
@@ -54,15 +56,18 @@ Audio is downloaded only through a separate action after you confirm you have au
 ```sh
 go test ./internal/...
 cd frontend
-npm ci
-npm run typecheck
-npm test
-npm run build
+pnpm install --frozen-lockfile
+pnpm run typecheck
+pnpm test
+pnpm run build
 cd ..
+node --test scripts/frontend-dependencies.test.mjs
 # Native macOS desktop build / app bundle
 wails3 build
 wails3 package
 ```
+
+Wails defaults to pnpm for dependency installation and frontend scripts. Commit `frontend/pnpm-lock.yaml` with dependency changes; routine builds use the frozen lockfile. This migration retains the existing dependency versions and Vite/Vitest configuration.
 
 Bindings are checked in and generated from Go service signatures. Regenerate after changing a service method:
 
