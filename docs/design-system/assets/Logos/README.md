@@ -1,0 +1,1 @@
+`mousqueau-mark.svg` is the app mark from the window favicon (`frontend/index.html`): a 32×32 square in `primary` #2867c7, corner radius 6, with a white "M" set at 23px in the viewer's default font. Its colors are fixed; it reads on both themes. Use it at 16–64px. Do not redraw the letter or substitute the platform app icons, which are still the Wails template's.

@@ -1,0 +1,311 @@
+/* Mousqueau app styles — frontend/src/style.css on tokens.
+   Literal values from the source are now var(--token); bare element
+   selectors (header, h2, h3, video, hr) are scoped to the app's classes. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+.shell {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* Header */
+.app-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-20);
+  padding: var(--space-22) 110px var(--space-18) var(--space-22);
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.app-header strong {
+  font-size: 24px;
+  letter-spacing: -0.6px;
+}
+.subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  display: block;
+  margin-top: var(--space-3);
+}
+.theme-toggle {
+  position: absolute;
+  right: var(--space-20);
+  top: 30px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+  z-index: 3;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Status bar */
+.statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10);
+  min-height: var(--statusbar-min-height);
+  padding: var(--space-10) var(--space-20);
+  flex-wrap: wrap;
+}
+
+/* Workspace and panels */
+.workspace {
+  display: grid;
+  grid-template-columns:
+    minmax(var(--col-media-min), 0.95fr)
+    minmax(var(--col-cues-min), 1.25fr)
+    minmax(var(--col-review-min), 1fr);
+  gap: var(--space-14);
+  padding: 0 var(--space-18) var(--space-18);
+  height: calc(100vh - 150px);
+  min-height: var(--workspace-min-height);
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  padding: var(--space-18);
+  min-width: 0;
+  overflow: auto;
+}
+.panel h2 {
+  font-size: 16px;
+  margin: 0 0 var(--space-16);
+}
+.panel h3,
+.youtube-results h3 {
+  font-size: 14px;
+  margin: 0;
+}
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+.section-heading h2 {
+  margin: 0;
+}
+
+/* Media */
+.media-video {
+  width: 100%;
+  max-height: var(--video-max-height);
+  background: var(--video-ground);
+  border-radius: var(--radius-md);
+}
+.video-placeholder {
+  height: var(--placeholder-height);
+  border: 1px dashed var(--line);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+}
+.path {
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.clock {
+  font: 24px var(--font-mono);
+  margin: var(--space-20) 0;
+}
+.range {
+  display: flex;
+  gap: var(--space-16);
+  margin-top: var(--space-22);
+}
+.range label {
+  display: grid;
+  gap: var(--space-8);
+  flex: 1;
+}
+.range .ant-input-number {
+  width: 100%;
+}
+.muted {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  font-weight: 400;
+}
+.notice {
+  margin-top: var(--space-16);
+}
+
+/* Cues */
+.cues-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cue-list {
+  flex: 1;
+  overflow: auto;
+  min-height: 160px;
+}
+.cue {
+  display: block;
+  text-align: left;
+  width: 100%;
+  border: 1px solid var(--line);
+  padding: var(--space-12);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: var(--radius-md);
+  margin: 0 0 var(--space-8);
+  cursor: pointer;
+}
+.cue:hover,
+.cue.selected {
+  background: var(--select);
+  border-color: var(--cue-accent);
+}
+.cue.playing {
+  box-shadow: var(--shadow-playing);
+}
+.cue-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  gap: var(--space-8);
+}
+.cue-text {
+  white-space: pre-wrap;
+  margin: var(--space-9) 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.cue-editor {
+  padding-top: var(--space-14);
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-10);
+}
+.time-fields {
+  display: flex;
+  gap: var(--space-10);
+}
+.time-fields label {
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+  color: var(--muted);
+}
+.time-fields input {
+  margin-top: var(--space-5);
+  font-family: var(--font-mono);
+}
+
+/* Speakers */
+.speaker-list {
+  display: flex;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-12);
+}
+.speaker-form {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: var(--space-8);
+  margin-bottom: var(--space-28);
+}
+.speaker-form button {
+  grid-column: 1/-1;
+}
+
+/* Suggestions */
+.suggestion {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-suggestion);
+  padding: var(--space-12);
+  margin-bottom: var(--space-12);
+}
+.suggestion.accepted,
+.suggestion.rejected {
+  opacity: var(--opacity-settled);
+}
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+}
+.comparison label {
+  font-size: 11px;
+  color: var(--muted);
+}
+.comparison p {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: var(--space-8) 0 var(--space-12);
+}
+.removed {
+  background: var(--diff-removed);
+  text-decoration: line-through;
+}
+.added {
+  background: var(--diff-added);
+  font-weight: 600;
+}
+.youtube-results {
+  margin-top: var(--space-18);
+}
+.divider {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: var(--space-22) 0;
+}
+
+@media (max-width: 1150px) {
+  .workspace {
+    grid-template-columns: minmax(260px, 0.8fr) minmax(330px, 1fr);
+    height: auto;
+    min-height: calc(100vh - 150px);
+  }
+  .review-panel {
+    grid-column: 1/-1;
+  }
+  .cues-panel {
+    height: 700px;
+  }
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media (max-width: 700px) {
+  .workspace {
+    display: flex;
+    flex-direction: column;
+  }
+  .cues-panel {
+    height: 650px;
+  }
+  .app-header {
+    padding-right: 100px;
+  }
+}

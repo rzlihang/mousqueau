@@ -1,0 +1,60 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<title>Mousqueau</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); overflow: hidden; }
+  .cover { position: relative; height: 288px; overflow: hidden; }
+  .art { position: absolute; top: 0; left: 480px; width: 480px; height: 288px; overflow: hidden; }
+  .art svg { display: block; width: 480px; height: 288px; }
+  .brand { fill: var(--primary); }
+  .tint { fill: var(--muted); }
+  .deep { fill: var(--ink); }
+  .cut { fill: var(--bg); }
+  .s2 { fill: var(--speaker-2); }
+  .s3 { fill: var(--speaker-3); }
+  .blk { rx: var(--radius-md); }
+  .bar { rx: var(--radius-sm); }
+  .words { position: absolute; left: var(--space-28); bottom: var(--space-28); max-width: 440px; }
+  .name { margin: 0; font-size: 72px; line-height: .92; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+  .tag { margin: var(--space-12) 0 0 3px; font-size: 14px; line-height: 20px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      primary 160×240 bled off the top (the app mark's field, largest) · muted 128×160 (the slate secondary-text neutral; select vanishes on bg in light) · ink 160×192 bled off the right edge · speaker-2 and speaker-3 as two tag-sized chips; ≈30% of 960×288
+  arrangement one tall primary slab with satellites, bottoms on one line at 224, space-16 gutters; speaker chips on the ground below like tags under a cue
+  pattern     subtitle cue bars (geometric, dense UI: a cue list is rows of rounded bars): 8px bars at a 24px pitch, cut in ground from the muted and ink blocks, one in primary for the selected cue
+  scales      sides in space-8 multiples; gutters space-16; bar pitch 3×space-8; blocks radius-md (6px), bars and chips radius-sm (4px)
+-->
+<rect class="brand blk" x="16" y="-16" width="160" height="240" rx="6"/>
+<rect class="tint blk" x="192" y="64" width="128" height="160" rx="6"/>
+<rect class="deep blk" x="336" y="32" width="160" height="192" rx="6"/>
+<rect class="cut bar" x="208" y="88" width="64" height="8" rx="4"/>
+<rect class="cut bar" x="208" y="112" width="96" height="8" rx="4"/>
+<rect class="cut bar" x="208" y="136" width="40" height="8" rx="4"/>
+<rect class="cut bar" x="208" y="160" width="80" height="8" rx="4"/>
+<rect class="cut bar" x="208" y="184" width="56" height="8" rx="4"/>
+<rect class="cut bar" x="352" y="56" width="104" height="8" rx="4"/>
+<rect class="brand bar" x="352" y="80" width="72" height="8" rx="4"/>
+<rect class="cut bar" x="352" y="104" width="120" height="8" rx="4"/>
+<rect class="cut bar" x="352" y="128" width="48" height="8" rx="4"/>
+<rect class="cut bar" x="352" y="152" width="88" height="8" rx="4"/>
+<rect class="cut bar" x="352" y="176" width="64" height="8" rx="4"/>
+<rect class="s2 bar" x="192" y="240" width="32" height="16" rx="4"/>
+<rect class="s3 bar" x="232" y="240" width="24" height="16" rx="4"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Mousqueau</h1>
+<p class="tag">字幕校正 · 说话人辨识</p>
+</div>
+</div>
+</body>
+</html>
