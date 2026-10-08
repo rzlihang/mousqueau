@@ -1,11 +1,13 @@
 package main
 
 import (
+	"mousqueau/internal/media"
 	"mousqueau/internal/project"
 	"mousqueau/internal/subtitle"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -74,5 +76,29 @@ func TestDemoHasReviewableSuggestions(t *testing.T) {
 	}
 	if !snapshot.Project.State.Suggestions[2].Review || len(snapshot.Project.State.Suggestions[2].SpeakerIDs) != 2 {
 		t.Fatal("overlapping demo speakers not marked")
+	}
+}
+func TestWaveformUsesSelectedMediaOnly(t *testing.T) {
+	s := &EditorService{}
+	if _, err := s.Waveform(); err == nil {
+		t.Fatal("waveform without media")
+	}
+	if !media.Dependency("ffmpeg") {
+		t.Skip("FFmpeg missing")
+	}
+	path := filepath.Join(t.TempDir(), "tone.wav")
+	if err := exec.Command("ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-y", path).Run(); err != nil {
+		t.Fatal(err)
+	}
+	s = &EditorService{mediaPath: path, mediaRevision: 3}
+	w, err := s.Waveform()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.MediaURL != s.GetSnapshot().MediaURL || w.PeaksPerSecond != media.PeaksPerSecond || len(w.Peaks) == 0 {
+		t.Fatalf("unexpected waveform %s %d %d", w.MediaURL, w.PeaksPerSecond, len(w.Peaks))
+	}
+	if s.GetStatus().Busy {
+		t.Fatal("waveform must not block other work")
 	}
 }

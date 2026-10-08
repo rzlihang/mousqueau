@@ -90,3 +90,11 @@ export function SetSpeaker(speaker: analysis$0.Speaker): $CancellablePromise<$mo
 export function Undo(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(941058598);
 }
+
+/**
+ * Waveform decodes the selected local media for the timeline. It runs beside
+ * other work, never uploads anything, and a newer request cancels an older one.
+ */
+export function Waveform(): $CancellablePromise<$models.Waveform> {
+    return $Call.ByID(644119011);
+}

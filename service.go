@@ -29,14 +29,20 @@ type Snapshot struct {
 	MediaPath string           `json:"mediaPath"`
 	MediaURL  string           `json:"mediaUrl"`
 }
+type Waveform struct {
+	MediaURL       string `json:"mediaUrl"`
+	PeaksPerSecond int    `json:"peaksPerSecond"`
+	Peaks          []int  `json:"peaks"`
+}
 type EditorService struct {
-	mu            sync.Mutex
-	app           *application.App
-	project       *project.Project
-	mediaPath     string
-	mediaRevision int
-	cancel        context.CancelFunc
-	phase         string
+	mu             sync.Mutex
+	app            *application.App
+	project        *project.Project
+	mediaPath      string
+	mediaRevision  int
+	cancel         context.CancelFunc
+	phase          string
+	waveformCancel context.CancelFunc
 }
 
 func (s *EditorService) ready() error {
@@ -271,6 +277,40 @@ func (s *EditorService) Cancel() {
 		s.cancel()
 		s.phase = "Cancelling…"
 	}
+}
+
+// Waveform decodes the selected local media for the timeline. It runs beside
+// other work, never uploads anything, and a newer request cancels an older one.
+func (s *EditorService) Waveform() (Waveform, error) {
+	s.mu.Lock()
+	if s.waveformCancel != nil {
+		s.waveformCancel()
+	}
+	path := s.mediaPath
+	url := fmt.Sprintf("/media/video?v=%d", s.mediaRevision)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	s.waveformCancel = cancel
+	s.mu.Unlock()
+	defer cancel()
+	if path == "" {
+		return Waveform{}, fmt.Errorf("import local media first")
+	}
+	peaks, err := media.Peaks(ctx, path)
+	if err != nil {
+		return Waveform{}, friendly(err)
+	}
+	return Waveform{MediaURL: url, PeaksPerSecond: media.PeaksPerSecond, Peaks: peaks}, nil
+}
+
+// ServiceShutdown stops background FFmpeg work when the application quits.
+func (s *EditorService) ServiceShutdown() error {
+	s.Cancel()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.waveformCancel != nil {
+		s.waveformCancel()
+	}
+	return nil
 }
 func (s *EditorService) phaseUpdate(phase string) { s.mu.Lock(); defer s.mu.Unlock(); s.phase = phase }
 func friendly(err error) error {
