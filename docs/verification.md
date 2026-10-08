@@ -37,6 +37,18 @@ Verified on 2026-10-08 on macOS arm64 using Go 1.27.1, Node 24.21.0, pnpm 12.10.
 
 These checks do not cover Wails CLI development/packaging or macOS GUI behavior; the acceptance checklist below remains outstanding.
 
+## Ant Design v6 verification
+
+Verified on 2026-10-08 on macOS arm64 with Ant Design 6.6.5, React 18.3.1, Node 24.21.0, and pnpm 12.10.1:
+
+- `pnpm install --frozen-lockfile`, `pnpm run typecheck`, `pnpm test` (7 tests), and `pnpm run build` passed. The production JavaScript bundle is 718.64 kB (236.47 kB gzip); the bundle-size advisory remains.
+- Replaced the deprecated `Alert.message` prop with `Alert.title`. The existing custom Tag spacing already uses explicit CSS margins/gaps and requires no migration override.
+- Regenerated `THIRD_PARTY_NOTICES.txt` for the changed production dependencies. Added the full MIT license from the `is-mobile` 5.0.0 README as a checked-in fallback; `node --test scripts/frontend-dependencies.test.mjs` passed (3 tests).
+- Chrome smoke against the actual Go service in server mode passed: empty state, demo loading, accepting a suggestion, undo restoring original text and status, light/dark rendering, and opening/closing the YouTube modal. The machine has yt-dlp installed, so the missing-yt-dlp Alert branch was typechecked but not exercised in this smoke.
+- `go build -tags production -o /private/tmp/mousqueau-antd6-check .` compiled the native macOS binary with the updated frontend assets.
+
+This browser smoke does not verify the macOS desktop WebView, native dialogs, media playback, or live analysis/downloads. Remote CI has not run for this upgrade.
+
 ## Mac acceptance checklist (still outstanding)
 
 1. Follow README setup on a real Mac. Confirm `wails3 dev` opens a desktop window and badges reflect `PATH`/key configuration.

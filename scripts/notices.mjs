@@ -16,6 +16,7 @@ function append(name, version, directory) {
     "@ant-design/icons-svg": "third_party/licenses/ant-design-icons.txt",
     "@wailsio/runtime": "third_party/licenses/wails-runtime.txt",
     "toggle-selection": "third_party/licenses/toggle-selection.txt",
+    "is-mobile": "third_party/licenses/is-mobile.txt",
   }[name];
   if (!files.length && !fallback)
     throw new Error(`Missing license file for ${name} at ${directory}`);

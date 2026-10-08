@@ -13,19 +13,19 @@
   },
   "dependencies": {
     "@wailsio/runtime": "3.0.0-beta.28",
+    "antd": "^6.6.5",
+    "diff": "^8.0.2",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "antd": "^5.29.0",
-    "diff": "^8.0.2"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@types/diff": "^7.0.2",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^6.0.0",
     "typescript": "^5.2.2",
     "vite": "^8.0.5",
-    "vitest": "^4.0.0",
-    "@types/diff": "^7.0.2"
+    "vitest": "^4.0.0"
   },
   "packageManager": "pnpm@12.10.1"
 }

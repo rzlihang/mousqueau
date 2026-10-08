@@ -1,6 +1,6 @@
 # Mousqueau v0.1
 
-A Wails v3 desktop application for correcting **existing SRT subtitles** and reviewing speaker identities in conversations. Go + React/TypeScript + Vite + Ant Design, bootstrapped from the official Wails v3 React template and pinned to `v3.0.0-beta.28`. macOS is the first target; the core is portable to Windows and Linux.
+A Wails v3 desktop application for correcting **existing SRT subtitles** and reviewing speaker identities in conversations. Go + React/TypeScript + Vite + Ant Design v6, bootstrapped from the official Wails v3 React template and pinned to `v3.0.0-beta.28`. macOS is the first target; the core is portable to Windows and Linux.
 
 ![Mousqueau editor with mock Traditional Chinese diarization](docs/editor-preview.png)
 

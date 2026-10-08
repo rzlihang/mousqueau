@@ -1125,7 +1125,7 @@ function EditorApp({
         {!status?.ytdlp && (
           <Alert
             type="warning"
-            message="请先安装 yt-dlp 并加入 PATH。本机媒体与 SRT 导入不受影响。"
+            title="请先安装 yt-dlp 并加入 PATH。本机媒体与 SRT 导入不受影响。"
           />
         )}
         <Space.Compact block>
