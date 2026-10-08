@@ -58,10 +58,11 @@ func Discover(ctx context.Context, raw string) (YouTubeInfo, error) {
 	if err != nil {
 		return YouTubeInfo{}, err
 	}
-	if !Dependency("yt-dlp") {
-		return YouTubeInfo{}, fmt.Errorf("install yt-dlp and add it to PATH; local imports still work")
+	ytdlp, ok := Tool("yt-dlp")
+	if !ok {
+		return YouTubeInfo{}, fmt.Errorf("yt-dlp was not found; install it or set its location in Settings. Local imports still work")
 	}
-	cmd := command(ctx, "yt-dlp", "--ignore-config", "--no-playlist", "--skip-download", "--dump-single-json", "--", canonical)
+	cmd := command(ctx, ytdlp, "--ignore-config", "--no-playlist", "--skip-download", "--dump-single-json", "--", canonical)
 	data, err := cmd.Output()
 	if err != nil {
 		if ctx.Err() != nil {
@@ -124,10 +125,12 @@ func DownloadCaption(ctx context.Context, raw, language string, automatic bool) 
 	if !languageID.MatchString(language) {
 		return nil, fmt.Errorf("invalid subtitle language")
 	}
-	if !Dependency("yt-dlp") {
+	ytdlp, ok := Tool("yt-dlp")
+	if !ok {
 		return nil, fmt.Errorf("yt-dlp is missing")
 	}
-	if !Dependency("ffmpeg") {
+	ffmpeg, ok := Tool("ffmpeg")
+	if !ok {
 		return nil, fmt.Errorf("FFmpeg is required for subtitle conversion")
 	}
 	dir, err := os.MkdirTemp("", "mousqueau-captions-*")
@@ -139,7 +142,7 @@ func DownloadCaption(ctx context.Context, raw, language string, automatic bool) 
 	if automatic {
 		flag = "--write-auto-subs"
 	}
-	cmd := command(ctx, "yt-dlp", "--ignore-config", "--no-playlist", "--skip-download", flag, "--sub-langs", language, "--sub-format", "srt/vtt", "--convert-subs", "srt", "-o", filepath.Join(dir, "caption.%(ext)s"), "--", canonical)
+	cmd := command(ctx, ytdlp, "--ignore-config", "--no-playlist", "--ffmpeg-location", ffmpeg, "--skip-download", flag, "--sub-langs", language, "--sub-format", "srt/vtt", "--convert-subs", "srt", "-o", filepath.Join(dir, "caption.%(ext)s"), "--", canonical)
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -157,7 +160,9 @@ func DownloadAudio(ctx context.Context, raw, destination string) error {
 	if err != nil {
 		return err
 	}
-	if !Dependency("yt-dlp") || !Dependency("ffmpeg") {
+	ytdlp, hasYTDLP := Tool("yt-dlp")
+	ffmpeg, hasFFmpeg := Tool("ffmpeg")
+	if !hasYTDLP || !hasFFmpeg {
 		return fmt.Errorf("yt-dlp and FFmpeg are required for audio download")
 	}
 	if !HasExtension(destination, ".m4a") {
@@ -168,7 +173,7 @@ func DownloadAudio(ctx context.Context, raw, destination string) error {
 		return err
 	}
 	defer os.RemoveAll(dir)
-	cmd := command(ctx, "yt-dlp", "--ignore-config", "--no-playlist", "--max-filesize", "500M", "-f", "bestaudio", "-x", "--audio-format", "m4a", "-o", filepath.Join(dir, "audio.%(ext)s"), "--", canonical)
+	cmd := command(ctx, ytdlp, "--ignore-config", "--no-playlist", "--ffmpeg-location", ffmpeg, "--max-filesize", "500M", "-f", "bestaudio", "-x", "--audio-format", "m4a", "-o", filepath.Join(dir, "audio.%(ext)s"), "--", canonical)
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()

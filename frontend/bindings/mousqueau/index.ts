@@ -7,7 +7,9 @@ export {
 };
 
 export type {
+    SettingsView,
     Snapshot,
     Status,
+    ToolStatus,
     Waveform
 } from "./models.js";

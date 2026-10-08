@@ -9,7 +9,9 @@ import (
 	"mousqueau/internal/analysis"
 	"mousqueau/internal/media"
 	"mousqueau/internal/project"
+	"mousqueau/internal/settings"
 	"mousqueau/internal/subtitle"
+	"mousqueau/internal/update"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,6 +45,17 @@ type EditorService struct {
 	cancel         context.CancelFunc
 	phase          string
 	waveformCancel context.CancelFunc
+
+	settings       settings.Settings
+	settingsPath   string          // empty in tests: nothing is written
+	keys           credentialStore // nil: the system keychain
+	keyMu          sync.Mutex      // serializes keychain changes
+	storedKey      string          // from the keychain; stays in Go
+	update         update.Release
+	updateEndpoint string
+	updateCancel   context.CancelFunc
+	pendingAction  string
+	closing        bool
 }
 
 func (s *EditorService) ready() error {
@@ -75,7 +88,7 @@ func (s *EditorService) GetSnapshot() Snapshot { s.mu.Lock(); defer s.mu.Unlock(
 func (s *EditorService) GetStatus() Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return Status{Busy: s.cancel != nil, Phase: s.phase, FFmpeg: media.Dependency("ffmpeg"), YTDLP: media.Dependency("yt-dlp"), APIConfigured: os.Getenv("OPENAI_API_KEY") != ""}
+	return Status{Busy: s.cancel != nil, Phase: s.phase, FFmpeg: media.Dependency("ffmpeg"), YTDLP: media.Dependency("yt-dlp"), APIConfigured: s.apiKeyLocked() != ""}
 }
 func (s *EditorService) ImportVideo() (Snapshot, error) {
 	path, err := s.app.Dialog.OpenFile().SetTitle("Import local video or audio").AddFilter("Media", "*.mp4;*.mov;*.m4v;*.webm;*.mkv;*.m4a;*.mp3;*.wav").PromptForSingleSelection()
@@ -150,6 +163,7 @@ func (s *EditorService) OpenProject() (Snapshot, error) {
 	s.project = p
 	s.mediaPath = p.VideoPath
 	s.mediaRevision++
+	s.rememberProjectLocked(path)
 	return s.snapshot(), nil
 }
 func (s *EditorService) SaveProject() (string, error) {
@@ -172,6 +186,7 @@ func (s *EditorService) SaveProject() (string, error) {
 	if err := media.SafeNewFile(path, data); err != nil {
 		return "", err
 	}
+	s.rememberProjectLocked(path)
 	return path, nil
 }
 func (s *EditorService) ExportSRT() (string, error) {
@@ -310,6 +325,9 @@ func (s *EditorService) ServiceShutdown() error {
 	if s.waveformCancel != nil {
 		s.waveformCancel()
 	}
+	if s.updateCancel != nil {
+		s.updateCancel()
+	}
 	return nil
 }
 func (s *EditorService) phaseUpdate(phase string) { s.mu.Lock(); defer s.mu.Unlock(); s.phase = phase }
@@ -326,8 +344,9 @@ func (s *EditorService) Analyze(start, end float64, uploadAuthorized bool) (Snap
 	if err := media.ValidateRange(start, end); err != nil {
 		return Snapshot{}, err
 	}
-	if os.Getenv("OPENAI_API_KEY") == "" {
-		return Snapshot{}, fmt.Errorf("set OPENAI_API_KEY; local editing does not require an API key")
+	key := s.apiKey()
+	if key == "" {
+		return Snapshot{}, fmt.Errorf("add an OpenAI API key in Settings or set OPENAI_API_KEY; local editing does not require one")
 	}
 	ctx, err := s.begin("Extracting audio with FFmpeg…")
 	if err != nil {
@@ -351,7 +370,7 @@ func (s *EditorService) Analyze(start, end float64, uploadAuthorized bool) (Snap
 	}
 	defer cleanup()
 	s.phaseUpdate("Uploading selected audio to OpenAI and identifying speakers…")
-	var provider analysis.Provider = analysis.OpenAI{Key: os.Getenv("OPENAI_API_KEY")}
+	var provider analysis.Provider = analysis.OpenAI{Key: key}
 	segments, err := provider.Transcribe(ctx, audio)
 	if err != nil {
 		return Snapshot{}, friendly(err)

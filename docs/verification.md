@@ -55,6 +55,20 @@ On 2026-10-08, a user reported white strips at the top/bottom of the native wind
 
 The fix anchors the body to the viewport, prevents document overscroll and pane scroll chaining, and synchronizes the light/dark theme to the document background before paint. Typecheck, all 7 frontend tests, the production frontend build, and native macOS compilation passed. A separate native `Mousqueau Scroll Preview` app loaded the demo and rendered in dark mode; simulated upward/downward scrolling showed no white strips in the captured result. The user then tested physical trackpad scrolling in that native preview and confirmed the white strips had disappeared. The original preview window was preserved. This confirms the reported issue on this Mac, not the full Mac acceptance checklist below.
 
+## Settings and welcome windows
+
+Verified on 2026-10-08 on macOS arm64 with Go 1.27.1, Node 24.21.0, pnpm 12.10.1, Wails v3.0.0-beta.28:
+
+- `go vet -tags server ./...`, `CGO_ENABLED=0 go test -tags server ./...` (31 tests) and `go test -race ./internal/...` passed. New coverage: settings defaults/round trip/damaged file, tool lookup order and invalid configured locations, API key validation, release selection (drafts, prereleases, foreign URLs, HTTP errors, cancellation) and version ordering, and at the service level key precedence without exposing the key, tool changes refused while processing, update check against a local server, the one-time setup action, and reopening the last project.
+- Bindings regenerated with `wails3 generate bindings -ts -i -f '-tags=server'`: 1 service, 34 methods.
+- `pnpm run typecheck`, `pnpm test` (11 tests) and `pnpm run build` passed; `go build -tags production` compiled the native binary.
+- Headless Chrome against the real Go service in server mode, with an isolated home directory: the settings window (760×540) and welcome window (760×520) rendered in light and dark without overflow or runtime errors; sidebar scroll tracking, section jumps, search filtering, theme switching, the four welcome steps, the missing-key warning, and the "载入示例" hand-over to the editor all worked. The editor's environment popover shows the settings link and no longer has a theme switch.
+- The `/usr/bin/security` commands the keychain package uses were round-tripped once by hand with a throwaway item (add through stdin, read, delete, exit status 44 when absent).
+
+A later review of this branch found four problems, since fixed with tests: a tool location that failed to save still took effect, concurrent key saves and removals could leave the cached key out of step with the keychain, a service test read the real keychain (it now uses an in-memory store), and the welcome window's "offline only" option claimed more than it did when a key already existed (it is now labelled as keeping the current configuration). The service suite has 32 tests.
+
+Not verified: anything that needs native windows. Server mode has no windows, menus, or file dialogs, so the hidden editor during first launch, the welcome window's close behaviour, ⌘, and the 设置… menu item, fixed window sizes and disabled buttons, the "选择…" tool dialog, saving a real key from the app, opening the release page, and a live GitHub check are all untested.
+
 ## Mac acceptance checklist (still outstanding)
 
 1. Follow README setup on a real Mac. Confirm `wails3 dev` opens a desktop window and badges reflect `PATH`/key configuration.
@@ -68,3 +82,7 @@ The fix anchors the body to the viewport, prevents document overscroll and pane 
 9. Build/package on macOS, check embedded license notices, and configure developer signing/notarization before a public release.
 
 CI includes a native macOS compilation job; its future result must be checked in GitHub and does not establish GUI testing.
+10. First launch with no `settings.json`: only the welcome window appears; finishing or closing it shows the editor, and "载入示例" / "导入 SRT" run there. Relaunch opens the editor directly, with the last saved or opened project when that preference is on.
+11. ⌘, and Mousqueau › 设置… open one settings window; closing the editor closes it too and the app quits. Theme changes apply to every open window at once, and "跟随系统" follows a macOS appearance switch.
+12. Save, replace and remove an API key in Settings; confirm it appears in Keychain Access under "Mousqueau", that analysis works when launched from Finder, and that `OPENAI_API_KEY` still takes precedence. Pin FFmpeg to a wrong location and confirm "位置无效", then "自动检测".
+13. "检查更新" against the real repository, with and without 接收测试版.

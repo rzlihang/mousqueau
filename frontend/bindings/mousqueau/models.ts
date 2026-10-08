@@ -5,6 +5,30 @@
 // @ts-ignore: Unused imports
 import * as project$0 from "./internal/project/models.js";
 
+/**
+ * SettingsView is what the settings and welcome windows show. It never
+ * contains the API key, only where one comes from.
+ */
+export interface SettingsView {
+    "theme": string;
+    "openLastProject": boolean;
+    "setupDone": boolean;
+    "ffmpeg": ToolStatus;
+    "ytdlp": ToolStatus;
+
+    /**
+     * "env", "keychain" or ""
+     */
+    "keySource": string;
+    "keyStored": boolean;
+    "keychainAvailable": boolean;
+    "autoUpdate": boolean;
+    "beta": boolean;
+    "version": string;
+    "lastUpdateCheck": string;
+    "updateVersion": string;
+}
+
 export interface Snapshot {
     "project": project$0.Project | null;
     "mediaPath": string;
@@ -17,6 +41,12 @@ export interface Status {
     "ffmpeg": boolean;
     "ytdlp": boolean;
     "apiConfigured": boolean;
+}
+
+export interface ToolStatus {
+    "path": string;
+    "custom": boolean;
+    "ready": boolean;
 }
 
 export interface Waveform {

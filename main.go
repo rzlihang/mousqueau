@@ -20,9 +20,8 @@ func main() {
 		Mac:      application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
 	})
 	service.app = app
-	app.Window.NewWithOptions(application.WebviewWindowOptions{Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: 1100, MinHeight: 720, URL: "/",
-		// The frontend draws the toolbar under the traffic lights and marks it draggable.
-		Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset}})
+	service.loadSettings()
+	service.openWindows()
 	defer service.Cancel()
 	if err := app.Run(); err != nil {
 		log.Fatal(err)

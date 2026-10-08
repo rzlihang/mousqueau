@@ -24,14 +24,14 @@ cd ..
 wails3 dev
 ```
 
-For AI analysis, set `OPENAI_API_KEY` in the environment of the **Go application** before launching. The application does not read `.env` files or collect keys in the browser. Launching a packaged app through Finder generally does not inherit terminal exports; launch its executable from the configured shell when using the initial environment-variable configuration.
+For AI analysis, either save an API key under **设置 › 供应商** (⌘,), which stores it in the macOS keychain, or set `OPENAI_API_KEY` in the environment of the **Go application** before launching; the environment variable wins when both exist. The key is typed once into the settings or welcome window and handed to Go; it is never written to project or settings files and never returned to the frontend. The application does not read `.env` files. Launching a packaged app through Finder generally does not inherit terminal exports, so use the keychain there. Key storage is macOS-only; other platforms use the environment variable.
 
 ```sh
 export OPENAI_API_KEY='your-key'
 wails3 dev
 ```
 
-FFmpeg and yt-dlp must also be on that process's `PATH`. Hover the environment indicator at the left of the status bar for dependency/configuration availability. Linux desktop builds require GTK4 and WebKitGTK 6 development packages; Windows requires the WebView2 runtime. See the [Wails setup guide](https://v3.wails.io/getting-started/installation/). The server build described below is only for local testing, not a deployed service.
+FFmpeg and yt-dlp are looked up on that process's `PATH`, then in `/opt/homebrew/bin` and `/usr/local/bin`; **设置 › 外部工具** can pin either to another location. The first launch opens a short welcome window (theme, external tools, optional OpenAI key) that can be run again from Settings. Preferences are kept in `settings.json` under the user configuration directory (`~/Library/Application Support/Mousqueau` on macOS). Update checks only read this repository's GitHub release list, at most once a day when automatic checking is on, and never download anything. Hover the environment indicator at the left of the status bar for dependency/configuration availability. Linux desktop builds require GTK4 and WebKitGTK 6 development packages; Windows requires the WebView2 runtime. See the [Wails setup guide](https://v3.wails.io/getting-started/installation/). The server build described below is only for local testing, not a deployed service.
 
 ## Use the editor
 
@@ -43,7 +43,7 @@ FFmpeg and yt-dlp must also be on that process's `PATH`. Hover the environment i
 6. **保存项目** writes JSON with immutable original cues, editable cues, speaker mappings, transcription segments, suggestions, and undo/redo history. **开启项目** restores it. The local media path is saved; if the file moved, reimport it. Projects contain transcripts and local paths, but not API keys.
 7. **导出 SRT** writes the edited text/times without speaker metadata. Both saves and exports require a **new filename**: existing destinations are refused, including hardlinks/symlinks to source files. Originals are never overwritten. Keep a JSON project to retain speaker information and history.
 
-Use **载入示例** for a Traditional Chinese conversation and mock diarization without an API key. The third cue deliberately includes overlapping speakers. The UI supports light/dark themes. Existing UTF-8 Traditional Chinese text is preserved. Taiwan Mandarin audio is processed with Chinese-language transcription; OpenAI can still return Simplified Chinese or misrecognize names. Verify wording and script before accepting. The diarization model does not support a transcription prompt, so v0.1 does not invent a prompt-based Traditional Chinese guarantee or apply stylistic rewriting.
+Use **载入示例** for a Traditional Chinese conversation and mock diarization without an API key. The third cue deliberately includes overlapping speakers. The UI follows the system appearance by default and can be fixed to light or dark in Settings. Existing UTF-8 Traditional Chinese text is preserved. Taiwan Mandarin audio is processed with Chinese-language transcription; OpenAI can still return Simplified Chinese or misrecognize names. Verify wording and script before accepting. The diarization model does not support a transcription prompt, so v0.1 does not invent a prompt-based Traditional Chinese guarantee or apply stylistic rewriting.
 
 ## Optional YouTube import
 
