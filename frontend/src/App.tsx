@@ -21,11 +21,11 @@ import {
   Select,
   Space,
   Spin,
-  Switch,
   Tag,
   Tooltip,
   theme,
 } from "antd";
+import { Events } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { Snapshot, Status } from "../bindings/mousqueau/models";
 import type { Cue } from "../bindings/mousqueau/internal/subtitle/models";
@@ -37,8 +37,12 @@ import {
   filterCues,
   formatSeconds,
 } from "./workspace";
+import { resolveDark, themeChoice } from "./preferences";
+import SettingsWindow from "./SettingsWindow";
 import SuggestionCard, { SpeakerTag, SpeakerTags } from "./SuggestionCard";
 import Timeline from "./Timeline";
+import { isMac, useSettings, useSystemDark } from "./useSettings";
+import WelcomeWindow from "./WelcomeWindow";
 import "./style.css";
 
 type Draft = {
@@ -61,7 +65,7 @@ type Wave =
   | { url: string; error: string }
   | null;
 const colors = ["#1677ff", "#52c41a", "#d46b08"];
-const isMac = /Mac/.test(navigator.userAgent);
+const settingsShortcut = isMac ? "⌘," : "Ctrl+,";
 
 function UndoIcon() {
   return (
@@ -92,13 +96,7 @@ function RedoIcon() {
   );
 }
 
-function EditorApp({
-  dark,
-  setDark,
-}: {
-  dark: boolean;
-  setDark: (dark: boolean) => void;
-}) {
+function EditorApp({ dark }: { dark: boolean }) {
   const { message, modal } = AntApp.useApp();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
@@ -375,11 +373,40 @@ function EditorApp({
       if (!exportSRT) setDirty(false);
     }
   }
+  // The welcome window hands over the first action chosen at the end of setup.
+  const replaceRef = useRef(replaceProject);
+  replaceRef.current = replaceProject;
+  useEffect(() => {
+    const take = () =>
+      void Editor.TakePendingAction()
+        .then((action) => {
+          if (action === "demo") replaceRef.current(Editor.LoadDemo);
+          else if (action === "srt") replaceRef.current(Editor.ImportSRT);
+        })
+        .catch(() => {
+          /* runtime may be starting */
+        });
+    take();
+    const offAction = Events.On("pending-action", take);
+    const offUpdate = Events.On("update-available", (e) =>
+      message.info(`有新版本 ${e.data}，可在 设置 › 更新 中查看。`),
+    );
+    return () => {
+      offAction();
+      offUpdate();
+    };
+  }, [message]);
   const canUndo = !busy && !draftDirty && !!p?.undo?.length;
   const canRedo = !busy && !draftDirty && !!p?.redo?.length;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
+      // On macOS the application menu owns this shortcut.
+      if (!isMac && e.ctrlKey && e.key === ",") {
+        e.preventDefault();
+        void Editor.OpenSettings();
+        return;
+      }
       if (
         !(e.metaKey || e.ctrlKey) ||
         target.closest("input, textarea, [contenteditable], .ant-modal")
@@ -1062,14 +1089,21 @@ function EditorApp({
               </div>
               {!status?.apiConfigured && (
                 <p className="muted">
-                  设置 OPENAI_API_KEY 后重启应用即可使用分析。API 密钥仅由 Go
-                  后端读取。
+                  在设置中添加 OpenAI API 密钥后即可使用分析。
                 </p>
               )}
               <div className="rule" />
               <p className="muted">
                 文件保留在本机。仅确认分析时上传选定音频。
               </p>
+              <Button
+                type="link"
+                size="small"
+                className="env-link"
+                onClick={() => void Editor.OpenSettings()}
+              >
+                打开设置（{settingsShortcut}）
+              </Button>
             </div>
           }
         >
@@ -1106,17 +1140,6 @@ function EditorApp({
             {formatTime(cue.end)}
           </span>
         )}
-        <label className="theme-toggle">
-          深色
-          <Switch
-            size="small"
-            checked={dark}
-            onChange={(value) => {
-              setDark(value);
-              localStorage.setItem("mousqueau-theme", value ? "dark" : "light");
-            }}
-          />
-        </label>
       </footer>
 
       <Modal
@@ -1238,10 +1261,23 @@ const LIGHT_FIXES = {
 };
 const DARK_FIXES = { colorError: "#ff7875" };
 
+// Each native window loads this bundle and says which one it is.
+const windowKind = new URLSearchParams(window.location.search).get("window");
+
 export default function App() {
-  const [dark, setDark] = useState(
-    () => localStorage.getItem("mousqueau-theme") === "dark",
+  const [settings, setSettings] = useSettings();
+  const systemDark = useSystemDark();
+  // The last theme is cached so a window opens in it before Go has answered.
+  const [cached] = useState(() =>
+    themeChoice(localStorage.getItem("mousqueau-theme")),
   );
+  const dark = resolveDark(
+    settings ? themeChoice(settings.theme) : cached,
+    systemDark,
+  );
+  useEffect(() => {
+    if (settings) localStorage.setItem("mousqueau-theme", settings.theme);
+  }, [settings]);
   useLayoutEffect(() => {
     // WebKit uses the document background outside the page during overscroll.
     document.documentElement.dataset.theme = dark ? "dark" : "light";
@@ -1260,7 +1296,26 @@ export default function App() {
     >
       <AntApp>
         <div data-theme={dark ? "dark" : "light"}>
-          <EditorApp dark={dark} setDark={setDark} />
+          {windowKind === "settings" ? (
+            settings && (
+              <SettingsWindow
+                settings={settings}
+                onChange={setSettings}
+                dark={dark}
+                systemDark={systemDark}
+              />
+            )
+          ) : windowKind === "welcome" ? (
+            settings && (
+              <WelcomeWindow
+                settings={settings}
+                onChange={setSettings}
+                systemDark={systemDark}
+              />
+            )
+          ) : (
+            <EditorApp dark={dark} />
+          )}
         </div>
       </AntApp>
     </ConfigProvider>

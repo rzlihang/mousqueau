@@ -6,7 +6,6 @@ import (
 	"math"
 	"mousqueau/internal/analysis"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -23,8 +22,9 @@ func Extract(ctx context.Context, input string, start, end float64) (string, fun
 	if err := ValidateRange(start, end); err != nil {
 		return "", noop, err
 	}
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		return "", noop, fmt.Errorf("FFmpeg is not installed or not on PATH")
+	ffmpeg, ok := Tool("ffmpeg")
+	if !ok {
+		return "", noop, fmt.Errorf("FFmpeg was not found; install it or set its location in Settings")
 	}
 	stat, err := os.Stat(input)
 	if err != nil || !stat.Mode().IsRegular() {
@@ -36,7 +36,7 @@ func Extract(ctx context.Context, input string, start, end float64) (string, fun
 	}
 	cleanup := func() { _ = os.RemoveAll(dir) }
 	path := filepath.Join(dir, "range.m4a")
-	cmd := command(ctx, "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-ss", strconv.FormatFloat(start, 'f', 3, 64), "-i", input, "-t", strconv.FormatFloat(end-start, 'f', 3, 64), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "64k", "-y", path)
+	cmd := command(ctx, ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error", "-ss", strconv.FormatFloat(start, 'f', 3, 64), "-i", input, "-t", strconv.FormatFloat(end-start, 'f', 3, 64), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "64k", "-y", path)
 	if err := cmd.Run(); err != nil {
 		cleanup()
 		if ctx.Err() != nil {
@@ -55,7 +55,6 @@ func Extract(ctx context.Context, input string, start, end float64) (string, fun
 	}
 	return path, cleanup, nil
 }
-func Dependency(name string) bool { _, err := exec.LookPath(name); return err == nil }
 func SamePath(a, b string) bool {
 	aa, _ := filepath.Abs(a)
 	bb, _ := filepath.Abs(b)

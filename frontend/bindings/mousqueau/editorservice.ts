@@ -27,6 +27,17 @@ export function Cancel(): $CancellablePromise<void> {
     return $Call.ByID(3786708210);
 }
 
+/**
+ * CheckForUpdates asks GitHub for the release list. Nothing is downloaded.
+ */
+export function CheckForUpdates(): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(1357089591);
+}
+
+export function ChooseToolPath(name: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(1578746980, name);
+}
+
 export function DecideSuggestion(id: string, decision: string): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(288395852, id, decision);
 }
@@ -45,6 +56,18 @@ export function EditCue(cue: subtitle$0.Cue): $CancellablePromise<$models.Snapsh
 
 export function ExportSRT(): $CancellablePromise<string> {
     return $Call.ByID(3550621713);
+}
+
+/**
+ * FinishSetup closes the welcome window and hands an optional first action
+ * ("demo" or "srt") to the editor window.
+ */
+export function FinishSetup(action: string): $CancellablePromise<void> {
+    return $Call.ByID(1910089976, action);
+}
+
+export function GetSettings(): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(2481381065);
 }
 
 export function GetSnapshot(): $CancellablePromise<$models.Snapshot> {
@@ -75,16 +98,77 @@ export function OpenProject(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(3448282533);
 }
 
+/**
+ * OpenReleasePage shows the release in the browser; installing stays manual.
+ */
+export function OpenReleasePage(): $CancellablePromise<void> {
+    return $Call.ByID(795610990);
+}
+
+export function OpenSettings(): $CancellablePromise<void> {
+    return $Call.ByID(478554733);
+}
+
+/**
+ * OpenWelcome runs the initial setup again from the settings window.
+ */
+export function OpenWelcome(): $CancellablePromise<void> {
+    return $Call.ByID(3653634452);
+}
+
 export function Redo(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(2511831216);
+}
+
+export function RemoveAPIKey(): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(3290982575);
+}
+
+/**
+ * SaveAPIKey stores the key in the macOS keychain. It is kept in Go from here
+ * on; no method returns it to the frontend.
+ */
+export function SaveAPIKey(key: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(2270827278, key);
 }
 
 export function SaveProject(): $CancellablePromise<string> {
     return $Call.ByID(2582404462);
 }
 
+export function SetAutoUpdate(enabled: boolean): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(1657648478, enabled);
+}
+
+export function SetBeta(enabled: boolean): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(1197282714, enabled);
+}
+
+export function SetOpenLastProject(enabled: boolean): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(2730099861, enabled);
+}
+
 export function SetSpeaker(speaker: analysis$0.Speaker): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(800982401, speaker);
+}
+
+export function SetTheme(theme: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(3609745485, theme);
+}
+
+/**
+ * SetToolPath pins FFmpeg or yt-dlp to a location; an empty path returns to
+ * automatic detection. The tool is not run until an import or analysis needs it.
+ */
+export function SetToolPath(name: string, path: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(680364449, name, path);
+}
+
+/**
+ * TakePendingAction returns the action chosen at the end of setup, once.
+ */
+export function TakePendingAction(): $CancellablePromise<string> {
+    return $Call.ByID(2081175160);
 }
 
 export function Undo(): $CancellablePromise<$models.Snapshot> {
