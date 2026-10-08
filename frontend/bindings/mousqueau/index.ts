@@ -8,5 +8,6 @@ export {
 
 export type {
     Snapshot,
-    Status
+    Status,
+    Waveform
 } from "./models.js";

@@ -18,3 +18,9 @@ export interface Status {
     "ytdlp": boolean;
     "apiConfigured": boolean;
 }
+
+export interface Waveform {
+    "mediaUrl": string;
+    "peaksPerSecond": number;
+    "peaks": number[] | null;
+}
