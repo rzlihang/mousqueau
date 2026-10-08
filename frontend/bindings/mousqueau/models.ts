@@ -11,6 +11,16 @@ import * as project$0 from "./internal/project/models.js";
  */
 export interface SettingsView {
     "theme": string;
+
+    /**
+     * "system", "zh-CN" or "en-US"
+     */
+    "language": string;
+
+    /**
+     * the language in use
+     */
+    "locale": string;
     "openLastProject": boolean;
     "setupDone": boolean;
     "ffmpeg": ToolStatus;

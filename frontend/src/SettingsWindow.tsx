@@ -11,18 +11,18 @@ import {
   Tag,
 } from "antd";
 import * as Editor from "../bindings/mousqueau/editorservice";
-import type {
-  SettingsView,
-  ToolStatus,
-} from "../bindings/mousqueau/models";
+import type { SettingsView, ToolStatus } from "../bindings/mousqueau/models";
+import { LANGUAGE_NAMES, errorText, matchLocale, useT } from "./i18n";
 import { ICON_PATHS, PathIcon } from "./icons";
 import {
   SECTIONS,
   type SectionId,
-  THEME_OPTIONS,
   formatChecked,
+  languageChoice,
+  languageOptions,
   matchSettings,
   themeChoice,
+  themeOptions,
   toolLabel,
 } from "./preferences";
 import { isMac, osName } from "./useSettings";
@@ -50,6 +50,7 @@ function ToolCard({
   tool: ToolStatus;
   apply: Apply;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState(tool.path);
   useEffect(() => setDraft(tool.path), [tool.path]);
   const commit = () => {
@@ -62,14 +63,14 @@ function ToolCard({
         <strong>{label}</strong>
         <span className="set-hint">{need}</span>
         <div className="spacer" />
-        <Tag color={tool.ready ? "green" : "orange"}>{toolLabel(tool)}</Tag>
+        <Tag color={tool.ready ? "green" : "orange"}>{toolLabel(tool, t)}</Tag>
       </div>
       <div className="set-line">
         <Input
           size="small"
           className="mono-input"
-          aria-label={`${label} 位置`}
-          placeholder="自动查找"
+          aria-label={t.settings.toolLocation(label)}
+          placeholder={t.settings.autoFind}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -79,13 +80,13 @@ function ToolCard({
           size="small"
           onClick={() => void apply(() => Editor.ChooseToolPath(name))}
         >
-          选择…
+          {t.common.choose}
         </Button>
         <Button
           size="small"
           onClick={() => void apply(() => Editor.SetToolPath(name, ""))}
         >
-          自动检测
+          {t.settings.autoDetect}
         </Button>
       </div>
       <span className="set-hint">{hint}</span>
@@ -100,6 +101,7 @@ export default function SettingsWindow({
   systemDark,
 }: Props) {
   const { message } = AntApp.useApp();
+  const t = useT();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<SectionId>("general");
   const [apiKey, setApiKey] = useState("");
@@ -109,14 +111,17 @@ export default function SettingsWindow({
   const scroller = useRef<HTMLDivElement>(null);
   const { rows, sections, any } = matchSettings(query);
   const theme = themeChoice(settings.theme);
+  const language = languageChoice(settings.language);
+  const locale = matchLocale(settings.locale);
   const configured = settings.keySource !== "";
+  const os = osName(t);
 
   const apply: Apply = async (action) => {
     try {
       onChange(await action());
       return true;
     } catch (e) {
-      void message.error(String(e));
+      void message.error(errorText(e));
       return false;
     }
   };
@@ -141,7 +146,7 @@ export default function SettingsWindow({
     setSaving(true);
     if (await apply(() => Editor.SaveAPIKey(apiKey))) {
       setApiKey("");
-      void message.success("API 密钥已保存到钥匙串。");
+      void message.success(t.settings.keySaved);
     }
     setSaving(false);
   }
@@ -153,31 +158,31 @@ export default function SettingsWindow({
 
   return (
     <div className={`panel-window settings${isMac ? " mac" : ""}`}>
-      <nav className="set-side" aria-label="设置目录">
+      <nav className="set-side" aria-label={t.settings.nav}>
         <div className="panel-drag" />
         <Input
           size="small"
           allowClear
-          placeholder="搜索设置"
-          aria-label="搜索设置"
+          placeholder={t.settings.search}
+          aria-label={t.settings.search}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {SECTIONS.map((s) => {
-          const on = s.id === active && sections[s.id];
+        {SECTIONS.map((id) => {
+          const on = id === active && sections[id];
           return (
             <a
-              key={s.id}
-              href={`#sec-${s.id}`}
-              className={`side-item${on ? " on" : ""}${sections[s.id] ? "" : " dim"}`}
+              key={id}
+              href={`#sec-${id}`}
+              className={`side-item${on ? " on" : ""}${sections[id] ? "" : " dim"}`}
               aria-current={on ? "location" : undefined}
               onClick={(e) => {
                 e.preventDefault();
-                jump(s.id);
+                jump(id);
               }}
             >
-              <PathIcon d={ICON_PATHS[s.id]} />
-              {s.label}
+              <PathIcon d={ICON_PATHS[id]} />
+              {t.settings.sections[id]}
             </a>
           );
         })}
@@ -185,41 +190,65 @@ export default function SettingsWindow({
 
       <main className="set-main">
         <div className="set-head">
-          <h1>设置</h1>
+          <h1>{t.settings.title}</h1>
         </div>
         <div className="set-scroll" ref={scroller} onScroll={onScroll}>
-          {!any && (
-            <div className="set-empty">没有与“{query}”匹配的设置。</div>
-          )}
+          {!any && <div className="set-empty">{t.settings.noMatch(query)}</div>}
 
           {sections.general && (
             <section id="sec-general" data-sec="general">
-              <h2>通用</h2>
+              <h2>{t.settings.sections.general}</h2>
               <div className="set-card">
                 {rows.theme && (
                   <div className="set-row">
                     <div className="set-label">
-                      <span>主题</span>
+                      <span>{t.theme.label}</span>
                       <span className="set-hint">
                         {theme === "system"
-                          ? `随 ${osName} 外观自动切换。当前：${systemDark ? "深色" : "浅色"}。`
-                          : `始终使用${dark ? "深色" : "浅色"}，不随 ${osName} 切换。`}
+                          ? t.settings.themeFollows(
+                              os,
+                              systemDark ? t.theme.dark : t.theme.light,
+                            )
+                          : t.settings.themeFixed(
+                              dark ? t.theme.dark : t.theme.light,
+                              os,
+                            )}
                       </span>
                     </div>
                     <Segmented
                       size="small"
-                      options={THEME_OPTIONS}
+                      options={themeOptions(t)}
                       value={theme}
                       onChange={(v) => void apply(() => Editor.SetTheme(v))}
                     />
                   </div>
                 )}
+                {rows.language && (
+                  <div className="set-row">
+                    <div className="set-label">
+                      <span>{t.language.label}</span>
+                      <span className="set-hint">
+                        {language === "system" && locale
+                          ? t.language.current(LANGUAGE_NAMES[locale])
+                          : t.language.hint}
+                      </span>
+                    </div>
+                    <Select
+                      size="small"
+                      aria-label={t.language.label}
+                      value={language}
+                      options={languageOptions(t)}
+                      onChange={(v) => void apply(() => Editor.SetLanguage(v))}
+                      style={{ width: 128 }}
+                    />
+                  </div>
+                )}
                 {rows.startup && (
                   <div className="set-row">
-                    <span>启动时打开上次的项目</span>
+                    <span>{t.settings.openLast}</span>
                     <Switch
                       size="small"
-                      aria-label="启动时打开上次的项目"
+                      aria-label={t.settings.openLast}
                       checked={settings.openLastProject}
                       onChange={(v) =>
                         void apply(() => Editor.SetOpenLastProject(v))
@@ -230,16 +259,14 @@ export default function SettingsWindow({
                 {rows.setup && (
                   <div className="set-row">
                     <div className="set-label">
-                      <span>初始设置</span>
-                      <span className="set-hint">
-                        重新检查外部工具与 OpenAI 配置。
-                      </span>
+                      <span>{t.settings.setup}</span>
+                      <span className="set-hint">{t.settings.setupHint}</span>
                     </div>
                     <Button
                       size="small"
                       onClick={() => void Editor.OpenWelcome()}
                     >
-                      重新运行初始设置
+                      {t.settings.rerunSetup}
                     </Button>
                   </div>
                 )}
@@ -249,13 +276,13 @@ export default function SettingsWindow({
 
           {sections.tools && (
             <section id="sec-tools" data-sec="tools">
-              <h2>外部工具</h2>
+              <h2>{t.settings.sections.tools}</h2>
               {rows.ffmpeg && (
                 <ToolCard
                   name="ffmpeg"
                   label="FFmpeg"
-                  need="必需"
-                  hint="用于读取媒体与截取分析音频。留空时在 PATH 与 Homebrew 中查找。"
+                  need={t.common.required}
+                  hint={t.settings.ffmpegHint}
                   tool={settings.ffmpeg}
                   apply={apply}
                 />
@@ -264,8 +291,8 @@ export default function SettingsWindow({
                 <ToolCard
                   name="yt-dlp"
                   label="yt-dlp"
-                  need="可选"
-                  hint="仅 YouTube 导入需要。下载不会自动上传到 OpenAI。"
+                  need={t.common.optional}
+                  hint={t.settings.ytdlpHint}
                   tool={settings.ytdlp}
                   apply={apply}
                 />
@@ -275,19 +302,19 @@ export default function SettingsWindow({
 
           {sections.providers && (
             <section id="sec-providers" data-sec="providers">
-              <h2>供应商</h2>
+              <h2>{t.settings.sections.providers}</h2>
               {rows.provDefault && (
                 <div className="set-card">
                   <div className="set-row">
                     <div className="set-label">
-                      <span>分析使用</span>
+                      <span>{t.settings.analysisProvider}</span>
                       <span className="set-hint">
-                        音频转录建议与说话人分析都发给这里选的供应商。
+                        {t.settings.analysisProviderHint}
                       </span>
                     </div>
                     <Select
                       size="small"
-                      aria-label="分析使用的供应商"
+                      aria-label={t.settings.analysisProviderLabel}
                       value="openai"
                       options={[{ value: "openai", label: "OpenAI" }]}
                       style={{ width: 128 }}
@@ -299,29 +326,34 @@ export default function SettingsWindow({
                 <div className="set-card">
                   <div className="set-row set-line">
                     <strong>OpenAI</strong>
-                    <span className="set-hint">当前使用</span>
+                    <span className="set-hint">{t.settings.inUse}</span>
                     <div className="spacer" />
                     <Tag color={configured ? "green" : "default"}>
-                      {configured ? "已配置" : "未配置"}
+                      {configured
+                        ? t.common.configured
+                        : t.common.notConfigured}
                     </Tag>
                   </div>
                   <div className="set-row">
-                    <span>密钥来源</span>
+                    <span>{t.settings.keySource}</span>
                     <span className="set-hint">
                       {settings.keySource === "env" ? (
                         <>
-                          环境变量 <span className="mono">OPENAI_API_KEY</span>
+                          {t.settings.envVar}{" "}
+                          <span className="mono">OPENAI_API_KEY</span>
                         </>
                       ) : settings.keySource === "keychain" ? (
-                        "macOS 钥匙串"
+                        t.settings.keychain
                       ) : (
-                        "未配置 · 可离线编辑"
+                        t.common.offlineOnly
                       )}
                     </span>
                   </div>
                   <div className="set-row set-field">
                     <label>
-                      {settings.keyStored ? "替换 API 密钥" : "API 密钥"}
+                      {settings.keyStored
+                        ? t.settings.replaceKey
+                        : t.settings.apiKey}
                       <div className="set-line">
                         <Input.Password
                           size="small"
@@ -341,35 +373,36 @@ export default function SettingsWindow({
                           }
                           onClick={() => void saveKey()}
                         >
-                          保存到钥匙串
+                          {t.settings.saveToKeychain}
                         </Button>
                       </div>
                     </label>
                     <span className="set-hint">
                       {settings.keychainAvailable ? (
                         <>
-                          设置了环境变量{" "}
+                          {t.settings.envWins[0]}{" "}
                           <span className="mono">OPENAI_API_KEY</span>{" "}
-                          时优先使用它。
+                          {t.settings.envWins[1]}
                         </>
                       ) : (
                         <>
-                          此平台不支持保存密钥；请设置环境变量{" "}
-                          <span className="mono">OPENAI_API_KEY</span>。
+                          {t.settings.noKeychain[0]}{" "}
+                          <span className="mono">OPENAI_API_KEY</span>{" "}
+                          {t.settings.noKeychain[1]}
                         </>
                       )}
                     </span>
                   </div>
                   <div className="set-row">
-                    <span className="set-hint">移除后仍可离线编辑。</span>
+                    <span className="set-hint">{t.settings.removeHint}</span>
                     <Popconfirm
-                      title="从钥匙串移除 API 密钥？"
-                      okText="移除"
-                      cancelText="取消"
+                      title={t.settings.removeConfirm}
+                      okText={t.settings.remove}
+                      cancelText={t.common.cancel}
                       onConfirm={() => void apply(Editor.RemoveAPIKey)}
                     >
                       <Button size="small" disabled={!settings.keyStored}>
-                        移除密钥
+                        {t.settings.removeKey}
                       </Button>
                     </Popconfirm>
                   </div>
@@ -378,58 +411,57 @@ export default function SettingsWindow({
               {rows.provAdd && (
                 <div className="set-card dashed">
                   <div className="set-row">
-                    <span className="set-hint">目前仅支持 OpenAI。</span>
+                    <span className="set-hint">{t.settings.onlyOpenai}</span>
                     <Button size="small" disabled>
-                      添加供应商
+                      {t.settings.addProvider}
                     </Button>
                   </div>
                 </div>
               )}
-              <span className="set-hint">
-                仅在你确认分析时，选定的音频会上传到所选供应商。
-              </span>
+              <span className="set-hint">{t.settings.uploadNote}</span>
             </section>
           )}
 
           {sections.updates && (
             <section id="sec-updates" data-sec="updates">
-              <h2>更新</h2>
+              <h2>{t.settings.sections.updates}</h2>
               <div className="set-card">
                 <div className="set-row">
                   <div className="set-label">
                     <span>
-                      当前版本 <span className="mono">{settings.version}</span>
+                      {t.settings.currentVersion}{" "}
+                      <span className="mono">{settings.version}</span>
                     </span>
                     <span className="set-hint set-status">
                       {checking ? (
                         <>
                           <Spin size="small" />
-                          正在检查…
+                          {t.settings.checking}
                         </>
                       ) : settings.updateVersion ? (
                         <>
                           <Tag color="blue">
-                            有新版本 {settings.updateVersion}
+                            {t.settings.newVersion(settings.updateVersion)}
                           </Tag>
                           <Button
                             type="link"
                             size="small"
                             onClick={() =>
                               void Editor.OpenReleasePage().catch((e) =>
-                                message.error(String(e)),
+                                message.error(errorText(e)),
                               )
                             }
                           >
-                            前往下载页面
+                            {t.settings.openDownload}
                           </Button>
                         </>
                       ) : justChecked ? (
                         <>
-                          <Tag color="green">已是最新版本</Tag>
-                          刚刚检查
+                          <Tag color="green">{t.settings.upToDate}</Tag>
+                          {t.settings.justChecked}
                         </>
                       ) : (
-                        formatChecked(settings.lastUpdateCheck)
+                        formatChecked(settings.lastUpdateCheck, t)
                       )}
                     </span>
                   </div>
@@ -438,45 +470,37 @@ export default function SettingsWindow({
                     disabled={checking}
                     onClick={() => void checkUpdate()}
                   >
-                    检查更新
+                    {t.settings.checkNow}
                   </Button>
                 </div>
                 <div className="set-row">
-                  <span>自动检查更新</span>
+                  <span>{t.settings.autoUpdate}</span>
                   <Switch
                     size="small"
-                    aria-label="自动检查更新"
+                    aria-label={t.settings.autoUpdate}
                     checked={settings.autoUpdate}
                     onChange={(v) => void apply(() => Editor.SetAutoUpdate(v))}
                   />
                 </div>
                 <div className="set-row">
                   <div className="set-label">
-                    <span>接收测试版</span>
-                    <span className="set-hint">
-                      更早获得新功能，可能不稳定。
-                    </span>
+                    <span>{t.settings.beta}</span>
+                    <span className="set-hint">{t.settings.betaHint}</span>
                   </div>
                   <Switch
                     size="small"
-                    aria-label="接收测试版"
+                    aria-label={t.settings.beta}
                     checked={settings.beta}
                     onChange={(v) => void apply(() => Editor.SetBeta(v))}
                   />
                 </div>
               </div>
-              <span className="set-hint">
-                检查更新只连接 GitHub
-                获取版本信息，不上传字幕或音频，也不会自动下载新版本。
-              </span>
+              <span className="set-hint">{t.settings.updatesNote}</span>
             </section>
           )}
 
           {/* lets the last section scroll to the top */}
-          <div
-            aria-hidden="true"
-            style={{ height: query.trim() ? 24 : 230 }}
-          />
+          <div aria-hidden="true" style={{ height: query.trim() ? 24 : 230 }} />
         </div>
       </main>
     </div>

@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
+	"mousqueau/internal/i18n"
 	"os"
 	"strconv"
 )
@@ -22,11 +22,11 @@ const peakSampleRate = 8000
 func Peaks(ctx context.Context, input string) ([]int, error) {
 	ffmpeg, ok := Tool("ffmpeg")
 	if !ok {
-		return nil, fmt.Errorf("FFmpeg was not found; install it or set its location in Settings")
+		return nil, i18n.Errorf("FFmpeg was not found; install it or set its location in Settings")
 	}
 	stat, err := os.Stat(input)
 	if err != nil || !stat.Mode().IsRegular() {
-		return nil, fmt.Errorf("select an existing local video or audio file")
+		return nil, i18n.Errorf("select an existing local video or audio file")
 	}
 	cmd := command(ctx, ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error", "-i", input, "-vn", "-ac", "1", "-ar", strconv.Itoa(peakSampleRate), "-f", "s16le", "-")
 	stdout, err := cmd.StdoutPipe()
@@ -45,7 +45,7 @@ func Peaks(ctx context.Context, input string) ([]int, error) {
 		return nil, readErr
 	}
 	if waitErr != nil {
-		return nil, fmt.Errorf("FFmpeg could not decode audio for the waveform")
+		return nil, i18n.Errorf("FFmpeg could not decode audio for the waveform")
 	}
 	return peaks, nil
 }

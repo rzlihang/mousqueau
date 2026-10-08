@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"mousqueau/internal/analysis"
+	"mousqueau/internal/i18n"
 	"mousqueau/internal/media"
 	"mousqueau/internal/project"
 	"mousqueau/internal/settings"
@@ -43,11 +44,12 @@ type EditorService struct {
 	mediaPath      string
 	mediaRevision  int
 	cancel         context.CancelFunc
-	phase          string
+	phase          string // English; translated when read
 	waveformCancel context.CancelFunc
 
 	settings       settings.Settings
 	settingsPath   string          // empty in tests: nothing is written
+	languages      []string        // the system's preferred languages
 	keys           credentialStore // nil: the system keychain
 	keyMu          sync.Mutex      // serializes keychain changes
 	storedKey      string          // from the keychain; stays in Go
@@ -60,7 +62,7 @@ type EditorService struct {
 
 func (s *EditorService) ready() error {
 	if s.cancel != nil {
-		return fmt.Errorf("wait for processing to finish or cancel it")
+		return i18n.Errorf("wait for processing to finish or cancel it")
 	}
 	return nil
 }
@@ -69,7 +71,7 @@ func (s *EditorService) requireProject() error {
 		return err
 	}
 	if s.project == nil {
-		return fmt.Errorf("import SRT subtitles first")
+		return i18n.Errorf("import SRT subtitles first")
 	}
 	return nil
 }
@@ -88,10 +90,10 @@ func (s *EditorService) GetSnapshot() Snapshot { s.mu.Lock(); defer s.mu.Unlock(
 func (s *EditorService) GetStatus() Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return Status{Busy: s.cancel != nil, Phase: s.phase, FFmpeg: media.Dependency("ffmpeg"), YTDLP: media.Dependency("yt-dlp"), APIConfigured: s.apiKeyLocked() != ""}
+	return Status{Busy: s.cancel != nil, Phase: i18n.T(s.phase), FFmpeg: media.Dependency("ffmpeg"), YTDLP: media.Dependency("yt-dlp"), APIConfigured: s.apiKeyLocked() != ""}
 }
 func (s *EditorService) ImportVideo() (Snapshot, error) {
-	path, err := s.app.Dialog.OpenFile().SetTitle("Import local video or audio").AddFilter("Media", "*.mp4;*.mov;*.m4v;*.webm;*.mkv;*.m4a;*.mp3;*.wav").PromptForSingleSelection()
+	path, err := s.app.Dialog.OpenFile().SetTitle(i18n.T("Import local video or audio")).AddFilter(i18n.T("Media"), "*.mp4;*.mov;*.m4v;*.webm;*.mkv;*.m4a;*.mp3;*.wav").PromptForSingleSelection()
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -105,7 +107,7 @@ func (s *EditorService) ImportVideo() (Snapshot, error) {
 	}
 	stat, err := os.Stat(path)
 	if err != nil || !stat.Mode().IsRegular() {
-		return Snapshot{}, fmt.Errorf("selected media file is unavailable")
+		return Snapshot{}, i18n.Errorf("selected media file is unavailable")
 	}
 	s.mediaPath = path
 	s.mediaRevision++
@@ -115,7 +117,7 @@ func (s *EditorService) ImportVideo() (Snapshot, error) {
 	return s.snapshot(), nil
 }
 func (s *EditorService) ImportSRT() (Snapshot, error) {
-	path, err := s.app.Dialog.OpenFile().SetTitle("Import existing SRT").AddFilter("SubRip subtitles", "*.srt").PromptForSingleSelection()
+	path, err := s.app.Dialog.OpenFile().SetTitle(i18n.T("Import existing SRT")).AddFilter(i18n.T("SubRip subtitles"), "*.srt").PromptForSingleSelection()
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -140,7 +142,7 @@ func (s *EditorService) ImportSRT() (Snapshot, error) {
 	return s.snapshot(), nil
 }
 func (s *EditorService) OpenProject() (Snapshot, error) {
-	path, err := s.app.Dialog.OpenFile().SetTitle("Open editing project").AddFilter("Mousqueau project", "*.json").PromptForSingleSelection()
+	path, err := s.app.Dialog.OpenFile().SetTitle(i18n.T("Open editing project")).AddFilter(i18n.T("Mousqueau project"), "*.json").PromptForSingleSelection()
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -167,7 +169,7 @@ func (s *EditorService) OpenProject() (Snapshot, error) {
 	return s.snapshot(), nil
 }
 func (s *EditorService) SaveProject() (string, error) {
-	path, err := s.app.Dialog.SaveFile().SetFilename("mousqueau-project.json").AddFilter("Mousqueau project", "*.json").PromptForSingleSelection()
+	path, err := s.app.Dialog.SaveFile().SetFilename("mousqueau-project.json").AddFilter(i18n.T("Mousqueau project"), "*.json").PromptForSingleSelection()
 	if err != nil || path == "" {
 		return "", err
 	}
@@ -190,7 +192,7 @@ func (s *EditorService) SaveProject() (string, error) {
 	return path, nil
 }
 func (s *EditorService) ExportSRT() (string, error) {
-	path, err := s.app.Dialog.SaveFile().SetFilename("corrected.srt").AddFilter("SubRip subtitles", "*.srt").PromptForSingleSelection()
+	path, err := s.app.Dialog.SaveFile().SetFilename("corrected.srt").AddFilter(i18n.T("SubRip subtitles"), "*.srt").PromptForSingleSelection()
 	if err != nil || path == "" {
 		return "", err
 	}
@@ -203,7 +205,7 @@ func (s *EditorService) ExportSRT() (string, error) {
 		path += ".srt"
 	}
 	if media.SamePath(path, s.project.SubtitlePath) || media.SamePath(path, s.mediaPath) {
-		return "", fmt.Errorf("choose a new output file to preserve the imported source")
+		return "", i18n.Errorf("choose a new output file to preserve the imported source")
 	}
 	text, err := subtitle.Render(s.project.State.Cues)
 	if err != nil {
@@ -290,7 +292,7 @@ func (s *EditorService) Cancel() {
 	defer s.mu.Unlock()
 	if s.cancel != nil {
 		s.cancel()
-		s.phase = "Cancelling…"
+		s.phase = i18n.N("Cancelling…")
 	}
 }
 
@@ -308,7 +310,7 @@ func (s *EditorService) Waveform() (Waveform, error) {
 	s.mu.Unlock()
 	defer cancel()
 	if path == "" {
-		return Waveform{}, fmt.Errorf("import local media first")
+		return Waveform{}, i18n.Errorf("import local media first")
 	}
 	peaks, err := media.Peaks(ctx, path)
 	if err != nil {
@@ -333,22 +335,22 @@ func (s *EditorService) ServiceShutdown() error {
 func (s *EditorService) phaseUpdate(phase string) { s.mu.Lock(); defer s.mu.Unlock(); s.phase = phase }
 func friendly(err error) error {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return fmt.Errorf("processing cancelled or timed out; subtitles were not changed")
+		return i18n.Errorf("processing cancelled or timed out; subtitles were not changed")
 	}
 	return err
 }
 func (s *EditorService) Analyze(start, end float64, uploadAuthorized bool) (Snapshot, error) {
 	if !uploadAuthorized {
-		return Snapshot{}, fmt.Errorf("confirm audio upload before analysis")
+		return Snapshot{}, i18n.Errorf("confirm audio upload before analysis")
 	}
 	if err := media.ValidateRange(start, end); err != nil {
 		return Snapshot{}, err
 	}
 	key := s.apiKey()
 	if key == "" {
-		return Snapshot{}, fmt.Errorf("add an OpenAI API key in Settings or set OPENAI_API_KEY; local editing does not require one")
+		return Snapshot{}, i18n.Errorf("add an OpenAI API key in Settings or set OPENAI_API_KEY; local editing does not require one")
 	}
-	ctx, err := s.begin("Extracting audio with FFmpeg…")
+	ctx, err := s.begin(i18n.N("Extracting audio with FFmpeg…"))
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -362,14 +364,14 @@ func (s *EditorService) Analyze(start, end float64, uploadAuthorized bool) (Snap
 	}
 	s.mu.Unlock()
 	if p == nil || path == "" {
-		return Snapshot{}, fmt.Errorf("import media and SRT subtitles before analysis")
+		return Snapshot{}, i18n.Errorf("import media and SRT subtitles before analysis")
 	}
 	audio, cleanup, err := media.Extract(ctx, path, start, end)
 	if err != nil {
 		return Snapshot{}, friendly(err)
 	}
 	defer cleanup()
-	s.phaseUpdate("Uploading selected audio to OpenAI and identifying speakers…")
+	s.phaseUpdate(i18n.N("Uploading selected audio to OpenAI and identifying speakers…"))
 	var provider analysis.Provider = analysis.OpenAI{Key: key}
 	segments, err := provider.Transcribe(ctx, audio)
 	if err != nil {
@@ -425,7 +427,7 @@ func (s *EditorService) LoadDemo() (Snapshot, error) {
 	return s.snapshot(), nil
 }
 func (s *EditorService) DiscoverYouTube(raw string) (media.YouTubeInfo, error) {
-	ctx, err := s.begin("Discovering YouTube subtitles…")
+	ctx, err := s.begin(i18n.N("Discovering YouTube subtitles…"))
 	if err != nil {
 		return media.YouTubeInfo{}, err
 	}
@@ -434,7 +436,7 @@ func (s *EditorService) DiscoverYouTube(raw string) (media.YouTubeInfo, error) {
 	return info, friendly(err)
 }
 func (s *EditorService) ImportYouTubeCaption(raw, language string, automatic bool) (Snapshot, error) {
-	ctx, err := s.begin("Downloading selected subtitle track…")
+	ctx, err := s.begin(i18n.N("Downloading selected subtitle track…"))
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -458,16 +460,16 @@ func (s *EditorService) ImportYouTubeCaption(raw, language string, automatic boo
 }
 func (s *EditorService) DownloadYouTubeAudio(raw string, authorized bool) (Snapshot, error) {
 	if !authorized {
-		return Snapshot{}, fmt.Errorf("confirm you are authorized to download this audio")
+		return Snapshot{}, i18n.Errorf("confirm you are authorized to download this audio")
 	}
-	path, err := s.app.Dialog.SaveFile().SetFilename("youtube-audio.m4a").AddFilter("M4A audio", "*.m4a").PromptForSingleSelection()
+	path, err := s.app.Dialog.SaveFile().SetFilename("youtube-audio.m4a").AddFilter(i18n.T("M4A audio"), "*.m4a").PromptForSingleSelection()
 	if err != nil || path == "" {
 		return s.GetSnapshot(), err
 	}
 	if !media.HasExtension(path, ".m4a") {
 		path += ".m4a"
 	}
-	ctx, err := s.begin("Downloading authorized YouTube audio…")
+	ctx, err := s.begin(i18n.N("Downloading authorized YouTube audio…"))
 	if err != nil {
 		return Snapshot{}, err
 	}

@@ -3,8 +3,8 @@ package project
 
 import (
 	"encoding/json"
-	"fmt"
 	"mousqueau/internal/analysis"
+	"mousqueau/internal/i18n"
 	"mousqueau/internal/subtitle"
 )
 
@@ -52,7 +52,7 @@ func (p *Project) Edit(cue subtitle.Cue) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("subtitle no longer exists")
+	return i18n.Errorf("subtitle no longer exists")
 }
 func (p *Project) UndoEdit() {
 	if len(p.Undo) == 0 {
@@ -97,19 +97,19 @@ func (p *Project) AddAnalysis(result analysis.Result) {
 }
 func (p *Project) Decide(id, decision string) error {
 	if decision != "accepted" && decision != "rejected" {
-		return fmt.Errorf("invalid suggestion decision")
+		return i18n.Errorf("invalid suggestion decision")
 	}
 	next := clone(p.State)
 	for i, s := range next.Suggestions {
 		if s.ID == id {
 			if s.Status != "pending" {
-				return fmt.Errorf("suggestion already reviewed")
+				return i18n.Errorf("suggestion already reviewed")
 			}
 			if decision == "accepted" {
 				for j, c := range next.Cues {
 					if c.ID == s.CueID {
 						if c.Text != s.Original {
-							return fmt.Errorf("subtitle changed since analysis; analyze again or edit manually")
+							return i18n.Errorf("subtitle changed since analysis; analyze again or edit manually")
 						}
 						c.Text = s.Proposed
 						c.SpeakerIDs = s.SpeakerIDs
@@ -126,11 +126,11 @@ func (p *Project) Decide(id, decision string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("suggestion not found")
+	return i18n.Errorf("suggestion not found")
 }
 func (p *Project) SetSpeaker(speaker analysis.Speaker) error {
 	if speaker.ID == "" || speaker.Name == "" {
-		return fmt.Errorf("speaker ID and name are required")
+		return i18n.Errorf("speaker ID and name are required")
 	}
 	next := clone(p.State)
 	found := false
@@ -149,19 +149,19 @@ func (p *Project) SetSpeaker(speaker analysis.Speaker) error {
 func Decode(data []byte) (*Project, error) {
 	var p Project
 	if err := json.Unmarshal(data, &p); err != nil {
-		return nil, fmt.Errorf("invalid project JSON: %w", err)
+		return nil, i18n.Errorf("invalid project JSON: %w", err)
 	}
 	if p.Version != 1 {
-		return nil, fmt.Errorf("unsupported project version %d", p.Version)
+		return nil, i18n.Errorf("unsupported project version %d", p.Version)
 	}
 	if len(p.Original) == 0 || len(p.State.Cues) == 0 {
-		return nil, fmt.Errorf("project has no subtitles")
+		return nil, i18n.Errorf("project has no subtitles")
 	}
 	validate := func(cues []subtitle.Cue) error {
 		ids := map[string]bool{}
 		for _, c := range cues {
 			if c.ID == "" || ids[c.ID] {
-				return fmt.Errorf("missing or duplicate cue ID")
+				return i18n.Errorf("missing or duplicate cue ID")
 			}
 			ids[c.ID] = true
 		}

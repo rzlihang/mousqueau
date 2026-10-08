@@ -69,6 +69,17 @@ A later review of this branch found four problems, since fixed with tests: a too
 
 Not verified: anything that needs native windows. Server mode has no windows, menus, or file dialogs, so the hidden editor during first launch, the welcome window's close behaviour, ⌘, and the 设置… menu item, fixed window sizes and disabled buttons, the "选择…" tool dialog, saving a real key from the app, opening the release page, and a live GitHub check are all untested.
 
+## Interface language (Simplified Chinese / US English)
+
+Verified on 2026-10-08 in a Linux cloud environment with Go 1.25.0, Node 22.22.0, pnpm 12.10.1 and Wails v3.0.0-beta.28; nothing here ran on a Mac.
+
+- `go test -race ./internal/...`, `CGO_ENABLED=0 go test -tags server ./...`, `CGO_ENABLED=0 go vet -tags server ./...`, `GOOS=darwin go vet ./internal/...` and `CGO_ENABLED=0 GOOS=windows go build -tags server` passed. New coverage: locale resolution (system list, explicit choice, Chinese variants, unsupported languages), `AppleLanguages` and POSIX locale parsing, errors that follow the current language and still wrap with `%w`, a source scan that requires a Chinese entry with matching verbs for every translatable Go string, settings validation, and at the service level `SetLanguage` changing the locale, an error, a progress message and the saved setting.
+- Bindings regenerated with `wails3 generate bindings -ts -i -f '-tags=server'`: 1 service, 35 methods (adds `SetLanguage`).
+- `pnpm run typecheck`, `pnpm test` (15 tests, including identical dictionary shapes and no Chinese left in English) and `pnpm run build` passed.
+- Headless Chromium against the real Go service in server mode, with isolated configuration directories: with `LANG=en_US.UTF-8` the editor, settings and welcome windows rendered in English and `<html lang>` was `en-US`; with `LANG=zh_CN.UTF-8` they rendered in Chinese with the existing wording. Choosing 简体中文 in the English settings window switched that window and the already open editor without reloading, and saved `"language": "zh-CN"`. Searching "keychain" in the Chinese settings found the provider section. At 1100×720 neither language overflows the toolbar or timeline toolbar. No console errors.
+
+Not verified: everything native. The translated menu bar and its rebuild on a language change, window titles, file dialog titles, `defaults read` against a real macOS language list, the per-application language from System Settings, and whether `CFBundleLocalizations` makes AppKit's own items (Start Dictation, Emoji & Symbols, the Services list, the About panel) follow the system language all need a Mac. The darwin build of the root package needs cgo and was not compiled here.
+
 ## Mac acceptance checklist (still outstanding)
 
 1. Follow README setup on a real Mac. Confirm `wails3 dev` opens a desktop window and badges reflect `PATH`/key configuration.
@@ -86,3 +97,4 @@ CI includes a native macOS compilation job; its future result must be checked in
 11. ⌘, and Mousqueau › 设置… open one settings window; closing the editor closes it too and the app quits. Theme changes apply to every open window at once, and "跟随系统" follows a macOS appearance switch.
 12. Save, replace and remove an API key in Settings; confirm it appears in Keychain Access under "Mousqueau", that analysis works when launched from Finder, and that `OPENAI_API_KEY` still takes precedence. Pin FFmpeg to a wrong location and confirm "位置无效", then "自动检测".
 13. "检查更新" against the real repository, with and without 接收测试版.
+14. With macOS set to English, launch and confirm the menu bar (Mousqueau, File, Edit, View, Window, Help and their items, including Settings…), the editor, file dialogs and an error message are all English. Switch macOS to 简体中文, relaunch, and confirm the same in Chinese, including AppKit's Start Dictation / Emoji & Symbols items. Then set Settings › General › Language to the other language and confirm the menu bar, the settings and welcome window titles and every open window change at once, and that the choice survives a relaunch. Set a per-application language for Mousqueau in System Settings and confirm "跟随系统" follows it.

@@ -3,7 +3,7 @@ package media
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"mousqueau/internal/i18n"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -29,10 +29,10 @@ var languageID = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 func ValidateYouTube(raw string) (string, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" {
-		return "", fmt.Errorf("use an HTTPS URL for one YouTube video")
+		return "", i18n.Errorf("use an HTTPS URL for one YouTube video")
 	}
 	if u.Query().Get("list") != "" {
-		return "", fmt.Errorf("playlists and channels are not supported")
+		return "", i18n.Errorf("playlists and channels are not supported")
 	}
 	host := strings.ToLower(u.Hostname())
 	var id string
@@ -46,10 +46,10 @@ func ValidateYouTube(raw string) (string, error) {
 			id = strings.TrimPrefix(u.Path, "/shorts/")
 		}
 	default:
-		return "", fmt.Errorf("only youtube.com and youtu.be video URLs are supported")
+		return "", i18n.Errorf("only youtube.com and youtu.be video URLs are supported")
 	}
 	if !videoID.MatchString(id) {
-		return "", fmt.Errorf("URL must identify a single YouTube video")
+		return "", i18n.Errorf("URL must identify a single YouTube video")
 	}
 	return "https://www.youtube.com/watch?v=" + id, nil
 }
@@ -60,7 +60,7 @@ func Discover(ctx context.Context, raw string) (YouTubeInfo, error) {
 	}
 	ytdlp, ok := Tool("yt-dlp")
 	if !ok {
-		return YouTubeInfo{}, fmt.Errorf("yt-dlp was not found; install it or set its location in Settings. Local imports still work")
+		return YouTubeInfo{}, i18n.Errorf("yt-dlp was not found; install it or set its location in Settings. Local imports still work")
 	}
 	cmd := command(ctx, ytdlp, "--ignore-config", "--no-playlist", "--skip-download", "--dump-single-json", "--", canonical)
 	data, err := cmd.Output()
@@ -68,7 +68,7 @@ func Discover(ctx context.Context, raw string) (YouTubeInfo, error) {
 		if ctx.Err() != nil {
 			return YouTubeInfo{}, ctx.Err()
 		}
-		return YouTubeInfo{}, fmt.Errorf("yt-dlp could not discover subtitles; check URL, network, and yt-dlp version")
+		return YouTubeInfo{}, i18n.Errorf("yt-dlp could not discover subtitles; check URL, network, and yt-dlp version")
 	}
 	type track struct {
 		Ext string `json:"ext"`
@@ -123,15 +123,15 @@ func DownloadCaption(ctx context.Context, raw, language string, automatic bool) 
 		return nil, err
 	}
 	if !languageID.MatchString(language) {
-		return nil, fmt.Errorf("invalid subtitle language")
+		return nil, i18n.Errorf("invalid subtitle language")
 	}
 	ytdlp, ok := Tool("yt-dlp")
 	if !ok {
-		return nil, fmt.Errorf("yt-dlp is missing")
+		return nil, i18n.Errorf("yt-dlp is missing")
 	}
 	ffmpeg, ok := Tool("ffmpeg")
 	if !ok {
-		return nil, fmt.Errorf("FFmpeg is required for subtitle conversion")
+		return nil, i18n.Errorf("FFmpeg is required for subtitle conversion")
 	}
 	dir, err := os.MkdirTemp("", "mousqueau-captions-*")
 	if err != nil {
@@ -147,11 +147,11 @@ func DownloadCaption(ctx context.Context, raw, language string, automatic bool) 
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, fmt.Errorf("subtitle download failed; verify the selected track is still available")
+		return nil, i18n.Errorf("subtitle download failed; verify the selected track is still available")
 	}
 	paths, _ := filepath.Glob(filepath.Join(dir, "*.srt"))
 	if len(paths) != 1 {
-		return nil, fmt.Errorf("no unique SRT subtitle downloaded")
+		return nil, i18n.Errorf("no unique SRT subtitle downloaded")
 	}
 	return os.ReadFile(paths[0])
 }
@@ -163,10 +163,10 @@ func DownloadAudio(ctx context.Context, raw, destination string) error {
 	ytdlp, hasYTDLP := Tool("yt-dlp")
 	ffmpeg, hasFFmpeg := Tool("ffmpeg")
 	if !hasYTDLP || !hasFFmpeg {
-		return fmt.Errorf("yt-dlp and FFmpeg are required for audio download")
+		return i18n.Errorf("yt-dlp and FFmpeg are required for audio download")
 	}
 	if !HasExtension(destination, ".m4a") {
-		return fmt.Errorf("choose an .m4a destination")
+		return i18n.Errorf("choose an .m4a destination")
 	}
 	dir, err := os.MkdirTemp("", "mousqueau-youtube-*")
 	if err != nil {
@@ -178,7 +178,7 @@ func DownloadAudio(ctx context.Context, raw, destination string) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return fmt.Errorf("audio download failed; check authorization, availability and yt-dlp version")
+		return i18n.Errorf("audio download failed; check authorization, availability and yt-dlp version")
 	}
 	data, err := os.ReadFile(filepath.Join(dir, "audio.m4a"))
 	if err != nil {

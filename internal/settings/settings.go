@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"mousqueau/internal/i18n"
 	"os"
 	"path/filepath"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 type Settings struct {
 	Theme           string    `json:"theme"`
+	Language        string    `json:"language"` // "system" or an i18n locale
 	OpenLastProject bool      `json:"openLastProject"`
 	LastProject     string    `json:"lastProject,omitempty"`
 	SetupDone       bool      `json:"setupDone"`
@@ -24,7 +26,7 @@ type Settings struct {
 }
 
 func Default() Settings {
-	return Settings{Theme: "system", OpenLastProject: true, AutoUpdate: true}
+	return Settings{Theme: "system", Language: i18n.System, OpenLastProject: true, AutoUpdate: true}
 }
 
 func ValidTheme(theme string) bool {
@@ -56,6 +58,9 @@ func Load(path string) (Settings, error) {
 	}
 	if !ValidTheme(result.Theme) {
 		result.Theme = "system"
+	}
+	if !i18n.ValidChoice(result.Language) {
+		result.Language = i18n.System
 	}
 	return result, nil
 }

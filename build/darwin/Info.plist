@@ -25,5 +25,12 @@
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
             <string>© 2026, Mousqueau contributors</string>
+        <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+        <key>CFBundleLocalizations</key>
+        <array>
+            <string>en</string>
+            <string>zh-Hans</string>
+        </array>
     </dict>
 </plist>

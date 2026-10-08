@@ -5,16 +5,21 @@ import {
   Input,
   Radio,
   Segmented,
+  Select,
   Steps,
   Tag,
 } from "antd";
 import * as Editor from "../bindings/mousqueau/editorservice";
-import type {
-  SettingsView,
-  ToolStatus,
-} from "../bindings/mousqueau/models";
+import type { SettingsView, ToolStatus } from "../bindings/mousqueau/models";
+import { LANGUAGE_NAMES, errorText, matchLocale, useT } from "./i18n";
 import { ICON_PATHS, PathIcon } from "./icons";
-import { THEME_OPTIONS, themeChoice, toolLabel } from "./preferences";
+import {
+  languageChoice,
+  languageOptions,
+  themeChoice,
+  themeOptions,
+  toolLabel,
+} from "./preferences";
 import { isMac, osName } from "./useSettings";
 
 type Props = {
@@ -25,11 +30,6 @@ type Props = {
 type Apply = (action: () => Promise<SettingsView>) => Promise<boolean>;
 type KeyChoice = "env" | "key" | "none";
 
-const FACTS = [
-  "文件保留在本机。",
-  "仅在你确认分析时，才上传选定的音频。",
-  "未配置 OpenAI 也能离线编辑。",
-];
 const LAST = 3;
 
 function ToolRow({
@@ -47,12 +47,13 @@ function ToolRow({
   tool: ToolStatus;
   apply: Apply;
 }) {
+  const t = useT();
   const choose = (
     <Button
       size="small"
       onClick={() => void apply(() => Editor.ChooseToolPath(name))}
     >
-      选择…
+      {t.common.choose}
     </Button>
   );
   return (
@@ -61,7 +62,7 @@ function ToolRow({
         <strong>{label}</strong>
         <span className="set-hint">{need}</span>
         <div className="spacer" />
-        <Tag color={tool.ready ? "green" : "orange"}>{toolLabel(tool)}</Tag>
+        <Tag color={tool.ready ? "green" : "orange"}>{toolLabel(tool, t)}</Tag>
       </div>
       {tool.ready ? (
         <div className="set-line">
@@ -73,12 +74,14 @@ function ToolRow({
           <span className="set-hint">
             {tool.custom ? (
               <>
-                在 <span className="mono ink">{tool.path}</span>{" "}
-                找不到可执行文件。
+                {t.welcome.notFoundAt[0]}{" "}
+                <span className="mono ink">{tool.path}</span>{" "}
+                {t.welcome.notFoundAt[1]}
               </>
             ) : (
               <>
-                {missing}可用 Homebrew 安装：
+                {missing}
+                {t.welcome.brewInstall}
                 <span className="mono ink">brew install {name}</span>
               </>
             )}
@@ -89,7 +92,7 @@ function ToolRow({
               size="small"
               onClick={() => void apply(() => Editor.SetToolPath(name, ""))}
             >
-              重新检测
+              {t.welcome.redetect}
             </Button>
           </div>
         </>
@@ -104,6 +107,7 @@ export default function WelcomeWindow({
   systemDark,
 }: Props) {
   const { message } = AntApp.useApp();
+  const t = useT();
   const [step, setStep] = useState(0);
   const [working, setWorking] = useState(false);
   const [apiKey, setApiKey] = useState("");
@@ -112,6 +116,8 @@ export default function WelcomeWindow({
     hasEnv ? "env" : settings.keychainAvailable ? "key" : "none",
   );
   const theme = themeChoice(settings.theme);
+  const language = languageChoice(settings.language);
+  const locale = matchLocale(settings.locale);
   const configured = settings.keySource !== "";
 
   const apply: Apply = async (action) => {
@@ -119,7 +125,7 @@ export default function WelcomeWindow({
       onChange(await action());
       return true;
     } catch (e) {
-      void message.error(String(e));
+      void message.error(errorText(e));
       return false;
     }
   };
@@ -132,33 +138,37 @@ export default function WelcomeWindow({
         if (!saved) return;
         setApiKey("");
       } else if (!settings.keyStored) {
-        void message.warning("请输入 API 密钥，或选择暂不配置。");
+        void message.warning(t.welcome.needKey);
         return;
       }
     }
     setStep(Math.min(LAST, step + 1));
   }
   const finish = (action: string) =>
-    void Editor.FinishSetup(action).catch((e) => message.error(String(e)));
+    void Editor.FinishSetup(action).catch((e) => message.error(errorText(e)));
 
   const summary = [
     {
-      label: "主题",
-      value: THEME_OPTIONS.find((o) => o.value === theme)!.label,
+      label: t.theme.label,
+      value: themeOptions(t).find((o) => o.value === theme)!.label,
+    },
+    {
+      label: t.language.label,
+      value: locale ? LANGUAGE_NAMES[locale] : "",
     },
     {
       label: "FFmpeg",
-      value: toolLabel(settings.ffmpeg),
+      value: toolLabel(settings.ffmpeg, t),
       color: settings.ffmpeg.ready ? "green" : "orange",
     },
     {
       label: "yt-dlp",
-      value: toolLabel(settings.ytdlp),
+      value: toolLabel(settings.ytdlp, t),
       color: settings.ytdlp.ready ? "green" : "orange",
     },
     {
       label: "OpenAI",
-      value: configured ? "已配置" : "未配置 · 可离线编辑",
+      value: configured ? t.common.configured : t.common.offlineOnly,
       color: configured ? "green" : "default",
     },
   ];
@@ -173,7 +183,7 @@ export default function WelcomeWindow({
           </div>
           <div>
             <strong>Mousqueau</strong>
-            <span>字幕校正 · 说话人辨识</span>
+            <span>{t.welcome.tagline}</span>
           </div>
         </div>
         <Steps
@@ -181,10 +191,10 @@ export default function WelcomeWindow({
           size="small"
           current={step}
           items={[
-            { title: "欢迎" },
-            { title: "外部工具" },
-            { title: "OpenAI", content: "可选" },
-            { title: "完成" },
+            { title: t.welcome.steps.welcome },
+            { title: t.welcome.steps.tools },
+            { title: "OpenAI", content: t.common.optional },
+            { title: t.welcome.steps.done },
           ]}
         />
       </aside>
@@ -193,13 +203,10 @@ export default function WelcomeWindow({
         <div className="welcome-body">
           {step === 0 && (
             <>
-              <h1>开始之前，先做几项设置</h1>
-              <p>
-                Mousqueau 对照音频校正现有的 SRT
-                字幕，并复核说话人。接下来会检查外部工具，并可选配置 OpenAI。
-              </p>
+              <h1>{t.welcome.title}</h1>
+              <p>{t.welcome.intro}</p>
               <div className="welcome-facts">
-                {FACTS.map((fact) => (
+                {t.welcome.facts.map((fact) => (
                   <div key={fact}>
                     <PathIcon d={ICON_PATHS.check} />
                     <span>{fact}</span>
@@ -208,16 +215,37 @@ export default function WelcomeWindow({
               </div>
               <div className="welcome-theme">
                 <div className="set-label">
-                  <strong>主题</strong>
+                  <strong>{t.language.label}</strong>
+                  <span className="set-hint">
+                    {language === "system" && locale
+                      ? t.language.current(LANGUAGE_NAMES[locale])
+                      : t.welcome.changeLater}
+                  </span>
+                </div>
+                <Select
+                  size="small"
+                  aria-label={t.language.label}
+                  value={language}
+                  options={languageOptions(t)}
+                  onChange={(v) => void apply(() => Editor.SetLanguage(v))}
+                  style={{ width: 128 }}
+                />
+              </div>
+              <div className="welcome-theme">
+                <div className="set-label">
+                  <strong>{t.theme.label}</strong>
                   <span className="set-hint">
                     {theme === "system"
-                      ? `跟随 ${osName} 的外观。当前：${systemDark ? "深色" : "浅色"}`
-                      : "之后可在设置中更改。"}
+                      ? t.welcome.themeFollows(
+                          osName(t),
+                          systemDark ? t.theme.dark : t.theme.light,
+                        )
+                      : t.welcome.changeLater}
                   </span>
                 </div>
                 <Segmented
                   size="small"
-                  options={THEME_OPTIONS}
+                  options={themeOptions(t)}
                   value={theme}
                   onChange={(v) => void apply(() => Editor.SetTheme(v))}
                 />
@@ -227,59 +255,54 @@ export default function WelcomeWindow({
 
           {step === 1 && (
             <>
-              <h1>检查外部工具</h1>
-              <p className="set-hint">
-                已在 PATH、Homebrew 与 /usr/local/bin 中查找。
-              </p>
+              <h1>{t.welcome.toolsTitle}</h1>
+              <p className="set-hint">{t.welcome.toolsSearched}</p>
               <div className="set-card flat">
                 <ToolRow
                   name="ffmpeg"
                   label="FFmpeg"
-                  need="必需"
-                  missing="读取媒体与分析音频需要。"
+                  need={t.common.required}
+                  missing={t.welcome.ffmpegMissing}
                   tool={settings.ffmpeg}
                   apply={apply}
                 />
                 <ToolRow
                   name="yt-dlp"
                   label="yt-dlp"
-                  need="可选"
-                  missing="仅 YouTube 导入需要。"
+                  need={t.common.optional}
+                  missing={t.welcome.ytdlpMissing}
                   tool={settings.ytdlp}
                   apply={apply}
                 />
               </div>
-              <p className="set-hint">之后可在 设置 › 外部工具 中更改位置。</p>
+              <p className="set-hint">{t.welcome.toolsLater}</p>
             </>
           )}
 
           {step === 2 && (
             <>
-              <h1>配置 OpenAI（可选）</h1>
-              <p>
-                用于音频转录建议与说话人分析。仅在你确认分析时，选定的音频会上传到
-                OpenAI。
-              </p>
+              <h1>{t.welcome.openaiTitle}</h1>
+              <p>{t.welcome.openaiIntro}</p>
               <Radio.Group
                 vertical
                 value={choice}
                 onChange={(e) => setChoice(e.target.value)}
                 options={[
                   {
-                    label: `使用环境变量 OPENAI_API_KEY（${hasEnv ? "已检测到" : "未检测到"}）`,
+                    label: t.welcome.useEnv(hasEnv),
                     value: "env",
                     disabled: !hasEnv,
                   },
                   {
-                    label: "输入 API 密钥",
+                    label: t.welcome.enterKey,
                     value: "key",
                     disabled: !settings.keychainAvailable,
                   },
                   {
                     // Skipping never removes a key that is already in place.
                     label: configured
-                      ? "保持现有配置，不做更改"
-                      : "暂不配置，仅离线编辑",
+                      ? t.welcome.keepCurrent
+                      : t.welcome.skipKey,
                     value: "none",
                   },
                 ]}
@@ -287,15 +310,13 @@ export default function WelcomeWindow({
               {choice === "key" && (
                 <>
                   <label className="field">
-                    API 密钥
+                    {t.settings.apiKey}
                     <Input.Password
                       size="small"
                       autoComplete="off"
                       disabled={working}
                       placeholder={
-                        settings.keyStored
-                          ? "已保存在钥匙串，留空则保持不变"
-                          : "sk-…"
+                        settings.keyStored ? t.welcome.keyKept : "sk-…"
                       }
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
@@ -303,8 +324,8 @@ export default function WelcomeWindow({
                     />
                   </label>
                   <span className="set-hint">
-                    密钥保存在 macOS 钥匙串，不写入项目文件。
-                    {hasEnv && "已设置的环境变量仍会优先使用。"}
+                    {t.welcome.keyStorage}
+                    {hasEnv && t.welcome.envStillWins}
                   </span>
                 </>
               )}
@@ -313,7 +334,7 @@ export default function WelcomeWindow({
 
           {step === LAST && (
             <>
-              <h1>设置完成</h1>
+              <h1>{t.welcome.doneTitle}</h1>
               <div className="set-card flat">
                 {summary.map((row) => (
                   <div key={row.label} className="set-row">
@@ -327,7 +348,7 @@ export default function WelcomeWindow({
                 ))}
               </div>
               <p className="set-hint">
-                这些设置之后都能在 设置（{isMac ? "⌘," : "Ctrl+,"}）中修改。
+                {t.welcome.changeAnytime(isMac ? "⌘," : "Ctrl+,")}
               </p>
             </>
           )}
@@ -336,13 +357,13 @@ export default function WelcomeWindow({
         <div className="welcome-foot">
           {step < LAST && (
             <Button type="text" size="small" onClick={() => setStep(LAST)}>
-              跳过设置
+              {t.welcome.skip}
             </Button>
           )}
           <div className="spacer" />
           {step > 0 && (
             <Button disabled={working} onClick={() => setStep(step - 1)}>
-              上一步
+              {t.welcome.previous}
             </Button>
           )}
           {step < LAST ? (
@@ -351,13 +372,15 @@ export default function WelcomeWindow({
               disabled={working}
               onClick={() => void next()}
             >
-              继续
+              {t.welcome.next}
             </Button>
           ) : (
             <>
-              <Button onClick={() => finish("demo")}>载入示例</Button>
+              <Button onClick={() => finish("demo")}>
+                {t.common.loadDemo}
+              </Button>
               <Button type="primary" onClick={() => finish("srt")}>
-                导入 SRT
+                {t.common.importSrt}
               </Button>
             </>
           )}

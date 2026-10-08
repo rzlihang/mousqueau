@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mousqueau/internal/i18n"
 	"mousqueau/internal/media"
 	"mousqueau/internal/project"
 	"mousqueau/internal/settings"
@@ -119,6 +120,36 @@ func TestSettingsPersistAndNeverExposeTheKey(t *testing.T) {
 	exposed, _ := json.Marshal(s.GetSettings())
 	if strings.Contains(string(data)+string(exposed), "secret") {
 		t.Fatal("API key leaked into settings")
+	}
+}
+
+func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
+	defer i18n.SetCurrent(i18n.Current())
+	path := filepath.Join(t.TempDir(), "settings.json")
+	s := &EditorService{settings: settings.Default(), settingsPath: path, languages: []string{"zh-Hans-CN", "en-US"}}
+	if _, err := s.SetLanguage("fr-FR"); err == nil {
+		t.Fatal("unsupported language accepted")
+	}
+	view, err := s.SetLanguage("system")
+	if err != nil || view.Language != "system" || view.Locale != "zh-CN" {
+		t.Fatalf("system: %+v %v", view, err)
+	}
+	if _, err := s.EditCue(subtitle.Cue{}); err == nil || err.Error() != "请先导入 SRT 字幕" {
+		t.Fatalf("error not in Chinese: %v", err)
+	}
+	if s.begin(i18n.N("Discovering YouTube subtitles…")); s.GetStatus().Phase != "正在查找 YouTube 字幕…" {
+		t.Fatalf("phase not in Chinese: %q", s.GetStatus().Phase)
+	}
+	s.finish()
+	view, err = s.SetLanguage("en-US")
+	if err != nil || view.Language != "en-US" || view.Locale != "en-US" {
+		t.Fatalf("English: %+v %v", view, err)
+	}
+	if _, err := s.EditCue(subtitle.Cue{}); err == nil || err.Error() != "import SRT subtitles first" {
+		t.Fatalf("error not in English: %v", err)
+	}
+	if saved, _ := settings.Load(path); saved.Language != "en-US" {
+		t.Fatalf("language not saved: %+v", saved)
 	}
 }
 

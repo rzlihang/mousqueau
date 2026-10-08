@@ -13,7 +13,7 @@ func TestDefaultsRoundTripAndDamagedFile(t *testing.T) {
 	if err != nil || loaded != Default() {
 		t.Fatalf("missing file: %+v %v", loaded, err)
 	}
-	want := Settings{Theme: "dark", LastProject: "/tmp/p.json", SetupDone: true, FFmpegPath: "/opt/ffmpeg", Beta: true, LastUpdateCheck: time.Date(2026, 10, 8, 9, 0, 0, 0, time.UTC)}
+	want := Settings{Theme: "dark", Language: "zh-CN", LastProject: "/tmp/p.json", SetupDone: true, FFmpegPath: "/opt/ffmpeg", Beta: true, LastUpdateCheck: time.Date(2026, 10, 8, 9, 0, 0, 0, time.UTC)}
 	if err := want.Save(path); err != nil {
 		t.Fatal(err)
 	}
@@ -30,9 +30,9 @@ func TestDefaultsRoundTripAndDamagedFile(t *testing.T) {
 		t.Fatalf("temporary files left: %v", leftovers)
 	}
 
-	os.WriteFile(path, []byte(`{"theme":"neon","autoUpdate":false}`), 0600)
+	os.WriteFile(path, []byte(`{"theme":"neon","language":"fr-FR","autoUpdate":false}`), 0600)
 	loaded, err = Load(path)
-	if err != nil || loaded.Theme != "system" || loaded.AutoUpdate || !loaded.OpenLastProject {
+	if err != nil || loaded.Theme != "system" || loaded.Language != "system" || loaded.AutoUpdate || !loaded.OpenLastProject {
 		t.Fatalf("partial file: %+v %v", loaded, err)
 	}
 	os.WriteFile(path, []byte(`{not json`), 0600)

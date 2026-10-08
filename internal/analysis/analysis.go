@@ -4,6 +4,7 @@ package analysis
 import (
 	"fmt"
 	"math"
+	"mousqueau/internal/i18n"
 	"mousqueau/internal/subtitle"
 	"sort"
 	"strings"
@@ -43,7 +44,7 @@ func Offset(segments []Segment, offset, duration float64) ([]Segment, error) {
 	for i := range result {
 		s := &result[i]
 		if math.IsNaN(s.Start) || math.IsNaN(s.End) || math.IsInf(s.Start, 0) || math.IsInf(s.End, 0) || s.Start < 0 || s.End <= s.Start || s.End > duration+1 {
-			return nil, fmt.Errorf("invalid diarization segment %d", i)
+			return nil, i18n.Errorf("invalid diarization segment %d", i)
 		}
 		s.Start += offset
 		s.End += offset

@@ -144,6 +144,13 @@ export function SetBeta(enabled: boolean): $CancellablePromise<$models.SettingsV
     return $Call.ByID(1197282714, enabled);
 }
 
+/**
+ * SetLanguage switches every window, the menu and Go's messages at once.
+ */
+export function SetLanguage(choice: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(316158850, choice);
+}
+
 export function SetOpenLastProject(enabled: boolean): $CancellablePromise<$models.SettingsView> {
     return $Call.ByID(2730099861, enabled);
 }

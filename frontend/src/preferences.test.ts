@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { messagesFor } from "./i18n";
 import {
   formatChecked,
+  languageChoice,
   matchSettings,
   resolveDark,
   themeChoice,
   toolLabel,
 } from "./preferences";
+
+const zh = messagesFor("zh-CN");
+const en = messagesFor("en-US");
 
 describe("preferences", () => {
   it("resolves the theme against the system appearance", () => {
@@ -16,16 +21,23 @@ describe("preferences", () => {
     expect(themeChoice("dark")).toBe("dark");
     expect(themeChoice("neon")).toBe("system");
     expect(themeChoice(null)).toBe("system");
+    expect(languageChoice("en-US")).toBe("en-US");
+    expect(languageChoice("zh-TW")).toBe("system");
   });
 
   it("distinguishes a wrong tool location from a missing tool", () => {
-    expect(toolLabel({ path: "/x", custom: false, ready: true })).toBe(
+    expect(toolLabel({ path: "/x", custom: false, ready: true }, zh)).toBe(
       "已就绪",
     );
-    expect(toolLabel({ path: "/x", custom: true, ready: false })).toBe(
+    expect(toolLabel({ path: "/x", custom: true, ready: false }, zh)).toBe(
       "位置无效",
     );
-    expect(toolLabel({ path: "", custom: false, ready: false })).toBe("未安装");
+    expect(toolLabel({ path: "", custom: false, ready: false }, zh)).toBe(
+      "未安装",
+    );
+    expect(toolLabel({ path: "/x", custom: true, ready: false }, en)).toBe(
+      "Invalid location",
+    );
   });
 
   it("filters settings rows and their sections by keyword", () => {
@@ -48,15 +60,23 @@ describe("preferences", () => {
     expect(tool.rows.ffmpeg).toBe(false);
     expect(tool.sections.tools).toBe(true);
 
+    // Either language finds the same rows.
+    expect(matchSettings("Keychain").rows).toEqual(key.rows);
+    expect(matchSettings("语言").rows.language).toBe(true);
+    expect(matchSettings("language").sections.general).toBe(true);
+
     expect(matchSettings("没有这个设置").any).toBe(false);
   });
 
   it("formats the last update check in local time", () => {
-    expect(formatChecked("")).toBe("尚未检查");
-    expect(formatChecked("not a date")).toBe("尚未检查");
+    expect(formatChecked("", zh)).toBe("尚未检查");
+    expect(formatChecked("not a date", en)).toBe("Never checked");
     const local = new Date(2026, 9, 8, 9, 5);
-    expect(formatChecked(local.toISOString())).toBe(
+    expect(formatChecked(local.toISOString(), zh)).toBe(
       "上次检查：2026-10-08 09:05",
+    );
+    expect(formatChecked(local.toISOString(), en)).toBe(
+      "Last checked: 2026-10-08 09:05",
     );
   });
 });

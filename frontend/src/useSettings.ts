@@ -3,8 +3,10 @@ import { Events } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { SettingsView } from "../bindings/mousqueau/models";
 
+import type { Messages } from "./i18n";
+
 export const isMac = /Mac/.test(navigator.userAgent);
-export const osName = isMac ? "macOS" : "系统";
+export const osName = (t: Messages) => (isMac ? "macOS" : t.common.system);
 
 // Settings live in Go; every window reloads them when any window changes one.
 export function useSettings(): [
