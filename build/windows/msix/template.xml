@@ -21,7 +21,7 @@
         PackageDescription="A Mousqueau application">
         <Capabilities>
             <Capability Name="runFullTrust" />
-            
+
         </Capabilities>
         <Applications>
             <Application
@@ -30,7 +30,7 @@
                 DisplayName="Mousqueau"
                 ExecutableName="mousqueau"
                 EntryPoint="Windows.FullTrustApplication">
-                
+
             </Application>
         </Applications>
         <Resources>

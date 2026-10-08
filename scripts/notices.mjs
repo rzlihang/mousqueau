@@ -73,5 +73,12 @@ for (const [id, cachedDirectory] of [...modules.entries()].sort(([a], [b]) =>
     ).Dir;
   append(name, version, dir);
 }
-writeFileSync("THIRD_PARTY_NOTICES.txt", chunks.join(""));
+writeFileSync(
+  "THIRD_PARTY_NOTICES.txt",
+  chunks
+    .join("")
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+$/gm, "")
+    .trimEnd() + "\n",
+);
 console.log("Wrote THIRD_PARTY_NOTICES.txt");
