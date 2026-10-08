@@ -1,0 +1,36 @@
+# Verification performed
+
+Verified on 2026-10-08 in a Linux cloud environment, using Go 1.27.1, Node 24.19.0, Wails v3.0.0-beta.28, and installed FFmpeg.
+
+| Check                                                        | Result                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `go test ./internal/...`                                     | PASS: SRT parsing/round-trip/identifiers/timestamps, invalid input, project edits and persistence, undo/redo, stale suggestions, speaker alignment, OpenAI multipart contract/cancellation/size limit, safe file writes, single-video URLs, real FFmpeg extraction and temporary cleanup |
+| `go test -race ./internal/...`                               | PASS                                                                                                                                                                                                                                                                                     |
+| `CGO_ENABLED=0 go test -tags server ./...`                   | PASS, including detached service snapshots, explicit upload authorization, busy/cancel state, selected-file media Range requests, and arbitrary-path rejection                                                                                                                           |
+| Official `wails3 generate bindings -ts -i -f '-tags=server'` | PASS: 1 service, 18 methods; checked-in generated TypeScript interfaces                                                                                                                                                                                                                  |
+| `npm run typecheck`                                          | PASS                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | PASS: 3 frontend helper tests (playback boundaries, Traditional Chinese diff, timestamp validation)                                                                                                                                                                                      |
+| `npm run build`                                              | PASS: Vite production build; advisory bundle-size warning remains for the Ant Design-based application                                                                                                                                                                                   |
+| `CGO_ENABLED=0 go build -tags server`                        | PASS                                                                                                                                                                                                                                                                                     |
+| Real Chromium + Wails headless smoke                         | PASS: demo, per-suggestion accept, undo, redo, manual text edit, speaker rename, dark theme, optional YouTube dialog; no browser runtime errors                                                                                                                                          |
+| Real FFmpeg extraction                                       | PASS: generated a 61-second synthetic source, extracted a selected 60-second AAC range, checked output/cleanup and cancellation                                                                                                                                                          |
+| Windows cross-compilation (`CGO_ENABLED=0 GOOS=windows go build`) | PASS: binary compiled on Linux; Windows GUI was not tested |
+| `go vet -tags server ./...` (CGO disabled) | PASS |
+| Native Linux desktop                                         | Not built: GTK4/WebKitGTK 6 development packages are absent                                                                                                                                                                                                                              |
+| Native macOS GUI                                             | Not tested: this is a Linux environment                                                                                                                                                                                                                                                  |
+| Live OpenAI / YouTube                                        | Not tested: no API credential and no allowed live API/video destinations                                                                                                                                                                                                                 |
+
+The initial headless HTTP test required permission to open local test ports in the sandbox; rerunning with local networking enabled passed. Browser smoke exercised the real Go service through generated Wails bindings, not a frontend-only mock. Native dialogs cannot be exercised in Wails server mode.
+
+## Mac acceptance checklist (still outstanding)
+
+1. Follow README setup on a real Mac. Confirm `wails3 dev` opens a desktop window and badges reflect `PATH`/key configuration.
+2. Import a known MP4 and UTF-8 SRT. Confirm visual playback, audio, seeking, scroll-follow, multiline text, and timestamp edits.
+3. Assign A/B/C and multiple speakers, undo/redo, save a new JSON file, reopen, and check speaker names/history/original cues.
+4. Export to a new SRT and parse/watch it in an external player. Attempt exporting over the source and verify refusal.
+5. With a configured key, select 60–300 seconds, approve upload, inspect diarized timestamps and proposals. Reject one, accept another, and verify undo. Test cancel during extraction and upload, missing FFmpeg/key, and an API rejection.
+6. With current yt-dlp/FFmpeg, discover a video with manual and automatic captions, prefer the manual track, and import it. Separately approve an authorized audio download and confirm it does not trigger an API upload. Reject playlist/channel URLs.
+7. Test unsupported media, moved media paths, unsaved field edits, theme switching, window resize/close, and the packaged `.app` launched from a configured shell.
+8. Build/package on macOS, check embedded license notices, and configure developer signing/notarization before a public release.
+
+CI includes a native macOS compilation job; its future result must be checked in GitHub and does not establish GUI testing.

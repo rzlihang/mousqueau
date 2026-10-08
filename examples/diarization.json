@@ -1,0 +1,9 @@
+{
+  "segments": [
+    {"id":"s1","speaker":"A","start":0.5,"end":3.5,"text":"我們今天要討論新的字幕編輯器。"},
+    {"id":"s2","speaker":"B","start":3.5,"end":7,"text":"可以先保留原本的字幕，再讓使用者確認修正。"},
+    {"id":"s3","speaker":"A","start":7,"end":8,"text":"對。"},
+    {"id":"s4","speaker":"C","start":7.8,"end":11,"text":"那說話人的標記呢？"},
+    {"id":"s5","speaker":"B","start":11,"end":15,"text":"如果同一句有兩個人，就應該標記需要檢查。"}
+  ]
+}
