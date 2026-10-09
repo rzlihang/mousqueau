@@ -69,6 +69,32 @@ A later review of this branch found four problems, since fixed with tests: a too
 
 Not verified: anything that needs native windows. Server mode has no windows, menus, or file dialogs, so the hidden editor during first launch, the welcome window's close behaviour, ⌘, and the 设置… menu item, fixed window sizes and disabled buttons, the "选择…" tool dialog, saving a real key from the app, opening the release page, and a live GitHub check are all untested.
 
+## Windows and Linux desktop support
+
+Verified on 2026-10-09 in a Linux cloud container (Ubuntu 24.04, amd64) with Go 1.25.0, Node 22.22.0, pnpm 12.10.1, Wails v3.0.0-beta.28, GTK 4.14 and WebKitGTK 2.52 installed from apt. Nothing here was run on macOS or Windows.
+
+| Check | Result |
+| ----- | ------ |
+| `go test ./...` with cgo, GTK4 and WebKitGTK present | PASS, including the root package natively for the first time; new: window URLs with and without `chrome=custom`, and the Linux key store against a fake `secret-tool` (missing item, store, replace, delete twice, key never in argv, failures reported as errors) |
+| `go test -race ./internal/...`, `CGO_ENABLED=0 go test -tags server ./...`, `CGO_ENABLED=0 go build -tags server` | PASS |
+| `pnpm run typecheck`, `pnpm test` (11 tests), `pnpm run build`; `node --test scripts/frontend-dependencies.test.mjs` | PASS |
+| `go build -tags production` native Linux binary | PASS |
+| `scripts/linux-gui-smoke.sh` under `xvfb-run` + openbox | PASS (three consecutive runs): welcome window alone on first launch → its drawn close button shows the editor → maximise sets `_NET_WM_STATE_MAXIMIZED_*` and restore clears it → double-clicking the title bar does the same (implemented in the frontend; the Wails runtime handles it only on macOS) → Ctrl+, opens settings → its close button closes it → the editor's close button quits the app. The same script run against a build of `main` fails at the first close button, as expected |
+| Manual xdotool checks in the same setup | PASS: dragging the title bar moves the window by exactly the pointer offset; dragging the bottom-right edge resizes it; dark theme and the demo render; the window edge is drawn. Pressing a resize edge used to start a text selection across the panes (the Wails runtime does not cancel that press); fixed and rechecked by screenshot |
+| Linux key store against a real GNOME Keyring (unlocked in a D-Bus session) | PASS: empty read, store, replace, read back, delete, delete again; with no D-Bus session every call returns an error rather than "no key" |
+| `GOOS=windows go build -tags production -ldflags "-H windowsgui"` (amd64 and arm64), `GOOS=windows go vet ./...`, `GOOS=windows go test -c` for every package | PASS: compiles only. The Credential Manager code, frameless WebView2 windows, and the Go tests on Windows are not run here; the new `windows-build` CI job runs `go test ./...` on a Windows runner |
+
+Not verified: Windows GUI at all; Linux under a real desktop session, Wayland, or HiDPI; media playback through GStreamer; native file dialogs (a GTK file chooser did open under Xvfb, but nothing was picked); saving a key from the Settings window on either platform.
+
+## Windows and Linux acceptance checklist (still outstanding)
+
+1. Windows 11: first launch shows only the welcome window, with a native shadow and rounded corners; its close button (red on hover) shows the editor. The editor's minimise, maximise/restore and close buttons work; double-clicking the toolbar's empty space maximises; edges resize; Snap layouts appear when dragging to a screen edge.
+2. Windows: save, replace and remove an API key in Settings; confirm it appears in Credential Manager as `Mousqueau/openai-api-key` and that analysis works when launched from the Start menu.
+3. Windows: `winget install Gyan.FFmpeg` and confirm FFmpeg is found after restarting the app; import an MP4 and confirm playback and the waveform.
+4. Linux (GNOME on Wayland and on X11, and KDE): the same window checks as item 1, plus the 1 px window edge in light and dark themes.
+5. Linux: save a key with GNOME Keyring or KWallet running and confirm it in Seahorse/KWalletManager; confirm Settings reports an error rather than success when no keyring is running.
+6. Both: import/export through native dialogs, unsaved edits on close, theme following the system appearance, and `wails3 package` output (NSIS/MSIX on Windows, AppImage/deb on Linux).
+
 ## Mac acceptance checklist (still outstanding)
 
 1. Follow README setup on a real Mac. Confirm `wails3 dev` opens a desktop window and badges reflect `PATH`/key configuration.

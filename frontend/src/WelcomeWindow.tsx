@@ -15,7 +15,16 @@ import type {
 } from "../bindings/mousqueau/models";
 import { ICON_PATHS, PathIcon } from "./icons";
 import { THEME_OPTIONS, themeChoice, toolLabel } from "./preferences";
-import { isMac, osName } from "./useSettings";
+import {
+  customChrome,
+  installCommand,
+  isMac,
+  keyStore,
+  keyStoreName,
+  osName,
+  toolSearch,
+} from "./useSettings";
+import WindowControls from "./WindowControls";
 
 type Props = {
   settings: SettingsView;
@@ -78,8 +87,8 @@ function ToolRow({
               </>
             ) : (
               <>
-                {missing}可用 Homebrew 安装：
-                <span className="mono ink">brew install {name}</span>
+                {missing}可用以下命令安装：
+                <span className="mono ink">{installCommand(name)}</span>
               </>
             )}
           </span>
@@ -164,7 +173,10 @@ export default function WelcomeWindow({
   ];
 
   return (
-    <div className={`panel-window welcome${isMac ? " mac" : ""}`}>
+    <div
+      className={`panel-window welcome${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
+    >
+      {customChrome && <WindowControls minimise={false} />}
       <aside className="welcome-side">
         <div className="panel-drag" />
         <div className="welcome-brand">
@@ -229,7 +241,7 @@ export default function WelcomeWindow({
             <>
               <h1>检查外部工具</h1>
               <p className="set-hint">
-                已在 PATH、Homebrew 与 /usr/local/bin 中查找。
+                已在 {toolSearch} 中查找。
               </p>
               <div className="set-card flat">
                 <ToolRow
@@ -294,7 +306,7 @@ export default function WelcomeWindow({
                       disabled={working}
                       placeholder={
                         settings.keyStored
-                          ? "已保存在钥匙串，留空则保持不变"
+                          ? `已保存在${keyStore}，留空则保持不变`
                           : "sk-…"
                       }
                       value={apiKey}
@@ -303,7 +315,7 @@ export default function WelcomeWindow({
                     />
                   </label>
                   <span className="set-hint">
-                    密钥保存在 macOS 钥匙串，不写入项目文件。
+                    密钥保存在{keyStoreName}，不写入项目文件。
                     {hasEnv && "已设置的环境变量仍会优先使用。"}
                   </span>
                 </>

@@ -25,7 +25,15 @@ import {
   themeChoice,
   toolLabel,
 } from "./preferences";
-import { isMac, osName } from "./useSettings";
+import {
+  customChrome,
+  isMac,
+  keyStore,
+  keyStoreName,
+  osName,
+  toolSearch,
+} from "./useSettings";
+import WindowControls from "./WindowControls";
 
 type Props = {
   settings: SettingsView;
@@ -141,7 +149,7 @@ export default function SettingsWindow({
     setSaving(true);
     if (await apply(() => Editor.SaveAPIKey(apiKey))) {
       setApiKey("");
-      void message.success("API 密钥已保存到钥匙串。");
+      void message.success(`API 密钥已保存到${keyStore}。`);
     }
     setSaving(false);
   }
@@ -152,7 +160,9 @@ export default function SettingsWindow({
   }
 
   return (
-    <div className={`panel-window settings${isMac ? " mac" : ""}`}>
+    <div
+      className={`panel-window settings${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
+    >
       <nav className="set-side" aria-label="设置目录">
         <div className="panel-drag" />
         <Input
@@ -186,6 +196,7 @@ export default function SettingsWindow({
       <main className="set-main">
         <div className="set-head">
           <h1>设置</h1>
+          {customChrome && <WindowControls />}
         </div>
         <div className="set-scroll" ref={scroller} onScroll={onScroll}>
           {!any && (
@@ -255,7 +266,7 @@ export default function SettingsWindow({
                   name="ffmpeg"
                   label="FFmpeg"
                   need="必需"
-                  hint="用于读取媒体与截取分析音频。留空时在 PATH 与 Homebrew 中查找。"
+                  hint={`用于读取媒体与截取分析音频。留空时在 ${toolSearch} 中查找。`}
                   tool={settings.ffmpeg}
                   apply={apply}
                 />
@@ -313,7 +324,7 @@ export default function SettingsWindow({
                           环境变量 <span className="mono">OPENAI_API_KEY</span>
                         </>
                       ) : settings.keySource === "keychain" ? (
-                        "macOS 钥匙串"
+                        keyStoreName
                       ) : (
                         "未配置 · 可离线编辑"
                       )}
@@ -341,7 +352,7 @@ export default function SettingsWindow({
                           }
                           onClick={() => void saveKey()}
                         >
-                          保存到钥匙串
+                          保存到{keyStore}
                         </Button>
                       </div>
                     </label>
@@ -363,7 +374,7 @@ export default function SettingsWindow({
                   <div className="set-row">
                     <span className="set-hint">移除后仍可离线编辑。</span>
                     <Popconfirm
-                      title="从钥匙串移除 API 密钥？"
+                      title={`从${keyStore}移除 API 密钥？`}
                       okText="移除"
                       cancelText="取消"
                       onConfirm={() => void apply(Editor.RemoveAPIKey)}
