@@ -65,6 +65,9 @@ jobs:
         working-directory: frontend
       - run: go test ./...
       - run: go build -tags production -o /tmp/mousqueau .
+      # WebKitGTK sandboxes its web processes with bubblewrap, which the
+      # runner's AppArmor policy forbids from creating user namespaces.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: xvfb-run -a -s "-screen 0 1700x1050x24" dbus-run-session -- scripts/linux-gui-smoke.sh /tmp/mousqueau linux-gui
       - uses: actions/upload-artifact@v4
         if: always()

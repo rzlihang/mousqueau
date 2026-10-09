@@ -38,7 +38,7 @@ FFmpeg and yt-dlp are looked up on that process's `PATH`, then (outside Windows)
 The same Go, Node and pnpm versions apply, plus `wails3` as above. See the [Wails setup guide](https://v3.wails.io/getting-started/installation/) for the native toolchain.
 
 - **Windows**: the WebView2 runtime (preinstalled on Windows 10/11). FFmpeg and yt-dlp can be installed with `winget install Gyan.FFmpeg` and `winget install yt-dlp.yt-dlp`.
-- **Linux**: GTK4 and WebKitGTK 6 development packages, plus GStreamer plugins for media playback. On Ubuntu 24.04: `sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev gstreamer1.0-plugins-good gstreamer1.0-libav ffmpeg libsecret-tools`. Install yt-dlp from its own releases or `pipx install yt-dlp`, since distribution packages lag behind YouTube changes.
+- **Linux**: GTK4 and WebKitGTK 6 development packages, plus GStreamer plugins for media playback. On Ubuntu 24.04: `sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev gstreamer1.0-plugins-good gstreamer1.0-libav ffmpeg libsecret-tools`. Install yt-dlp from its own releases or `pipx install yt-dlp`, since distribution packages lag behind YouTube changes. WebKitGTK runs its web content in a bubblewrap sandbox; where the system forbids unprivileged user namespaces (as GitHub's Ubuntu 24.04 runners do through AppArmor), the app exits at launch with `bwrap: setting up uid map: Permission denied` in its output.
 
 On both, the windows have no native frame: the toolbar is the title bar (drag it to move the window, double-click to maximise) and the minimise, maximise and close buttons sit at its right, where macOS keeps its traffic lights on the left. Frameless windows resize from their edges. Settings open with Ctrl+, since there is no application menu.
 

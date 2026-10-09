@@ -84,6 +84,8 @@ Verified on 2026-10-09 in a Linux cloud container (Ubuntu 24.04, amd64) with Go 
 | Linux key store against a real GNOME Keyring (unlocked in a D-Bus session) | PASS: empty read, store, replace, read back, delete, delete again; with no D-Bus session every call returns an error rather than "no key" |
 | `GOOS=windows go build -tags production -ldflags "-H windowsgui"` (amd64 and arm64), `GOOS=windows go vet ./...`, `GOOS=windows go test -c` for every package | PASS: compiles only. The Credential Manager code, frameless WebView2 windows, and the Go tests on Windows are not run here; the new `windows-build` CI job runs `go test ./...` on a Windows runner |
 
+First CI run (2026-10-09): `windows-build` failed in an existing settings test that asserted Unix permission bits (now checked outside Windows only), and `linux-desktop` failed because the app died at launch. That was reproduced here by making `bwrap` fail as on GitHub's AppArmor-restricted runners; the workflow now lifts that restriction, and the smoke script stops as soon as the app exits and prints the start and end of its log.
+
 Not verified: Windows GUI at all; Linux under a real desktop session, Wayland, or HiDPI; media playback through GStreamer; native file dialogs (a GTK file chooser did open under Xvfb, but nothing was picked); saving a key from the Settings window on either platform.
 
 ## Windows and Linux acceptance checklist (still outstanding)

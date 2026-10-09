@@ -27,13 +27,17 @@ WM=$!
 APP=$!
 cleanup() {
 	kill "$APP" "$WM" 2>/dev/null || true
-	[ -n "$SHOTS" ] || cat "$HOME/app.log"
 }
 trap cleanup EXIT
 
 fail() {
 	echo "FAIL: $*" >&2
 	shot "failure"
+	# A crash puts its cause first and a goroutine dump after it.
+	echo "--- application log (first and last 30 lines) ---" >&2
+	head -n 30 "${SHOTS:-$HOME}/app.log" >&2 || true
+	echo "..." >&2
+	tail -n 30 "${SHOTS:-$HOME}/app.log" >&2 || true
 	exit 1
 }
 shot() {
@@ -57,12 +61,14 @@ window() {
 	done
 	return 0
 }
-# wait_for <seconds> <command…> polls until the command succeeds.
+# wait_for <seconds> <command…> polls until the command succeeds, and stops
+# early when the application has died (unless that is what it waits for).
 wait_for() {
 	local deadline=$((SECONDS + $1))
 	shift
 	until "$@"; do
 		[ $SECONDS -lt $deadline ] || return 1
+		[ "$1" = exited ] || kill -0 "$APP" 2>/dev/null || fail "the application exited"
 		sleep 0.5
 	done
 }
@@ -80,6 +86,7 @@ click() {
 wait_for 60 shown panel || fail "welcome window did not open"
 sleep 2 # let the page render
 WELCOME=$(window panel)
+[ -n "$WELCOME" ] || fail "welcome window disappeared"
 shot "1-welcome"
 hidden editor || fail "editor shown before setup finished"
 
