@@ -4,6 +4,7 @@ import type {
   Suggestion,
 } from "../bindings/mousqueau/internal/analysis/models";
 import { changedText } from "./editor";
+import { useT } from "./i18n";
 
 type Props = {
   suggestion: Suggestion;
@@ -16,7 +17,9 @@ type Props = {
 };
 
 export function SpeakerTag({ speaker }: { speaker?: Speaker }) {
-  if (!speaker) return <Tag className="speaker-tag">Unknown</Tag>;
+  const t = useT();
+  if (!speaker)
+    return <Tag className="speaker-tag">{t.common.unknownSpeaker}</Tag>;
   return (
     <Tag className="speaker-tag" color={speaker.color || "default"}>
       {speaker.name || speaker.id}
@@ -55,25 +58,26 @@ export default function SuggestionCard({
   onDecide,
   onLocate,
 }: Props) {
+  const t = useT();
   const locked = busy || s.status !== "pending" || draftDirty;
   const diff = changedText(s.original, s.proposed);
   return (
     <article className={`suggestion ${s.status}`}>
       <div className="section-heading">
-        <strong>字幕 #{cueIdentifier}</strong>
+        <strong>{t.suggestion.cue(cueIdentifier ?? "")}</strong>
         <Tag color={s.review ? "orange" : "blue"}>
           {s.status !== "pending"
             ? s.status === "accepted"
-              ? "已接受"
-              : "已拒绝"
+              ? t.suggestion.accepted
+              : t.suggestion.rejected
             : s.review
-              ? "需人工复核"
-              : "待确认"}
+              ? t.common.pendingReview
+              : t.common.pendingDecision}
         </Tag>
       </div>
       <div className="comparison">
         <div>
-          <label>分析时原文</label>
+          <label>{t.suggestion.original}</label>
           <p>
             {diff
               .filter((d) => !d.added)
@@ -85,7 +89,7 @@ export default function SuggestionCard({
           </p>
         </div>
         <div>
-          <label>音频转录建议</label>
+          <label>{t.suggestion.proposed}</label>
           <p>
             {diff
               .filter((d) => !d.removed)
@@ -103,9 +107,7 @@ export default function SuggestionCard({
         </div>
       )}
       <p className="muted">
-        {s.review
-          ? "多人、重叠或跨句／范围边界：请对照音频确认文字与时间。"
-          : "以音频转录为依据，请确认忠实度与繁体用字。"}
+        {s.review ? t.suggestion.reviewHint : t.suggestion.plainHint}
       </p>
       <Space wrap>
         <Button
@@ -114,18 +116,18 @@ export default function SuggestionCard({
           type="primary"
           onClick={() => onDecide("accepted")}
         >
-          {s.review ? "确认后接受" : "接受"}
+          {s.review ? t.suggestion.acceptReviewed : t.suggestion.accept}
         </Button>
         <Button
           size="small"
           disabled={locked}
           onClick={() => onDecide("rejected")}
         >
-          拒绝
+          {t.suggestion.reject}
         </Button>
         {onLocate && (
           <Button size="small" disabled={busy} onClick={onLocate}>
-            定位字幕
+            {t.suggestion.locate}
           </Button>
         )}
       </Space>

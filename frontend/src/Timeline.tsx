@@ -13,6 +13,7 @@ import type {
 } from "../bindings/mousqueau/internal/analysis/models";
 import type { Cue } from "../bindings/mousqueau/internal/subtitle/models";
 import { formatTime } from "./editor";
+import { useT } from "./i18n";
 import {
   cueStatus,
   formatSeconds,
@@ -75,6 +76,7 @@ export default function Timeline(props: Props) {
     dark,
     busy,
   } = props;
+  const t = useT();
   const scroller = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -223,20 +225,20 @@ export default function Timeline(props: Props) {
   const w = (c: Cue) => Math.max(2, Math.round((c.end - c.start) * pps) - 2);
 
   return (
-    <section className="timeline" aria-label="时间轴">
+    <section className="timeline" aria-label={t.timeline.label}>
       <div className="timeline-toolbar">
-        <h2>时间轴</h2>
+        <h2>{t.timeline.label}</h2>
         <span className="mono muted">
-          显示 {formatTime(viewStart)} —{" "}
+          {t.timeline.showing} {formatTime(viewStart)} —{" "}
           {formatTime(Math.min(viewEnd, duration))}
         </span>
         <div className="zoom">
-          <span className="muted">缩放</span>
+          <span className="muted">{t.timeline.zoom}</span>
           <Slider
             value={zoom}
             onChange={changeZoom}
             tooltip={{ open: false }}
-            aria-label="时间轴缩放"
+            aria-label={t.timeline.zoomLabel}
           />
         </div>
         <div className="spacer" />
@@ -245,10 +247,10 @@ export default function Timeline(props: Props) {
       <div className="timeline-body">
         <div className="track-heads" aria-hidden="true">
           <div style={{ height: RULER }} />
-          <div className="track-audio">音频</div>
-          <div className="track-cues">字幕</div>
-          <div className="track-speakers">说话人</div>
-          <div className="track-markers">校正建议</div>
+          <div className="track-audio">{t.timeline.audio}</div>
+          <div className="track-cues">{t.timeline.cues}</div>
+          <div className="track-speakers">{t.timeline.speakers}</div>
+          <div className="track-markers">{t.timeline.suggestions}</div>
         </div>
         <div
           className="track-scroll"
@@ -271,7 +273,7 @@ export default function Timeline(props: Props) {
             )}
             <div
               className="ruler"
-              title="点击定位播放头；拖动选取分析范围"
+              title={t.timeline.rulerHint}
               onPointerDown={rulerDown}
               onPointerMove={rulerMove}
               onPointerUp={rulerUp}
@@ -326,7 +328,7 @@ export default function Timeline(props: Props) {
                   disabled={busy}
                   className={`block${c.id === selectedId ? " selected" : ""}${c.id === activeId ? " playing" : ""}`}
                   style={{ left: x(c.start) + 1, width: w(c) }}
-                  aria-label={`选择第 ${c.identifier} 句`}
+                  aria-label={t.timeline.selectCue(c.identifier)}
                   onClick={() => props.onSelectCue(c)}
                 >
                   <span className="block-id">#{c.identifier}</span>
@@ -352,7 +354,7 @@ export default function Timeline(props: Props) {
                         height: 26,
                       }}
                     >
-                      Unknown
+                      {t.common.unknownSpeaker}
                     </div>
                   );
                 const each = Math.floor(
@@ -390,11 +392,13 @@ export default function Timeline(props: Props) {
                     className="marker"
                     disabled={busy}
                     style={{ left: x(c.start) + 1 }}
-                    aria-label={`选择第 ${c.identifier} 句`}
+                    aria-label={t.timeline.selectCue(c.identifier)}
                     onClick={() => props.onSelectCue(c)}
                   >
                     <Tag color={status === "review" ? "orange" : "blue"}>
-                      {status === "review" ? "需人工复核" : "待确认"}
+                      {status === "review"
+                        ? t.common.pendingReview
+                        : t.common.pendingDecision}
                     </Tag>
                   </button>
                 );

@@ -5,8 +5,8 @@ package update
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
+	"mousqueau/internal/i18n"
 	"net/http"
 	"strconv"
 	"strings"
@@ -42,14 +42,14 @@ func Latest(ctx context.Context, client *http.Client, endpoint string, beta bool
 		if ctx.Err() != nil {
 			return Release{}, ctx.Err()
 		}
-		return Release{}, fmt.Errorf("cannot reach GitHub; check your connection")
+		return Release{}, i18n.Errorf("cannot reach GitHub; check your connection")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
 		return Release{}, nil
 	}
 	if resp.StatusCode != http.StatusOK {
-		return Release{}, fmt.Errorf("GitHub did not return release information (HTTP %d)", resp.StatusCode)
+		return Release{}, i18n.Errorf("GitHub did not return release information (HTTP %d)", resp.StatusCode)
 	}
 	var releases []struct {
 		Tag        string `json:"tag_name"`
@@ -58,7 +58,7 @@ func Latest(ctx context.Context, client *http.Client, endpoint string, beta bool
 		Prerelease bool   `json:"prerelease"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 4_000_000)).Decode(&releases); err != nil {
-		return Release{}, fmt.Errorf("invalid release information from GitHub")
+		return Release{}, i18n.Errorf("invalid release information from GitHub")
 	}
 	var best Release
 	for _, r := range releases {

@@ -1195,3 +1195,18 @@ h3 {
   pointer-events: none;
   z-index: 2000;
 }
+
+/* Subtitle text follows Settings › Subtitle font; --subtitle-font is set on
+   the root element of every window. */
+.row-text,
+.subtitle-overlay,
+.block-text,
+.comparison p,
+textarea.subtitle-text,
+.font-preview {
+  font-family: var(--subtitle-font, inherit);
+}
+.font-preview {
+  font-size: 15px;
+  color: var(--ink, inherit);
+}

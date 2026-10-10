@@ -69,6 +69,30 @@ A later review of this branch found four problems, since fixed with tests: a too
 
 Not verified: anything that needs native windows. Server mode has no windows, menus, or file dialogs, so the hidden editor during first launch, the welcome window's close behaviour, ⌘, and the 设置… menu item, fixed window sizes and disabled buttons, the "选择…" tool dialog, saving a real key from the app, opening the release page, and a live GitHub check are all untested.
 
+## Interface language (Simplified Chinese / US English)
+
+Verified on 2026-10-08 in a Linux cloud environment with Go 1.25.0, Node 22.22.0, pnpm 12.10.1 and Wails v3.0.0-beta.28; nothing here ran on a Mac.
+
+- `go test -race ./internal/...`, `CGO_ENABLED=0 go test -tags server ./...`, `CGO_ENABLED=0 go vet -tags server ./...`, `GOOS=darwin go vet ./internal/...` and `CGO_ENABLED=0 GOOS=windows go build -tags server` passed. New coverage: locale resolution (system list, explicit choice, Chinese variants, unsupported languages), `AppleLanguages` and POSIX locale parsing, errors that follow the current language and still wrap with `%w`, a source scan that requires a Chinese entry with matching verbs for every translatable Go string, settings validation, and at the service level `SetLanguage` changing the locale, an error, a progress message and the saved setting.
+- Bindings regenerated with `wails3 generate bindings -ts -i -f '-tags=server'`: 1 service, 35 methods (adds `SetLanguage`).
+- `pnpm run typecheck`, `pnpm test` (15 tests, including identical dictionary shapes and no Chinese left in English) and `pnpm run build` passed.
+- Headless Chromium against the real Go service in server mode, with isolated configuration directories: with `LANG=en_US.UTF-8` the editor, settings and welcome windows rendered in English and `<html lang>` was `en-US`; with `LANG=zh_CN.UTF-8` they rendered in Chinese with the existing wording. Choosing 简体中文 in the English settings window switched that window and the already open editor without reloading, and saved `"language": "zh-CN"`. Searching "keychain" in the Chinese settings found the provider section. At 1100×720 neither language overflows the toolbar or timeline toolbar. No console errors.
+
+Not verified: everything native. The translated menu bar and its rebuild on a language change, window titles, file dialog titles, `defaults read` against a real macOS language list, the per-application language from System Settings, and whether `CFBundleLocalizations` makes AppKit's own items (Start Dictation, Emoji & Symbols, the Services list, the About panel) follow the system language all need a Mac. The darwin build of the root package needs cgo and was not compiled here.
+
+## Traditional Chinese, mainland wording, subtitle font, no Help menu
+
+Verified on 2026-10-08 in a Linux cloud environment with Go 1.25.0, Node 22.22.0, pnpm 12.10.1 and Wails v3.0.0-beta.28; nothing here ran on a Mac.
+
+- `go test ./internal/...`, `CGO_ENABLED=0 go test -tags server ./...` and `CGO_ENABLED=0 go vet -tags server ./...` passed. New coverage: Traditional/Simplified selection from script and region (`zh-Hant-HK`, `zh-Hans-TW`, `zh_TW`, `zh-SG`, bare `zh`), both catalogs complete with matching verbs, font name validation (CJK names accepted; quotes, backslashes, semicolons, braces, angle brackets, control characters and names over 100 characters refused) and its fallback when loading settings, and at the service level a Traditional Chinese error after choosing the system language on a `zh-Hant-TW` system plus saving, refusing and clearing the subtitle font.
+- Bindings regenerated: 1 service, 36 methods (adds `SetSubtitleFont`).
+- `pnpm run typecheck`, `pnpm test` (17 tests: identical shapes for all three dictionaries, no Taiwan terms such as 本机/开启/载入/套用 in zh-CN, no Simplified-only characters in zh-TW, font stacks, trilingual settings search) and `pnpm run build` passed.
+- Headless Chromium against the real Go service in server mode: with `LANG=zh_TW.UTF-8` the editor and settings rendered in Traditional Chinese with `<html lang="zh-TW">`; with `LANG=zh_CN.UTF-8` the toolbar reads 导入媒体 / 导入 SRT / YouTube 导入 / 加载示例 / 打开项目 / 保存项目 / 导出 SRT. Choosing Songti TC and then typing "My Font" in the settings window changed the cue list font in the open editor without reloading and was saved; `Bad"; x` was refused with the Traditional Chinese error and the field reverted.
+
+After merging the Windows and Linux desktop work (2026-10-10), its new text was brought into the three languages: the key store names (keychain, Credential Manager, keyring), the tool search paths, the frameless window controls, and the Linux and Windows key store errors. `go test ./internal/...`, `CGO_ENABLED=0 go test -tags server ./...`, `GOOS=windows go vet` / `go test -c`, `pnpm test` (17 tests), `pnpm run build` and `node --test scripts/frontend-dependencies.test.mjs` passed; in headless Chromium with `?chrome=custom` the window controls read 縮到最小 / 放到最大 / 關閉 and Minimize / Maximize / Close, and the tool hints name the Linux search path. The native Windows and Linux windows were not run after the merge; CI's `linux-desktop` and `windows-build` jobs cover them.
+
+Not verified: the menu without Help, the zh-Hant AppKit items and the fonts themselves need a Mac; the Linux browser here has none of the macOS Chinese fonts, so the font change was checked through the computed style only.
+
 ## Windows and Linux desktop support
 
 Verified on 2026-10-09 in a Linux cloud container (Ubuntu 24.04, amd64) with Go 1.25.0, Node 22.22.0, pnpm 12.10.1, Wails v3.0.0-beta.28, GTK 4.14 and WebKitGTK 2.52 installed from apt. Nothing here was run on macOS or Windows.
@@ -110,7 +134,9 @@ Not verified: Windows GUI at all; Linux under a real desktop session, Wayland, o
 9. Build/package on macOS, check embedded license notices, and configure developer signing/notarization before a public release.
 
 CI includes a native macOS compilation job; its future result must be checked in GitHub and does not establish GUI testing.
-10. First launch with no `settings.json`: only the welcome window appears; finishing or closing it shows the editor, and "载入示例" / "导入 SRT" run there. Relaunch opens the editor directly, with the last saved or opened project when that preference is on.
+10. First launch with no `settings.json`: only the welcome window appears; finishing or closing it shows the editor, and "加载示例" / "导入 SRT" run there. Relaunch opens the editor directly, with the last saved or opened project when that preference is on.
 11. ⌘, and Mousqueau › 设置… open one settings window; closing the editor closes it too and the app quits. Theme changes apply to every open window at once, and "跟随系统" follows a macOS appearance switch.
 12. Save, replace and remove an API key in Settings; confirm it appears in Keychain Access under "Mousqueau", that analysis works when launched from Finder, and that `OPENAI_API_KEY` still takes precedence. Pin FFmpeg to a wrong location and confirm "位置无效", then "自动检测".
 13. "检查更新" against the real repository, with and without 接收测试版.
+14. With macOS set to English, launch and confirm the menu bar (Mousqueau, File, Edit, View, Window and their items, including Settings…; there is no Help menu), the editor, file dialogs and an error message are all English. Switch macOS to 简体中文, relaunch, and confirm the same in Simplified Chinese with mainland wording; then to 繁體中文（台灣）and confirm Traditional Chinese with Taiwan wording, including AppKit's Start Dictation / Emoji & Symbols items. Then set Settings › General › Language to the other language and confirm the menu bar, the settings and welcome window titles and every open window change at once, and that the choice survives a relaunch. Set a per-application language for Mousqueau in System Settings and confirm "跟随系统" follows it.
+15. In Settings › General, choose PingFang TC, Songti TC and Kaiti TC as the subtitle font and confirm the cue list, viewer overlay, timeline blocks, text field and suggestion texts change in every open window, that a family that is not installed falls back to the interface font, that the choice survives a relaunch, and that an exported SRT is byte-identical whatever the font.

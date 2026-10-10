@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
+	"mousqueau/internal/i18n"
 	"os/exec"
 	"strings"
 )
@@ -25,7 +25,7 @@ func Available() bool { _, ok := tool(); return ok }
 func run(ctx context.Context, stdin string, args ...string) (string, bool, error) {
 	path, ok := tool()
 	if !ok {
-		return "", false, fmt.Errorf("secret-tool is not installed")
+		return "", false, i18n.Errorf("secret-tool is not installed")
 	}
 	cmd := exec.CommandContext(ctx, path, append(args, attributes...)...)
 	var stdout, stderr bytes.Buffer
@@ -45,7 +45,7 @@ func run(ctx context.Context, stdin string, args ...string) (string, bool, error
 func Get(ctx context.Context) (string, error) {
 	out, _, err := run(ctx, "", "lookup")
 	if err != nil {
-		return "", fmt.Errorf("cannot read the system keyring")
+		return "", i18n.Errorf("cannot read the system keyring")
 	}
 	return strings.TrimRight(out, "\r\n"), nil
 }
@@ -57,17 +57,17 @@ func Set(ctx context.Context, key string) error {
 		return err
 	}
 	if _, stored, err := run(ctx, key, "store", "--label=Mousqueau OpenAI API key"); err != nil || !stored {
-		return fmt.Errorf("cannot save to the system keyring")
+		return i18n.Errorf("cannot save to the system keyring")
 	}
 	if stored, err := Get(ctx); err != nil || stored != key {
-		return fmt.Errorf("cannot save to the system keyring")
+		return i18n.Errorf("cannot save to the system keyring")
 	}
 	return nil
 }
 
 func Delete(ctx context.Context) error {
 	if _, _, err := run(ctx, "", "clear"); err != nil {
-		return fmt.Errorf("cannot remove the key from the system keyring")
+		return i18n.Errorf("cannot remove the key from the system keyring")
 	}
 	return nil
 }

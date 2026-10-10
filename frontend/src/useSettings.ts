@@ -2,24 +2,19 @@ import { useEffect, useState } from "react";
 import { Events } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { SettingsView } from "../bindings/mousqueau/models";
+import type { Messages } from "./i18n";
 
 export const isMac = /Mac/.test(navigator.userAgent);
 export const isWindows = /Windows/.test(navigator.userAgent);
 export const osName = isMac ? "macOS" : isWindows ? "Windows" : "Linux";
-// Where Go keeps the API key: the short name for buttons, the full one for hints.
-export const keyStore = isMac ? "钥匙串" : isWindows ? "凭据管理器" : "密钥环";
-export const keyStoreName = isMac
-  ? "macOS 钥匙串"
-  : isWindows
-    ? "Windows 凭据管理器"
-    : "系统密钥环";
+const platform = isMac ? "mac" : isWindows ? "windows" : "linux";
+// Where Go keeps the API key: the short name for buttons and sentences, the
+// full one where it stands alone.
+export const keyStore = (t: Messages) => t.platform.keyStore[platform];
+export const keyStoreName = (t: Messages) => t.platform.keyStoreName[platform];
 // Where Go looks for FFmpeg and yt-dlp when no location is set, and how to
 // install them.
-export const toolSearch = isMac
-  ? "PATH、Homebrew 与 /usr/local/bin"
-  : isWindows
-    ? "PATH"
-    : "PATH 与 /usr/local/bin";
+export const toolSearch = (t: Messages) => t.platform.toolSearch[platform];
 export function installCommand(name: string): string {
   if (isMac) return `brew install ${name}`;
   if (isWindows)

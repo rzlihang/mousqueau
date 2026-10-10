@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"mousqueau/internal/i18n"
 	"mousqueau/internal/keychain"
 	"mousqueau/internal/media"
 	"mousqueau/internal/project"
@@ -20,6 +20,9 @@ import (
 
 // Overridden at release time with -ldflags "-X main.version=…".
 var version = "0.1.0"
+
+// Matches CFBundleIdentifier, where macOS keeps a per-application language.
+const appID = "com.rzlihang.mousqueau"
 
 const (
 	mainWindow     = "main"
@@ -58,6 +61,9 @@ type ToolStatus struct {
 // contains the API key, only where one comes from.
 type SettingsView struct {
 	Theme             string     `json:"theme"`
+	Language          string     `json:"language"` // "system", "zh-CN", "zh-TW" or "en-US"
+	Locale            string     `json:"locale"`   // the language in use
+	SubtitleFont      string     `json:"subtitleFont"`
 	OpenLastProject   bool       `json:"openLastProject"`
 	SetupDone         bool       `json:"setupDone"`
 	FFmpeg            ToolStatus `json:"ffmpeg"`
@@ -111,7 +117,7 @@ func (s *EditorService) apiKey() string { s.mu.Lock(); defer s.mu.Unlock(); retu
 
 func (s *EditorService) settingsView() SettingsView {
 	view := SettingsView{
-		Theme: s.settings.Theme, OpenLastProject: s.settings.OpenLastProject, SetupDone: s.settings.SetupDone,
+		Theme: s.settings.Theme, Language: s.settings.Language, Locale: string(i18n.Current()), SubtitleFont: s.settings.SubtitleFont, OpenLastProject: s.settings.OpenLastProject, SetupDone: s.settings.SetupDone,
 		FFmpeg: toolStatus("ffmpeg", s.settings.FFmpegPath), YTDLP: toolStatus("yt-dlp", s.settings.YTDLPPath),
 		KeyStored: s.storedKey != "", KeychainAvailable: s.keyStore().Available(),
 		AutoUpdate: s.settings.AutoUpdate, Beta: s.settings.Beta,
@@ -141,6 +147,9 @@ func (s *EditorService) loadSettings() {
 	media.SetToolPath("yt-dlp", s.settings.YTDLPPath)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	// Read once: like other Mac apps, a new system language applies on relaunch.
+	s.languages = i18n.SystemLanguages(ctx, appID)
+	i18n.SetCurrent(i18n.Resolve(s.settings.Language, s.languages))
 	s.storedKey, _ = s.keyStore().Get(ctx)
 	if !s.settings.OpenLastProject || !s.settings.SetupDone || s.settings.LastProject == "" {
 		return
@@ -157,7 +166,7 @@ func (s *EditorService) loadSettings() {
 func (s *EditorService) persistLocked(next settings.Settings) error {
 	if s.settingsPath != "" {
 		if err := next.Save(s.settingsPath); err != nil {
-			return fmt.Errorf("cannot save settings: %w", err)
+			return i18n.Errorf("cannot save settings: %w", err)
 		}
 	}
 	s.settings = next
@@ -207,9 +216,38 @@ func (s *EditorService) GetSettings() SettingsView {
 func (s *EditorService) SetTheme(theme string) (SettingsView, error) {
 	return s.change(func(next *settings.Settings) error {
 		if !settings.ValidTheme(theme) {
-			return fmt.Errorf("unknown theme")
+			return i18n.Errorf("unknown theme")
 		}
 		next.Theme = theme
+		return nil
+	})
+}
+
+// SetLanguage switches every window, the menu and Go's messages at once.
+// choice is "system", "zh-CN", "zh-TW" or "en-US".
+func (s *EditorService) SetLanguage(choice string) (SettingsView, error) {
+	view, err := s.change(func(next *settings.Settings) error {
+		if !i18n.ValidChoice(choice) {
+			return i18n.Errorf("unknown language")
+		}
+		next.Language = choice
+		return nil
+	}, func() { i18n.SetCurrent(i18n.Resolve(choice, s.languages)) })
+	if err == nil {
+		s.relabel()
+	}
+	return view, err
+}
+
+// SetSubtitleFont sets the font family subtitle text is shown in; an empty
+// name returns to the interface font. Exports are unaffected.
+func (s *EditorService) SetSubtitleFont(name string) (SettingsView, error) {
+	name = strings.TrimSpace(name)
+	return s.change(func(next *settings.Settings) error {
+		if err := settings.ValidateFont(name); err != nil {
+			return err
+		}
+		next.SubtitleFont = name
 		return nil
 	})
 }
@@ -237,13 +275,13 @@ func (s *EditorService) SetToolPath(name, path string) (SettingsView, error) {
 		case "yt-dlp":
 			next.YTDLPPath = path
 		default:
-			return fmt.Errorf("unknown external tool")
+			return i18n.Errorf("unknown external tool")
 		}
 		return nil
 	}, func() { media.SetToolPath(name, path) })
 }
 func (s *EditorService) ChooseToolPath(name string) (SettingsView, error) {
-	dialog := s.app.Dialog.OpenFile().SetTitle("Choose the " + name + " executable")
+	dialog := s.app.Dialog.OpenFile().SetTitle(i18n.T("Choose the %s executable", name))
 	for _, dir := range []string{"/opt/homebrew/bin", "/usr/local/bin"} {
 		if stat, err := os.Stat(dir); err == nil && stat.IsDir() {
 			dialog.SetDirectory(dir)
@@ -298,7 +336,7 @@ func (s *EditorService) CheckForUpdates() (SettingsView, error) {
 	s.mu.Lock()
 	if s.updateCancel != nil {
 		defer s.mu.Unlock()
-		return s.settingsView(), fmt.Errorf("already checking for updates")
+		return s.settingsView(), i18n.Errorf("already checking for updates")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	s.updateCancel = cancel
@@ -380,19 +418,37 @@ func (s *EditorService) openPanel(name, title string, width, height int, minimis
 	}
 }
 func (s *EditorService) OpenSettings() {
-	s.openPanel(settingsWindow, "Mousqueau 设置", 760, 540, application.ButtonEnabled)
+	s.openPanel(settingsWindow, i18n.T(panelTitles[settingsWindow]), 760, 540, application.ButtonEnabled)
 }
 
 // OpenWelcome runs the initial setup again from the settings window.
 func (s *EditorService) OpenWelcome() {
-	s.openPanel(welcomeWindow, "欢迎使用 Mousqueau", 760, 520, application.ButtonDisabled)
+	s.openPanel(welcomeWindow, i18n.T(panelTitles[welcomeWindow]), 760, 520, application.ButtonDisabled)
+}
+
+var panelTitles = map[string]string{settingsWindow: i18n.N("Mousqueau Settings"), welcomeWindow: i18n.N("Welcome to Mousqueau")}
+
+// relabel brings the native text the frontend does not draw into the
+// current language.
+func (s *EditorService) relabel() {
+	if s.app == nil {
+		return
+	}
+	for name, title := range panelTitles {
+		if window := s.window(name); window != nil {
+			window.SetTitle(i18n.T(title))
+		}
+	}
+	if runtime.GOOS == "darwin" {
+		s.app.Menu.SetApplicationMenu(s.menu())
+	}
 }
 
 // FinishSetup closes the welcome window and hands an optional first action
 // ("demo" or "srt") to the editor window.
 func (s *EditorService) FinishSetup(action string) error {
 	if action != "" && action != "demo" && action != "srt" {
-		return fmt.Errorf("unknown action")
+		return i18n.Errorf("unknown action")
 	}
 	s.mu.Lock()
 	s.pendingAction = action
@@ -465,13 +521,14 @@ func (s *EditorService) openWindows() {
 	s.app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { go s.autoCheck() })
 }
 
-// menu is the default macOS menu plus the conventional Settings item.
+// menu is the default macOS menu, without Help, plus the conventional
+// Settings item.
 func (s *EditorService) menu() *application.Menu {
 	menu := application.NewMenu()
 	app := menu.AddSubmenu("Mousqueau")
 	app.AddRole(application.About)
 	app.AddSeparator()
-	app.Add("设置…").SetAccelerator("CmdOrCtrl+,").OnClick(func(*application.Context) { s.OpenSettings() })
+	app.Add(i18n.T("Settings…")).SetAccelerator("CmdOrCtrl+,").OnClick(func(*application.Context) { s.OpenSettings() })
 	app.AddSeparator()
 	app.AddRole(application.ServicesMenu)
 	app.AddSeparator()
@@ -484,6 +541,52 @@ func (s *EditorService) menu() *application.Menu {
 	menu.AddRole(application.EditMenu)
 	menu.AddRole(application.ViewMenu)
 	menu.AddRole(application.WindowMenu)
-	menu.AddRole(application.HelpMenu)
+	// No Help menu: Wails' only item there opens wails.io in the editor window.
+	// Wails labels its standard items in English only.
+	for _, item := range roleLabels {
+		if found := menu.FindByRole(item.role); found != nil {
+			found.SetLabel(i18n.T(item.label, "Mousqueau"))
+		}
+	}
 	return menu
+}
+
+// roleLabels repeats the English labels Wails gives these items; %[1]s is
+// the application name.
+var roleLabels = []struct {
+	role  application.Role
+	label string
+}{
+	{application.About, i18n.N("About %[1]s")},
+	{application.ServicesMenu, i18n.N("Services")},
+	{application.Hide, i18n.N("Hide %[1]s")},
+	{application.HideOthers, i18n.N("Hide Others")},
+	{application.UnHide, i18n.N("Show All")},
+	{application.Quit, i18n.N("Quit %[1]s")},
+	{application.FileMenu, i18n.N("File")},
+	{application.CloseWindow, i18n.N("Close")},
+	{application.EditMenu, i18n.N("Edit")},
+	{application.Undo, i18n.N("Undo")},
+	{application.Redo, i18n.N("Redo")},
+	{application.Cut, i18n.N("Cut")},
+	{application.Copy, i18n.N("Copy")},
+	{application.Paste, i18n.N("Paste")},
+	{application.PasteAndMatchStyle, i18n.N("Paste and Match Style")},
+	{application.Delete, i18n.N("Delete")},
+	{application.SelectAll, i18n.N("Select All")},
+	{application.SpeechMenu, i18n.N("Speech")},
+	{application.StartSpeaking, i18n.N("Start Speaking")},
+	{application.StopSpeaking, i18n.N("Stop Speaking")},
+	{application.ViewMenu, i18n.N("View")},
+	{application.Reload, i18n.N("Reload")},
+	{application.ForceReload, i18n.N("Force Reload")},
+	{application.OpenDevTools, i18n.N("Open Developer Tools")},
+	{application.ResetZoom, i18n.N("Actual Size")},
+	{application.ZoomIn, i18n.N("Zoom In")},
+	{application.ZoomOut, i18n.N("Zoom Out")},
+	{application.ToggleFullscreen, i18n.N("Toggle Full Screen")},
+	{application.WindowMenu, i18n.N("Window")},
+	{application.Minimise, i18n.N("Minimize")},
+	{application.Zoom, i18n.N("Zoom")},
+	{application.Front, i18n.N("Bring All to Front")},
 }

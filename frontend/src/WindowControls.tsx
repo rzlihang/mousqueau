@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Window } from "@wailsio/runtime";
+import { useT } from "./i18n";
 
 // Glyphs drawn on a 10 px grid with 1 px strokes, like native caption buttons.
 function Glyph({ d, crisp = true }: { d: string; crisp?: boolean }) {
@@ -29,6 +30,7 @@ export default function WindowControls({
   minimise?: boolean;
   maximise?: boolean;
 }) {
+  const t = useT();
   const [maximised, setMaximised] = useState(false);
   useEffect(() => {
     if (!maximise) return;
@@ -53,8 +55,8 @@ export default function WindowControls({
       {minimise && (
         <button
           type="button"
-          aria-label="最小化"
-          title="最小化"
+          aria-label={t.window.minimise}
+          title={t.window.minimise}
           onClick={() => void Window.Minimise()}
         >
           <Glyph d="M0 5.5h10" />
@@ -63,8 +65,8 @@ export default function WindowControls({
       {maximise && (
         <button
           type="button"
-          aria-label={maximised ? "还原" : "最大化"}
-          title={maximised ? "还原" : "最大化"}
+          aria-label={maximised ? t.window.restore : t.window.maximise}
+          title={maximised ? t.window.restore : t.window.maximise}
           onClick={() => void Window.ToggleMaximise()}
         >
           <Glyph
@@ -79,8 +81,8 @@ export default function WindowControls({
       <button
         type="button"
         className="close"
-        aria-label="关闭"
-        title="关闭"
+        aria-label={t.window.close}
+        title={t.window.close}
         onClick={() => void Window.Close()}
       >
         <Glyph d="M0.5 0.5l9 9M9.5 0.5l-9 9" crisp={false} />

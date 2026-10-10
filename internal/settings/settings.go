@@ -6,13 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"mousqueau/internal/i18n"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 type Settings struct {
 	Theme           string    `json:"theme"`
+	Language        string    `json:"language"`               // "system" or an i18n locale
+	SubtitleFont    string    `json:"subtitleFont,omitempty"` // a font family; empty is the interface font
 	OpenLastProject bool      `json:"openLastProject"`
 	LastProject     string    `json:"lastProject,omitempty"`
 	SetupDone       bool      `json:"setupDone"`
@@ -24,11 +30,23 @@ type Settings struct {
 }
 
 func Default() Settings {
-	return Settings{Theme: "system", OpenLastProject: true, AutoUpdate: true}
+	return Settings{Theme: "system", Language: i18n.System, OpenLastProject: true, AutoUpdate: true}
 }
 
 func ValidTheme(theme string) bool {
 	return theme == "system" || theme == "light" || theme == "dark"
+}
+
+// ValidateFont accepts an empty name or a font family name that can be
+// quoted in CSS as it is.
+func ValidateFont(name string) error {
+	if utf8.RuneCountInString(name) > 100 {
+		return i18n.Errorf("font name is too long")
+	}
+	if strings.ContainsAny(name, `"'\;{}<>`) || strings.IndexFunc(name, unicode.IsControl) >= 0 {
+		return i18n.Errorf("font names cannot contain quotes, backslashes, semicolons, braces or angle brackets")
+	}
+	return nil
 }
 
 // Path is the settings file inside the user's configuration directory.
@@ -56,6 +74,12 @@ func Load(path string) (Settings, error) {
 	}
 	if !ValidTheme(result.Theme) {
 		result.Theme = "system"
+	}
+	if !i18n.ValidChoice(result.Language) {
+		result.Language = i18n.System
+	}
+	if ValidateFont(result.SubtitleFont) != nil {
+		result.SubtitleFont = ""
 	}
 	return result, nil
 }

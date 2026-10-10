@@ -4,6 +4,7 @@ package subtitle
 import (
 	"fmt"
 	"math"
+	"mousqueau/internal/i18n"
 	"regexp"
 	"strconv"
 	"strings"
@@ -26,7 +27,7 @@ var timestamp = regexp.MustCompile(`^(\d{2,}):(\d{2}):(\d{2})[,\.](\d{3})$`)
 func ParseTime(value string) (float64, error) {
 	m := timestamp.FindStringSubmatch(strings.TrimSpace(value))
 	if m == nil {
-		return 0, fmt.Errorf("invalid timestamp %q; use HH:MM:SS,mmm", value)
+		return 0, i18n.Errorf("invalid timestamp %q; use HH:MM:SS,mmm", value)
 	}
 	n := make([]int, 4)
 	for i := range n {
@@ -37,7 +38,7 @@ func ParseTime(value string) (float64, error) {
 		}
 	}
 	if n[1] > 59 || n[2] > 59 {
-		return 0, fmt.Errorf("minutes and seconds must be 00–59")
+		return 0, i18n.Errorf("minutes and seconds must be 00–59")
 	}
 	return float64(n[0])*3600 + float64(n[1])*60 + float64(n[2]) + float64(n[3])/1000, nil
 }
@@ -50,7 +51,7 @@ func FormatTime(seconds float64) string {
 }
 func Validate(c Cue) error {
 	if math.IsNaN(c.Start) || math.IsNaN(c.End) || math.IsInf(c.Start, 0) || math.IsInf(c.End, 0) || c.Start < 0 || c.End <= c.Start {
-		return fmt.Errorf("cue %s: end must be greater than nonnegative start", c.Identifier)
+		return i18n.Errorf("cue %s: end must be greater than nonnegative start", c.Identifier)
 	}
 	return nil
 }
@@ -68,15 +69,15 @@ func Parse(input string) ([]Cue, error) {
 		id := strings.TrimSpace(lines[i])
 		i++
 		if _, err := strconv.ParseUint(id, 10, 64); err != nil {
-			return nil, fmt.Errorf("line %d: invalid SRT identifier %q", i, id)
+			return nil, i18n.Errorf("line %d: invalid SRT identifier %q", i, id)
 		}
 		if i >= len(lines) {
-			return nil, fmt.Errorf("cue %s: missing timestamp", id)
+			return nil, i18n.Errorf("cue %s: missing timestamp", id)
 		}
 		parts := rangeSeparator.Split(strings.TrimSpace(lines[i]), -1)
 		i++
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("cue %s: invalid time range", id)
+			return nil, i18n.Errorf("cue %s: invalid time range", id)
 		}
 		start, err := ParseTime(parts[0])
 		if err != nil {
@@ -96,12 +97,12 @@ func Parse(input string) ([]Cue, error) {
 			return nil, err
 		}
 		if len(body) == 0 {
-			return nil, fmt.Errorf("cue %s: missing subtitle text", id)
+			return nil, i18n.Errorf("cue %s: missing subtitle text", id)
 		}
 		cues = append(cues, c)
 	}
 	if len(cues) == 0 {
-		return nil, fmt.Errorf("no SRT cues found")
+		return nil, i18n.Errorf("no SRT cues found")
 	}
 	return cues, nil
 }
@@ -112,12 +113,12 @@ func Render(cues []Cue) (string, error) {
 			return "", err
 		}
 		if _, err := strconv.ParseUint(c.Identifier, 10, 64); err != nil {
-			return "", fmt.Errorf("invalid SRT identifier")
+			return "", i18n.Errorf("invalid SRT identifier")
 		}
 		text := strings.ReplaceAll(strings.ReplaceAll(c.Text, "\r\n", "\n"), "\r", "\n")
 		for _, line := range strings.Split(text, "\n") {
 			if strings.TrimSpace(line) == "" {
-				return "", fmt.Errorf("cue %s: text must not be empty or contain blank lines", c.Identifier)
+				return "", i18n.Errorf("cue %s: text must not be empty or contain blank lines", c.Identifier)
 			}
 		}
 		fmt.Fprintf(&out, "%s\n%s --> %s\n%s\n\n", c.Identifier, FormatTime(c.Start), FormatTime(c.End), text)

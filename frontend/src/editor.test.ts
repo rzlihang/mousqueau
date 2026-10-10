@@ -28,7 +28,7 @@ describe("editing helpers", () => {
   });
   it("handles millisecond rollover and rejects invalid timestamps", () => {
     expect(formatTime(59.9996)).toBe("00:01:00,000");
-    expect(parseTime("01:00:00,001")).toBe(3600.001);
-    expect(() => parseTime("00:70:00,000")).toThrow();
+    expect(parseTime("01:00:00,001", "bad")).toBe(3600.001);
+    expect(() => parseTime("00:70:00,000", "bad")).toThrow("bad");
   });
 });

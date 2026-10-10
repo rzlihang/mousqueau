@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"mime/multipart"
+	"mousqueau/internal/i18n"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -27,7 +27,7 @@ type OpenAI struct {
 
 func (p OpenAI) Transcribe(ctx context.Context, path string) ([]Segment, error) {
 	if strings.TrimSpace(p.Key) == "" {
-		return nil, fmt.Errorf("set OPENAI_API_KEY in the desktop application's environment to analyze audio")
+		return nil, i18n.Errorf("set OPENAI_API_KEY in the desktop application's environment to analyze audio")
 	}
 	file, err := os.Open(path)
 	if err != nil {
@@ -39,7 +39,7 @@ func (p OpenAI) Transcribe(ctx context.Context, path string) ([]Segment, error) 
 		return nil, err
 	}
 	if stat.Size() > MaxAudioBytes {
-		return nil, fmt.Errorf("audio exceeds 24 MB; select a shorter range")
+		return nil, i18n.Errorf("audio exceeds 24 MB; select a shorter range")
 	}
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
@@ -77,28 +77,28 @@ func (p OpenAI) Transcribe(ctx context.Context, path string) ([]Segment, error) 
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, fmt.Errorf("cannot reach OpenAI audio API; check your connection")
+		return nil, i18n.Errorf("cannot reach OpenAI audio API; check your connection")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		// Do not echo provider bodies which may include sensitive request details.
 		switch resp.StatusCode {
 		case 401, 403:
-			return nil, fmt.Errorf("OpenAI rejected credentials or model access (HTTP %d)", resp.StatusCode)
+			return nil, i18n.Errorf("OpenAI rejected credentials or model access (HTTP %d)", resp.StatusCode)
 		case 429:
-			return nil, fmt.Errorf("OpenAI rate or quota limit reached; retry later")
+			return nil, i18n.Errorf("OpenAI rate or quota limit reached; retry later")
 		default:
-			return nil, fmt.Errorf("OpenAI transcription failed (HTTP %d)", resp.StatusCode)
+			return nil, i18n.Errorf("OpenAI transcription failed (HTTP %d)", resp.StatusCode)
 		}
 	}
 	var data struct {
 		Segments []Segment `json:"segments"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 8_000_000)).Decode(&data); err != nil {
-		return nil, fmt.Errorf("invalid diarized_json response: %w", err)
+		return nil, i18n.Errorf("invalid diarized_json response: %w", err)
 	}
 	if len(data.Segments) == 0 {
-		return nil, fmt.Errorf("no speech segments returned for this range")
+		return nil, i18n.Errorf("no speech segments returned for this range")
 	}
 	return data.Segments, nil
 }

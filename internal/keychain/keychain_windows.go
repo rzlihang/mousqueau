@@ -3,7 +3,7 @@ package keychain
 import (
 	"context"
 	"errors"
-	"fmt"
+	"mousqueau/internal/i18n"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -57,7 +57,7 @@ func Get(ctx context.Context) (string, error) {
 		if errors.Is(err, windows.ERROR_NOT_FOUND) {
 			return "", nil
 		}
-		return "", fmt.Errorf("cannot read Windows Credential Manager")
+		return "", i18n.Errorf("cannot read Windows Credential Manager")
 	}
 	defer procCredFree.Call(uintptr(unsafe.Pointer(cred)))
 	if cred.CredentialBlobSize == 0 {
@@ -88,7 +88,7 @@ func Set(ctx context.Context, key string) error {
 		CredentialBlobSize: uint32(len(blob)), CredentialBlob: &blob[0],
 	}
 	if ok, _, _ := procCredWriteW.Call(uintptr(unsafe.Pointer(&cred)), 0); ok == 0 {
-		return fmt.Errorf("cannot save to Windows Credential Manager")
+		return i18n.Errorf("cannot save to Windows Credential Manager")
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func Delete(ctx context.Context) error {
 	}
 	ok, _, err := procCredDeleteW.Call(uintptr(unsafe.Pointer(name)), credTypeGeneric, 0)
 	if ok == 0 && !errors.Is(err, windows.ERROR_NOT_FOUND) {
-		return fmt.Errorf("cannot remove the key from Windows Credential Manager")
+		return i18n.Errorf("cannot remove the key from Windows Credential Manager")
 	}
 	return nil
 }

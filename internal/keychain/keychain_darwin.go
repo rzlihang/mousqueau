@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mousqueau/internal/i18n"
 	"os/exec"
 	"strings"
 )
@@ -23,7 +24,7 @@ func Get(ctx context.Context) (string, error) {
 		if errors.As(err, &exit) && exit.ExitCode() == notFound {
 			return "", nil
 		}
-		return "", fmt.Errorf("cannot read the macOS keychain")
+		return "", i18n.Errorf("cannot read the macOS keychain")
 	}
 	return strings.TrimRight(string(out), "\r\n"), nil
 }
@@ -37,12 +38,12 @@ func Set(ctx context.Context, key string) error {
 	cmd := exec.CommandContext(ctx, tool, "-i")
 	cmd.Stdin = strings.NewReader(fmt.Sprintf("add-generic-password -U -s %s -a %s -w '%s'\n", service, account, key))
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("cannot save to the macOS keychain")
+		return i18n.Errorf("cannot save to the macOS keychain")
 	}
 	// The interactive tool exits 0 even when a command fails, so confirm.
 	stored, err := Get(ctx)
 	if err != nil || stored != key {
-		return fmt.Errorf("cannot save to the macOS keychain")
+		return i18n.Errorf("cannot save to the macOS keychain")
 	}
 	return nil
 }
@@ -51,7 +52,7 @@ func Delete(ctx context.Context) error {
 	err := exec.CommandContext(ctx, tool, "delete-generic-password", "-s", service, "-a", account).Run()
 	var exit *exec.ExitError
 	if err != nil && !(errors.As(err, &exit) && exit.ExitCode() == notFound) {
-		return fmt.Errorf("cannot remove the key from the macOS keychain")
+		return i18n.Errorf("cannot remove the key from the macOS keychain")
 	}
 	return nil
 }

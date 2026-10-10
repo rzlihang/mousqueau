@@ -3,7 +3,7 @@
 package keychain
 
 import (
-	"fmt"
+	"mousqueau/internal/i18n"
 	"strings"
 )
 
@@ -16,14 +16,14 @@ const (
 // everything else also keeps the value safe to hand to the keychain tool.
 func Validate(key string) error {
 	if key == "" {
-		return fmt.Errorf("enter an API key")
+		return i18n.Errorf("enter an API key")
 	}
 	if len(key) > 512 {
-		return fmt.Errorf("API key is too long")
+		return i18n.Errorf("API key is too long")
 	}
 	for _, r := range key {
 		if r < 0x21 || r > 0x7e || strings.ContainsRune(`'"\`, r) {
-			return fmt.Errorf("API key contains spaces, quotes, or non-ASCII characters")
+			return i18n.Errorf("API key contains spaces, quotes, or non-ASCII characters")
 		}
 	}
 	return nil

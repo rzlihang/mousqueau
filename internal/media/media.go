@@ -2,9 +2,9 @@ package media
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"mousqueau/internal/analysis"
+	"mousqueau/internal/i18n"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,7 +13,7 @@ import (
 
 func ValidateRange(start, end float64) error {
 	if math.IsNaN(start) || math.IsNaN(end) || math.IsInf(start, 0) || math.IsInf(end, 0) || start < 0 || end-start < 60 || end-start > 300 {
-		return fmt.Errorf("select a 1–5 minute range with a nonnegative start")
+		return i18n.Errorf("select a 1–5 minute range with a nonnegative start")
 	}
 	return nil
 }
@@ -24,11 +24,11 @@ func Extract(ctx context.Context, input string, start, end float64) (string, fun
 	}
 	ffmpeg, ok := Tool("ffmpeg")
 	if !ok {
-		return "", noop, fmt.Errorf("FFmpeg was not found; install it or set its location in Settings")
+		return "", noop, i18n.Errorf("FFmpeg was not found; install it or set its location in Settings")
 	}
 	stat, err := os.Stat(input)
 	if err != nil || !stat.Mode().IsRegular() {
-		return "", noop, fmt.Errorf("select an existing local video or audio file")
+		return "", noop, i18n.Errorf("select an existing local video or audio file")
 	}
 	dir, err := os.MkdirTemp("", "mousqueau-audio-*")
 	if err != nil {
@@ -42,7 +42,7 @@ func Extract(ctx context.Context, input string, start, end float64) (string, fun
 		if ctx.Err() != nil {
 			return "", noop, ctx.Err()
 		}
-		return "", noop, fmt.Errorf("FFmpeg could not extract audio; check media format and selected range")
+		return "", noop, i18n.Errorf("FFmpeg could not extract audio; check media format and selected range")
 	}
 	info, err := os.Stat(path)
 	if err != nil {
@@ -51,7 +51,7 @@ func Extract(ctx context.Context, input string, start, end float64) (string, fun
 	}
 	if info.Size() == 0 || info.Size() > analysis.MaxAudioBytes {
 		cleanup()
-		return "", noop, fmt.Errorf("extracted audio is empty or exceeds the 24 MB upload limit")
+		return "", noop, i18n.Errorf("extracted audio is empty or exceeds the 24 MB upload limit")
 	}
 	return path, cleanup, nil
 }
@@ -69,7 +69,7 @@ func SafeNewFile(path string, data []byte) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		if os.IsExist(err) {
-			return fmt.Errorf("destination already exists; choose a new filename to preserve original files")
+			return i18n.Errorf("destination already exists; choose a new filename to preserve original files")
 		}
 		return err
 	}

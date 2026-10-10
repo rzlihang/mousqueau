@@ -125,8 +125,8 @@ export function RemoveAPIKey(): $CancellablePromise<$models.SettingsView> {
 }
 
 /**
- * SaveAPIKey stores the key in the macOS keychain. It is kept in Go from here
- * on; no method returns it to the frontend.
+ * SaveAPIKey stores the key in the system credential store. It is kept in Go
+ * from here on; no method returns it to the frontend.
  */
 export function SaveAPIKey(key: string): $CancellablePromise<$models.SettingsView> {
     return $Call.ByID(2270827278, key);
@@ -144,12 +144,28 @@ export function SetBeta(enabled: boolean): $CancellablePromise<$models.SettingsV
     return $Call.ByID(1197282714, enabled);
 }
 
+/**
+ * SetLanguage switches every window, the menu and Go's messages at once.
+ * choice is "system", "zh-CN", "zh-TW" or "en-US".
+ */
+export function SetLanguage(choice: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(316158850, choice);
+}
+
 export function SetOpenLastProject(enabled: boolean): $CancellablePromise<$models.SettingsView> {
     return $Call.ByID(2730099861, enabled);
 }
 
 export function SetSpeaker(speaker: analysis$0.Speaker): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(800982401, speaker);
+}
+
+/**
+ * SetSubtitleFont sets the font family subtitle text is shown in; an empty
+ * name returns to the interface font. Exports are unaffected.
+ */
+export function SetSubtitleFont(name: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(437073225, name);
 }
 
 export function SetTheme(theme: string): $CancellablePromise<$models.SettingsView> {

@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -37,7 +38,19 @@ import {
   filterCues,
   formatSeconds,
 } from "./workspace";
-import { resolveDark, themeChoice } from "./preferences";
+import enUS from "antd/locale/en_US";
+import zhCN from "antd/locale/zh_CN";
+import zhTW from "antd/locale/zh_TW";
+import {
+  type Locale,
+  I18nProvider,
+  errorText,
+  initialLocale,
+  matchLocale,
+  messagesFor,
+  useT,
+} from "./i18n";
+import { fontStack, resolveDark, themeChoice } from "./preferences";
 import SettingsWindow from "./SettingsWindow";
 import SuggestionCard, { SpeakerTag, SpeakerTags } from "./SuggestionCard";
 import Timeline from "./Timeline";
@@ -105,6 +118,7 @@ function RedoIcon() {
 
 function EditorApp({ dark }: { dark: boolean }) {
   const { message, modal } = AntApp.useApp();
+  const t = useT();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [working, setWorking] = useState(false);
@@ -163,7 +177,7 @@ function EditorApp({ dark }: { dark: boolean }) {
   useEffect(() => {
     void Editor.GetSnapshot()
       .then(setSnapshot)
-      .catch((e) => message.error(String(e)));
+      .catch((e) => message.error(errorText(e)));
     void refreshStatus();
     const timer = setInterval(() => void refreshStatus(), 700);
     return () => clearInterval(timer);
@@ -217,7 +231,7 @@ function EditorApp({ dark }: { dark: boolean }) {
           });
       })
       .catch((e) => {
-        if (current) setWave({ url: mediaUrl, error: String(e) });
+        if (current) setWave({ url: mediaUrl, error: errorText(e) });
       });
     return () => {
       current = false;
@@ -243,7 +257,7 @@ function EditorApp({ dark }: { dark: boolean }) {
     try {
       return await action();
     } catch (e) {
-      void message.error(String(e));
+      void message.error(errorText(e));
       return undefined;
     } finally {
       setWorking(false);
@@ -264,16 +278,15 @@ function EditorApp({ dark }: { dark: boolean }) {
       const edited: Cue = {
         ...cue,
         text: draft.text,
-        start: parseTime(draft.start),
-        end: parseTime(draft.end),
+        start: parseTime(draft.start, t.editor.invalidTime),
+        end: parseTime(draft.end, t.editor.invalidTime),
         speakerIds: draft.speakerIds,
         review: draft.review,
       };
-      if (edited.end <= edited.start)
-        throw new Error("结束时间必须晚于开始时间。");
+      if (edited.end <= edited.start) throw new Error(t.editor.endBeforeStart);
       return !!(await update(() => Editor.EditCue(edited)));
     } catch (e) {
-      void message.error(String(e));
+      void message.error(errorText(e));
       return false;
     }
   }
@@ -298,10 +311,10 @@ function EditorApp({ dark }: { dark: boolean }) {
     };
     if (p || draftDirty)
       modal.confirm({
-        title: "开启另一份字幕／项目？",
-        content: "当前项目将被替换。请先保存需要保留的编辑记录。",
-        okText: "替换当前项目",
-        cancelText: "返回",
+        title: t.editor.replaceTitle,
+        content: t.editor.replaceContent,
+        okText: t.editor.replaceOk,
+        cancelText: t.common.back,
         onOk: perform,
       });
     else void perform();
@@ -318,12 +331,12 @@ function EditorApp({ dark }: { dark: boolean }) {
     };
     if (draftDirty && next.id !== selected)
       modal.confirm({
-        title: "尚有未套用的编辑",
-        content: "先套用当前字幕的文字、时间与说话人修改，再跳到下一句。",
-        okText: "套用并跳转",
-        cancelText: "留在当前字幕",
+        title: t.editor.unappliedTitle,
+        content: t.editor.unappliedContent,
+        okText: t.editor.unappliedOk,
+        cancelText: t.editor.unappliedCancel,
         onOk: async () => {
-          if (!(await applyDraft())) throw new Error("请先修正编辑内容");
+          if (!(await applyDraft())) throw new Error(t.editor.fixDraftFirst);
           select();
         },
       });
@@ -337,7 +350,7 @@ function EditorApp({ dark }: { dark: boolean }) {
   function togglePlay() {
     const v = video.current;
     if (!v) return;
-    if (v.paused) void v.play().catch((e) => message.error(String(e)));
+    if (v.paused) void v.play().catch((e) => message.error(errorText(e)));
     else v.pause();
   }
   function changeDraft(patch: Partial<Draft>) {
@@ -354,18 +367,20 @@ function EditorApp({ dark }: { dark: boolean }) {
       rangeEnd - rangeStart < 60 ||
       rangeEnd - rangeStart > 300
     ) {
-      void message.error("请选择 60–300 秒的范围。");
+      void message.error(t.editor.rangeLength);
       return;
     }
     if (mediaDuration && rangeEnd > mediaDuration) {
-      void message.error("选取范围超过媒体长度。");
+      void message.error(t.editor.rangeBeyondMedia);
       return;
     }
     modal.confirm({
-      title: "将选定范围的音频上传到 OpenAI？",
-      content: `${formatTime(rangeStart)} — ${formatTime(rangeEnd)}。此操作会将音频发送到外部 API，并可能产生费用。返回结果仅作为待审建议；不会自动修改字幕。`,
-      okText: "确认上传并分析",
-      cancelText: "取消",
+      title: t.editor.uploadTitle,
+      content: t.editor.uploadContent(
+        `${formatTime(rangeStart)} — ${formatTime(rangeEnd)}`,
+      ),
+      okText: t.editor.uploadOk,
+      cancelText: t.common.cancel,
       onOk: async () => {
         if (await applyDraft())
           await update(() => Editor.Analyze(rangeStart, rangeEnd, true));
@@ -376,7 +391,7 @@ function EditorApp({ dark }: { dark: boolean }) {
     if (!(await applyDraft())) return;
     const path = await run(exportSRT ? Editor.ExportSRT : Editor.SaveProject);
     if (path) {
-      void message.success(`已保存：${path}`);
+      void message.success(t.editor.saved(path));
       if (!exportSRT) setDirty(false);
     }
   }
@@ -396,13 +411,13 @@ function EditorApp({ dark }: { dark: boolean }) {
     take();
     const offAction = Events.On("pending-action", take);
     const offUpdate = Events.On("update-available", (e) =>
-      message.info(`有新版本 ${e.data}，可在 设置 › 更新 中查看。`),
+      message.info(t.editor.updateAvailable(String(e.data))),
     );
     return () => {
       offAction();
       offUpdate();
     };
-  }, [message]);
+  }, [message, t]);
   const canUndo = !busy && !draftDirty && !!p?.undo?.length;
   const canRedo = !busy && !draftDirty && !!p?.redo?.length;
   useEffect(() => {
@@ -446,18 +461,18 @@ function EditorApp({ dark }: { dark: boolean }) {
         .pop()!
         .replace(/\.[^.]+$/, "")
     : p
-      ? "未命名项目"
-      : "未开启项目";
+      ? t.editor.untitled
+      : t.editor.noProject;
   const ready = !!status?.ffmpeg && !!status?.apiConfigured;
   const rangeSeconds = rangeEnd - rangeStart;
   const rangeValid = rangeSeconds >= 60 && rangeSeconds <= 300;
   const waveformNote = !mediaUrl
-    ? "导入本机媒体后显示波形"
+    ? t.editor.waveNoMedia
     : status && !status.ffmpeg
-      ? "需要 FFmpeg 才能显示波形"
+      ? t.editor.waveNeedsFfmpeg
       : wave && "error" in wave
-        ? "无法生成波形；字幕仍可编辑"
-        : "正在本机生成波形…";
+        ? t.editor.waveFailed
+        : t.editor.waveLoading;
 
   return (
     <div
@@ -479,8 +494,8 @@ function EditorApp({ dark }: { dark: boolean }) {
           <strong>{projectName}</strong>
           <span>
             {p
-              ? `${dirty || draftDirty ? "已编辑" : "未修改"} · ${cues.length} 句 · ${speakers.length} 位说话人`
-              : "Mousqueau · 字幕校正与说话人辨识"}
+              ? `${dirty || draftDirty ? t.editor.edited : t.editor.unchanged} · ${t.common.cues(cues.length)} · ${t.editor.speakerCount(speakers.length)}`
+              : t.editor.tagline}
           </span>
         </div>
         <div className="toolbar-group">
@@ -488,8 +503,11 @@ function EditorApp({ dark }: { dark: boolean }) {
             type="text"
             size="small"
             className="icon-button"
-            aria-label="撤销"
-            title={`撤销（${isMac ? "⌘Z" : "Ctrl+Z"}）`}
+            aria-label={t.editor.undo}
+            title={t.editor.withShortcut(
+              t.editor.undo,
+              isMac ? "⌘Z" : "Ctrl+Z",
+            )}
             disabled={!canUndo}
             onClick={() => void update(Editor.Undo)}
           >
@@ -499,8 +517,11 @@ function EditorApp({ dark }: { dark: boolean }) {
             type="text"
             size="small"
             className="icon-button"
-            aria-label="重做"
-            title={`重做（${isMac ? "⇧⌘Z" : "Ctrl+Shift+Z"}）`}
+            aria-label={t.editor.redo}
+            title={t.editor.withShortcut(
+              t.editor.redo,
+              isMac ? "⇧⌘Z" : "Ctrl+Shift+Z",
+            )}
             disabled={!canRedo}
             onClick={() => void update(Editor.Redo)}
           >
@@ -514,21 +535,21 @@ function EditorApp({ dark }: { dark: boolean }) {
             disabled={busy || draftDirty}
             onClick={() => void update(Editor.ImportVideo)}
           >
-            导入媒体
+            {t.common.importMedia}
           </Button>
           <Button
             size="small"
             disabled={busy}
             onClick={() => replaceProject(Editor.ImportSRT)}
           >
-            导入 SRT
+            {t.common.importSrt}
           </Button>
           <Button
             size="small"
             disabled={busy}
             onClick={() => setYoutubeOpen(true)}
           >
-            YouTube 导入
+            {t.editor.importYoutube}
           </Button>
           <Button
             size="small"
@@ -536,7 +557,7 @@ function EditorApp({ dark }: { dark: boolean }) {
             disabled={busy}
             onClick={() => replaceProject(Editor.LoadDemo)}
           >
-            载入示例
+            {t.common.loadDemo}
           </Button>
         </div>
         <div className="spacer" />
@@ -546,23 +567,24 @@ function EditorApp({ dark }: { dark: boolean }) {
             disabled={busy}
             onClick={() => replaceProject(Editor.OpenProject)}
           >
-            开启项目
+            {t.editor.openProject}
           </Button>
           <Button
             size="small"
             disabled={busy || !p}
             onClick={() => void save(false)}
           >
-            保存项目{dirty || draftDirty ? " •" : ""}
+            {t.editor.saveProject}
+            {dirty || draftDirty ? " •" : ""}
           </Button>
-          <Tooltip title="标准 SRT 不包含说话人资料。保存 JSON 项目可保留说话人、建议与编辑历史。导出请选择新文件名。">
+          <Tooltip title={t.editor.exportHint}>
             <Button
               size="small"
               type="primary"
               disabled={busy || !p}
               onClick={() => void save(true)}
             >
-              导出 SRT
+              {t.editor.exportSrt}
             </Button>
           </Tooltip>
         </div>
@@ -570,63 +592,64 @@ function EditorApp({ dark }: { dark: boolean }) {
       </header>
 
       <div className="upper">
-        <section className="cue-grid" aria-label="字幕列表">
+        <section className="cue-grid" aria-label={t.cueList.label}>
           <div className="pane-toolbar">
-            <h2>字幕</h2>
+            <h2>{t.cueList.title}</h2>
             <span className="muted">
-              {cues.length} 句{todoCount ? ` · ${todoCount} 条待处理` : ""}
+              {t.common.cues(cues.length)}
+              {todoCount ? t.cueList.todo(todoCount) : ""}
             </span>
             <div className="spacer" />
             <Input
               size="small"
               allowClear
-              placeholder="搜索字幕文本"
-              aria-label="搜索字幕文本"
+              placeholder={t.cueList.search}
+              aria-label={t.cueList.search}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
             <Select
               size="small"
-              aria-label="筛选字幕"
+              aria-label={t.cueList.filter}
               value={filter}
               onChange={setFilter}
               style={{ width: 96 }}
               options={[
-                { value: "all", label: "全部" },
-                { value: "todo", label: "待处理" },
-                { value: "unknown", label: "Unknown" },
+                { value: "all", label: t.cueList.all },
+                { value: "todo", label: t.cueList.todoFilter },
+                { value: "unknown", label: t.common.unknownSpeaker },
               ]}
             />
           </div>
           <div className="grid-head cue-columns" aria-hidden="true">
             <span>#</span>
-            <span>开始</span>
-            <span>时长</span>
-            <span>说话人</span>
-            <span>文本</span>
-            <span>状态</span>
+            <span>{t.cueList.columns.start}</span>
+            <span>{t.cueList.columns.duration}</span>
+            <span>{t.cueList.columns.speakers}</span>
+            <span>{t.cueList.columns.text}</span>
+            <span>{t.cueList.columns.status}</span>
           </div>
           <div className="grid-body">
             {!cues.length && (
-              <Empty description="导入 SRT 或载入示例开始编辑">
+              <Empty description={t.common.emptyProject}>
                 <Space>
                   <Button
                     disabled={busy}
                     onClick={() => replaceProject(Editor.ImportSRT)}
                   >
-                    导入 SRT
+                    {t.common.importSrt}
                   </Button>
                   <Button
                     disabled={busy}
                     onClick={() => replaceProject(Editor.LoadDemo)}
                   >
-                    载入示例
+                    {t.common.loadDemo}
                   </Button>
                 </Space>
               </Empty>
             )}
             {!!cues.length && !shown.length && (
-              <p className="muted grid-empty">没有符合条件的字幕。</p>
+              <p className="muted grid-empty">{t.cueList.noMatch}</p>
             )}
             {shown.map((c) => {
               const st = cueStatus(c, suggestions);
@@ -645,7 +668,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                   <span className="mono muted small">{c.identifier}</span>
                   <span className="mono">{formatTime(c.start)}</span>
                   <span className="mono muted small">
-                    {(c.end - c.start).toFixed(1)} 秒
+                    {t.common.seconds((c.end - c.start).toFixed(1))}
                   </span>
                   <span className="tag-row">
                     <SpeakerTags ids={c.speakerIds} speakers={speakers} />
@@ -654,7 +677,9 @@ function EditorApp({ dark }: { dark: boolean }) {
                   <span>
                     {st && (
                       <Tag color={st === "review" ? "orange" : "blue"}>
-                        {st === "review" ? "待复核" : "待确认"}
+                        {st === "review"
+                          ? t.cueList.review
+                          : t.common.pendingDecision}
                       </Tag>
                     )}
                   </span>
@@ -664,7 +689,7 @@ function EditorApp({ dark }: { dark: boolean }) {
           </div>
         </section>
 
-        <section className="viewer" aria-label="检视器">
+        <section className="viewer" aria-label={t.viewer.label}>
           <div className="viewer-frame">
             {mediaUrl ? (
               <>
@@ -688,23 +713,21 @@ function EditorApp({ dark }: { dark: boolean }) {
                   onTimeUpdate={(e) =>
                     !playing && setPlayhead(e.currentTarget.currentTime)
                   }
-                  onError={() =>
-                    void message.error(
-                      "媒体无法播放。请重新导入，或转为 MP4 / H.264 / AAC；字幕仍可编辑。",
-                    )
-                  }
+                  onError={() => void message.error(t.viewer.mediaError)}
                 />
-                {!hasVideo && <span className="viewer-note">仅音频</span>}
+                {!hasVideo && (
+                  <span className="viewer-note">{t.viewer.audioOnly}</span>
+                )}
               </>
             ) : (
               <div className="viewer-empty">
-                <span>导入本机视频或音频</span>
+                <span>{t.viewer.empty}</span>
                 <Button
                   size="small"
                   disabled={busy || draftDirty}
                   onClick={() => void update(Editor.ImportVideo)}
                 >
-                  导入媒体
+                  {t.common.importMedia}
                 </Button>
               </div>
             )}
@@ -723,22 +746,22 @@ function EditorApp({ dark }: { dark: boolean }) {
                 disabled={busy || !cues.length}
                 onClick={() => stepCue(-1)}
               >
-                上一句
+                {t.viewer.previous}
               </Button>
               <Button size="small" disabled={!mediaUrl} onClick={togglePlay}>
-                {playing ? "暂停" : "播放"}
+                {playing ? t.viewer.pause : t.viewer.play}
               </Button>
               <Button
                 size="small"
                 disabled={busy || !cues.length}
                 onClick={() => stepCue(1)}
               >
-                下一句
+                {t.viewer.next}
               </Button>
             </div>
             <Select
               size="small"
-              aria-label="播放速度"
+              aria-label={t.viewer.speed}
               value={rate}
               style={{ width: 72 }}
               onChange={(value) => {
@@ -753,7 +776,7 @@ function EditorApp({ dark }: { dark: boolean }) {
           </div>
         </section>
 
-        <aside className="inspector" aria-label="检查器">
+        <aside className="inspector" aria-label={t.inspector.label}>
           <div className="inspector-tabs">
             <Segmented
               block
@@ -761,10 +784,10 @@ function EditorApp({ dark }: { dark: boolean }) {
               value={tab}
               onChange={(v) => setTab(v as Tab)}
               options={[
-                { label: "编辑", value: "edit" },
-                { label: "说话人", value: "speakers" },
+                { label: t.inspector.edit, value: "edit" },
+                { label: t.inspector.speakers, value: "speakers" },
                 {
-                  label: `校正建议${pendingCount ? ` ${pendingCount}` : ""}`,
+                  label: `${t.inspector.suggestions}${pendingCount ? ` ${pendingCount}` : ""}`,
                   value: "suggestions",
                 },
               ]}
@@ -775,14 +798,14 @@ function EditorApp({ dark }: { dark: boolean }) {
               (cue ? (
                 <div className="stack">
                   <div className="section-heading">
-                    <h3>编辑 #{cue.identifier}</h3>
+                    <h3>{t.inspector.editing(cue.identifier)}</h3>
                     <span className="mono muted tiny">
                       {formatTime(cue.start)} → {formatTime(cue.end)}
                     </span>
                   </div>
                   <div className="time-fields">
                     <label>
-                      开始
+                      {t.inspector.start}
                       <Input
                         size="small"
                         className="mono-input"
@@ -792,7 +815,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                       />
                     </label>
                     <label>
-                      结束
+                      {t.inspector.end}
                       <Input
                         size="small"
                         className="mono-input"
@@ -803,15 +826,17 @@ function EditorApp({ dark }: { dark: boolean }) {
                     </label>
                   </div>
                   <span className="muted">
-                    时长 {(cue.end - cue.start).toFixed(3)} 秒 · 字速{" "}
-                    {(
-                      cue.text.length / Math.max(0.001, cue.end - cue.start)
-                    ).toFixed(1)}{" "}
-                    字／秒
+                    {t.inspector.stats(
+                      (cue.end - cue.start).toFixed(3),
+                      (
+                        cue.text.length / Math.max(0.001, cue.end - cue.start)
+                      ).toFixed(1),
+                    )}
                   </span>
                   <label className="field">
-                    文本
+                    {t.inspector.text}
                     <Input.TextArea
+                      className="subtitle-text"
                       disabled={busy}
                       autoSize={{ minRows: 2, maxRows: 5 }}
                       value={draft.text}
@@ -819,12 +844,12 @@ function EditorApp({ dark }: { dark: boolean }) {
                     />
                   </label>
                   <label className="field">
-                    说话人
+                    {t.inspector.speaker}
                     <Select
                       mode="multiple"
                       size="small"
                       disabled={busy}
-                      placeholder="Unknown · 未指派说话人"
+                      placeholder={t.inspector.unassigned}
                       value={draft.speakerIds}
                       options={speakerOptions}
                       onChange={(speakerIds) => changeDraft({ speakerIds })}
@@ -835,13 +860,15 @@ function EditorApp({ dark }: { dark: boolean }) {
                     checked={draft.review}
                     onChange={(e) => changeDraft({ review: e.target.checked })}
                   >
-                    需要复核
+                    {t.inspector.needsReview}
                   </Checkbox>
                   <div className="apply-row">
                     {draftDirty ? (
-                      <Tag color="gold">尚未套用</Tag>
+                      <Tag color="gold">{t.inspector.unapplied}</Tag>
                     ) : (
-                      <span className="muted">尚无未套用的修改</span>
+                      <span className="muted">
+                        {t.inspector.nothingUnapplied}
+                      </span>
                     )}
                     <div className="spacer" />
                     <Button
@@ -849,7 +876,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                       disabled={busy || !draftDirty}
                       onClick={discardDraft}
                     >
-                      还原
+                      {t.inspector.revert}
                     </Button>
                     <Button
                       size="small"
@@ -857,11 +884,11 @@ function EditorApp({ dark }: { dark: boolean }) {
                       disabled={busy || !draftDirty}
                       onClick={() => void applyDraft()}
                     >
-                      套用编辑
+                      {t.inspector.apply}
                     </Button>
                   </div>
                   <div className="rule" />
-                  <h3>本句校正建议</h3>
+                  <h3>{t.inspector.cueSuggestions}</h3>
                   {cueSuggestions.length ? (
                     cueSuggestions.map((s) => (
                       <SuggestionCard
@@ -876,29 +903,26 @@ function EditorApp({ dark }: { dark: boolean }) {
                     ))
                   ) : (
                     <span className="muted">
-                      本句没有校正建议。在时间轴上选取范围后可上传分析。
+                      {t.inspector.noCueSuggestions}
                     </span>
                   )}
                 </div>
               ) : (
-                <Empty description="导入 SRT 或载入示例开始编辑" />
+                <Empty description={t.common.emptyProject} />
               ))}
 
             {tab === "speakers" && (
               <div className="stack">
-                <span className="muted">
-                  不同分析范围的标签独立编号，可手动命名与指派。
-                </span>
+                <span className="muted">{t.inspector.speakersHint}</span>
                 <div>
                   {speakers.map((s) => (
                     <div key={s.id} className="speaker-row">
                       <SpeakerTag speaker={s} />
                       <span className="muted">
-                        {
+                        {t.common.cues(
                           cues.filter((c) => c.speakerIds?.includes(s.id))
-                            .length
-                        }{" "}
-                        句
+                            .length,
+                        )}
                       </span>
                       <div className="spacer" />
                       <Button
@@ -910,33 +934,35 @@ function EditorApp({ dark }: { dark: boolean }) {
                           setSpeakerName(s.name);
                         }}
                       >
-                        编辑名称
+                        {t.inspector.rename}
                       </Button>
                     </div>
                   ))}
                   <div className="speaker-row">
                     <SpeakerTag />
                     <span className="muted">
-                      {cues.filter((c) => !c.speakerIds?.length).length} 句
+                      {t.common.cues(
+                        cues.filter((c) => !c.speakerIds?.length).length,
+                      )}
                     </span>
                   </div>
                 </div>
                 <div className="speaker-form">
                   <Input
                     size="small"
-                    aria-label="说话人 ID"
+                    aria-label={t.inspector.speakerId}
                     disabled={busy}
                     value={speakerId}
                     onChange={(e) => setSpeakerId(e.target.value)}
-                    placeholder="说话人 ID（A / B / C）"
+                    placeholder={t.inspector.speakerIdPlaceholder}
                   />
                   <Input
                     size="small"
-                    aria-label="显示名称"
+                    aria-label={t.inspector.displayName}
                     disabled={busy}
                     value={speakerName}
                     onChange={(e) => setSpeakerName(e.target.value)}
-                    placeholder="显示名称，例如：主持人"
+                    placeholder={t.inspector.displayNamePlaceholder}
                   />
                   <Button
                     size="small"
@@ -959,7 +985,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                       )
                     }
                   >
-                    保存说话人
+                    {t.inspector.saveSpeaker}
                   </Button>
                 </div>
               </div>
@@ -967,11 +993,9 @@ function EditorApp({ dark }: { dark: boolean }) {
 
             {tab === "suggestions" && (
               <div className="stack">
-                <span className="muted">
-                  建议不会自动改动字幕。每次接受都需要点击，并可撤销。
-                </span>
+                <span className="muted">{t.inspector.suggestionsHint}</span>
                 {!suggestions.length && (
-                  <Empty description="分析音频或载入示例后查看建议" />
+                  <Empty description={t.inspector.noSuggestions} />
                 )}
                 {suggestions.map((s) => (
                   <SuggestionCard
@@ -1014,20 +1038,20 @@ function EditorApp({ dark }: { dark: boolean }) {
         actions={
           <>
             <span className={rangeValid ? "" : "range-invalid"}>
-              分析范围{" "}
+              {t.range.label}{" "}
               <span className="mono">
                 {formatSeconds(rangeStart)} — {formatSeconds(rangeEnd)}
               </span>{" "}
-              · {rangeSeconds} 秒
+              · {t.common.seconds(rangeSeconds)}
             </span>
-            <span className="muted">每次 1–5 分钟</span>
+            <span className="muted">{t.range.perRun}</span>
             <Popover
               trigger="click"
-              title="分析范围"
+              title={t.range.label}
               content={
                 <div className="range-form">
                   <label>
-                    开始（秒）
+                    {t.range.start}
                     <InputNumber
                       size="small"
                       min={0}
@@ -1037,7 +1061,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                     />
                   </label>
                   <label>
-                    结束（秒）
+                    {t.range.end}
                     <InputNumber
                       size="small"
                       min={0}
@@ -1053,16 +1077,14 @@ function EditorApp({ dark }: { dark: boolean }) {
                       setRange(Math.floor(playhead), Math.floor(playhead) + 60)
                     }
                   >
-                    以播放头为起点
+                    {t.range.fromPlayhead}
                   </Button>
-                  <p className="muted">
-                    也可以在时间刻度上拖动选取。请自行确认选取范围与音频内容。
-                  </p>
+                  <p className="muted">{t.range.hint}</p>
                 </div>
               }
             >
               <Button size="small" disabled={busy}>
-                调整范围
+                {t.range.adjust}
               </Button>
             </Popover>
             <Button
@@ -1077,7 +1099,7 @@ function EditorApp({ dark }: { dark: boolean }) {
               }
               onClick={analyze}
             >
-              上传所选音频并分析
+              {t.range.analyze}
             </Button>
           </>
         }
@@ -1087,43 +1109,41 @@ function EditorApp({ dark }: { dark: boolean }) {
         <Popover
           trigger={["hover", "click"]}
           placement="topLeft"
-          title="运行环境"
+          title={t.status.environment}
           content={
             <div className="env">
               <div>
                 <span>FFmpeg</span>
                 <Tag color={status?.ffmpeg ? "green" : "orange"}>
-                  {status?.ffmpeg ? "已就绪" : "未安装"}
+                  {status?.ffmpeg ? t.common.ready : t.common.notInstalled}
                 </Tag>
               </div>
               <div>
                 <span>OpenAI</span>
                 <Tag color={status?.apiConfigured ? "green" : "default"}>
-                  {status?.apiConfigured ? "已配置" : "未配置 · 可离线编辑"}
+                  {status?.apiConfigured
+                    ? t.common.configured
+                    : t.common.offlineOnly}
                 </Tag>
               </div>
               <div>
                 <span>yt-dlp</span>
                 <Tag color={status?.ytdlp ? "green" : "default"}>
-                  {status?.ytdlp ? "已就绪" : "未安装 · 可选"}
+                  {status?.ytdlp ? t.common.ready : t.status.optionalMissing}
                 </Tag>
               </div>
               {!status?.apiConfigured && (
-                <p className="muted">
-                  在设置中添加 OpenAI API 密钥后即可使用分析。
-                </p>
+                <p className="muted">{t.status.addKeyHint}</p>
               )}
               <div className="rule" />
-              <p className="muted">
-                文件保留在本机。仅确认分析时上传选定音频。
-              </p>
+              <p className="muted">{t.status.privacy}</p>
               <Button
                 type="link"
                 size="small"
                 className="env-link"
                 onClick={() => void Editor.OpenSettings()}
               >
-                打开设置（{settingsShortcut}）
+                {t.status.openSettings(settingsShortcut)}
               </Button>
             </div>
           }
@@ -1134,50 +1154,45 @@ function EditorApp({ dark }: { dark: boolean }) {
               aria-hidden="true"
             />
             {ready
-              ? "环境就绪"
+              ? t.status.allReady
               : status?.ffmpeg
-                ? "可离线编辑"
-                : "FFmpeg 未安装"}
+                ? t.status.offline
+                : t.status.noFfmpeg}
           </button>
         </Popover>
         {busy && (
           <Space size={6}>
             <Spin size="small" />
-            <span>{status?.phase || "处理中…"}</span>
+            <span>{status?.phase || t.status.working}</span>
             <Button
               danger
               size="small"
               type="text"
               onClick={() => void Editor.Cancel()}
             >
-              取消处理
+              {t.status.cancel}
             </Button>
           </Space>
         )}
         <div className="spacer" />
         {cue && (
           <span className="mono">
-            已选 #{cue.identifier} · {formatTime(cue.start)} →{" "}
+            {t.status.selected(cue.identifier)} · {formatTime(cue.start)} →{" "}
             {formatTime(cue.end)}
           </span>
         )}
       </footer>
 
       <Modal
-        title="可选 YouTube 导入"
+        title={t.youtube.title}
         open={youtubeOpen}
         onCancel={() => setYoutubeOpen(false)}
         footer={null}
         width={650}
       >
-        <p>
-          仅支持单个视频。优先选择手动字幕；字幕下载与音频下载分别由你操作。
-        </p>
+        <p>{t.youtube.intro}</p>
         {!status?.ytdlp && (
-          <Alert
-            type="warning"
-            title="请先安装 yt-dlp 并加入 PATH。本机媒体与 SRT 导入不受影响。"
-          />
+          <Alert type="warning" title={t.youtube.needsYtdlp} />
         )}
         <Space.Compact block>
           <Input
@@ -1203,7 +1218,7 @@ function EditorApp({ dark }: { dark: boolean }) {
               }
             }}
           >
-            发现字幕
+            {t.youtube.discover}
           </Button>
         </Space.Compact>
         {info && (
@@ -1216,12 +1231,12 @@ function EditorApp({ dark }: { dark: boolean }) {
                 disabled={busy}
                 options={(info.captions ?? []).map((c, i) => ({
                   value: i,
-                  label: `${c.language} · ${c.automatic ? "自动字幕" : "手动字幕（优先）"}`,
+                  label: `${c.language} · ${c.automatic ? t.youtube.automatic : t.youtube.manual}`,
                 }))}
                 onChange={setTrack}
               />
             ) : (
-              <Empty description="没有可导入的 SRT / VTT 字幕" />
+              <Empty description={t.youtube.noCaptions} />
             )}
             <Button
               className="notice"
@@ -1237,7 +1252,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                 );
               }}
             >
-              下载并导入所选字幕
+              {t.youtube.importCaption}
             </Button>
           </div>
         )}
@@ -1247,7 +1262,7 @@ function EditorApp({ dark }: { dark: boolean }) {
           disabled={busy}
           onChange={(e) => setAudioAuthorized(e.target.checked)}
         >
-          我确认有权下载此视频的音频
+          {t.youtube.authorized}
         </Checkbox>
         <Button
           className="notice"
@@ -1263,11 +1278,9 @@ function EditorApp({ dark }: { dark: boolean }) {
             void update(() => Editor.DownloadYouTubeAudio(youtubeURL, true))
           }
         >
-          另行下载音频到本机并载入
+          {t.youtube.downloadAudio}
         </Button>
-        <p className="muted">
-          下载不会自动上传到 OpenAI。开始分析仍需另行确认。
-        </p>
+        <p className="muted">{t.youtube.noUpload}</p>
       </Modal>
     </div>
   );
@@ -1290,9 +1303,24 @@ const RESIZE_EDGE = 8;
 // window managers draw none, so the page draws its own edge.
 const edged = customChrome && !isWindows;
 
+const ANTD_LOCALES = { "zh-CN": zhCN, "zh-TW": zhTW, "en-US": enUS };
+
 export default function App() {
   const [settings, setSettings] = useSettings();
   const systemDark = useSystemDark();
+  // Like the theme, the last language is cached for the first paint.
+  const [cachedLocale] = useState(() =>
+    initialLocale(
+      localStorage.getItem("mousqueau-locale"),
+      navigator.languages,
+    ),
+  );
+  const locale: Locale = matchLocale(settings?.locale) ?? cachedLocale;
+  const [cachedFont] = useState(
+    () => localStorage.getItem("mousqueau-subtitle-font") ?? "",
+  );
+  const subtitleFont = settings ? settings.subtitleFont : cachedFont;
+  const t = messagesFor(locale);
   // The last theme is cached so a window opens in it before Go has answered.
   const [cached] = useState(() =>
     themeChoice(localStorage.getItem("mousqueau-theme")),
@@ -1302,8 +1330,11 @@ export default function App() {
     systemDark,
   );
   useEffect(() => {
-    if (settings) localStorage.setItem("mousqueau-theme", settings.theme);
-  }, [settings]);
+    if (!settings) return;
+    localStorage.setItem("mousqueau-theme", settings.theme);
+    localStorage.setItem("mousqueau-locale", locale);
+    localStorage.setItem("mousqueau-subtitle-font", settings.subtitleFont);
+  }, [settings, locale]);
   useEffect(() => {
     // A press on a title bar's background moves the window, and one at the
     // edge of a frameless window resizes it; neither may also start a text
@@ -1330,8 +1361,12 @@ export default function App() {
     // WebKit uses the document background outside the page during overscroll.
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   }, [dark]);
+  useLayoutEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
   return (
     <ConfigProvider
+      locale={ANTD_LOCALES[locale]}
       button={{ autoInsertSpace: false }}
       theme={{
         algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
@@ -1342,33 +1377,38 @@ export default function App() {
         },
       }}
     >
-      <AntApp>
-        <div
-          data-theme={dark ? "dark" : "light"}
-          className={edged ? "window-edge" : undefined}
-        >
-          {windowKind === "settings" ? (
-            settings && (
-              <SettingsWindow
-                settings={settings}
-                onChange={setSettings}
-                dark={dark}
-                systemDark={systemDark}
-              />
-            )
-          ) : windowKind === "welcome" ? (
-            settings && (
-              <WelcomeWindow
-                settings={settings}
-                onChange={setSettings}
-                systemDark={systemDark}
-              />
-            )
-          ) : (
-            <EditorApp dark={dark} />
-          )}
-        </div>
-      </AntApp>
+      <I18nProvider value={t}>
+        <AntApp>
+          <div
+            data-theme={dark ? "dark" : "light"}
+            className={edged ? "window-edge" : undefined}
+            style={
+              { "--subtitle-font": fontStack(subtitleFont) } as CSSProperties
+            }
+          >
+            {windowKind === "settings" ? (
+              settings && (
+                <SettingsWindow
+                  settings={settings}
+                  onChange={setSettings}
+                  dark={dark}
+                  systemDark={systemDark}
+                />
+              )
+            ) : windowKind === "welcome" ? (
+              settings && (
+                <WelcomeWindow
+                  settings={settings}
+                  onChange={setSettings}
+                  systemDark={systemDark}
+                />
+              )
+            ) : (
+              <EditorApp dark={dark} />
+            )}
+          </div>
+        </AntApp>
+      </I18nProvider>
     </ConfigProvider>
   );
 }
