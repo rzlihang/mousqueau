@@ -8,6 +8,7 @@ import (
 	"mousqueau/internal/project"
 	"mousqueau/internal/settings"
 	"mousqueau/internal/update"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -28,6 +29,27 @@ const (
 	settingsWindow = "settings"
 	welcomeWindow  = "welcome"
 )
+
+// Elsewhere than macOS the windows have no native frame; the frontend draws
+// the window controls at the right of its own title bar, where macOS keeps
+// the traffic lights on the left.
+var customChrome = runtime.GOOS != "darwin"
+
+// windowURL tells the frontend which window it is and whether to draw the
+// window controls.
+func windowURL(name string) string {
+	query := url.Values{}
+	if name != mainWindow {
+		query.Set("window", name)
+	}
+	if customChrome {
+		query.Set("chrome", "custom")
+	}
+	if len(query) == 0 {
+		return "/"
+	}
+	return "/?" + query.Encode()
+}
 
 type ToolStatus struct {
 	Path   string `json:"path"`
@@ -273,8 +295,8 @@ func (s *EditorService) ChooseToolPath(name string) (SettingsView, error) {
 	return s.SetToolPath(name, path)
 }
 
-// SaveAPIKey stores the key in the macOS keychain. It is kept in Go from here
-// on; no method returns it to the frontend.
+// SaveAPIKey stores the key in the system credential store. It is kept in Go
+// from here on; no method returns it to the frontend.
 func (s *EditorService) SaveAPIKey(key string) (SettingsView, error) {
 	key = strings.TrimSpace(key)
 	// One credential change at a time, so the cached key always matches the
@@ -384,8 +406,8 @@ func (s *EditorService) openPanel(name, title string, width, height int, minimis
 		return
 	}
 	window := s.app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name: name, Title: title, Width: width, Height: height, URL: "/?window=" + name,
-		DisableResize: true, MinimiseButtonState: minimise,
+		Name: name, Title: title, Width: width, Height: height, URL: windowURL(name),
+		DisableResize: true, Frameless: customChrome, MinimiseButtonState: minimise,
 		MaximiseButtonState: application.ButtonDisabled, FullscreenButtonState: application.ButtonDisabled,
 		Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset},
 	})
@@ -475,9 +497,10 @@ func (s *EditorService) openWindows() {
 	s.mu.Lock()
 	setupDone := s.settings.SetupDone
 	s.mu.Unlock()
-	editor := s.app.Window.NewWithOptions(application.WebviewWindowOptions{Name: mainWindow, Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: 1100, MinHeight: 720, URL: "/", Hidden: !setupDone,
-		// The frontend draws the toolbar under the traffic lights and marks it draggable.
-		Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset}})
+	editor := s.app.Window.NewWithOptions(application.WebviewWindowOptions{Name: mainWindow, Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: 1100, MinHeight: 720, URL: windowURL(mainWindow), Hidden: !setupDone,
+		// The frontend draws the toolbar under the traffic lights, or with its
+		// own window controls elsewhere, and marks it draggable.
+		Frameless: customChrome, Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset}})
 	// Closing the editor ends the session, so the secondary windows go with it.
 	editor.RegisterHook(events.Common.WindowClosing, func(*application.WindowEvent) {
 		s.mu.Lock()

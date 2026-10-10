@@ -26,7 +26,7 @@ import {
   Tooltip,
   theme,
 } from "antd";
-import { Events } from "@wailsio/runtime";
+import { Events, Window } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { Snapshot, Status } from "../bindings/mousqueau/models";
 import type { Cue } from "../bindings/mousqueau/internal/subtitle/models";
@@ -54,7 +54,14 @@ import { fontStack, resolveDark, themeChoice } from "./preferences";
 import SettingsWindow from "./SettingsWindow";
 import SuggestionCard, { SpeakerTag, SpeakerTags } from "./SuggestionCard";
 import Timeline from "./Timeline";
-import { isMac, useSettings, useSystemDark } from "./useSettings";
+import {
+  customChrome,
+  isMac,
+  isWindows,
+  useSettings,
+  useSystemDark,
+} from "./useSettings";
+import WindowControls from "./WindowControls";
 import WelcomeWindow from "./WelcomeWindow";
 import "./style.css";
 
@@ -468,8 +475,21 @@ function EditorApp({ dark }: { dark: boolean }) {
         : t.editor.waveLoading;
 
   return (
-    <div className={`shell${isMac ? " mac" : ""}`}>
-      <header className="titlebar">
+    <div
+      className={`shell${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
+    >
+      <header
+        className="titlebar"
+        onDoubleClick={(e) => {
+          // Wails acts on title bar double-clicks only on macOS.
+          if (
+            customChrome &&
+            e.target instanceof Element &&
+            !e.target.closest("button, input, textarea, a, .ant-select")
+          )
+            void Window.ToggleMaximise();
+        }}
+      >
         <div className="project-title">
           <strong>{projectName}</strong>
           <span>
@@ -568,6 +588,7 @@ function EditorApp({ dark }: { dark: boolean }) {
             </Button>
           </Tooltip>
         </div>
+        {customChrome && <WindowControls maximise />}
       </header>
 
       <div className="upper">
@@ -1276,6 +1297,11 @@ const DARK_FIXES = { colorError: "#ff7875" };
 
 // Each native window loads this bundle and says which one it is.
 const windowKind = new URLSearchParams(window.location.search).get("window");
+// Wider than the band in which the Wails runtime starts a window resize.
+const RESIZE_EDGE = 8;
+// Windows keeps a native border and shadow around frameless windows; Linux
+// window managers draw none, so the page draws its own edge.
+const edged = customChrome && !isWindows;
 
 const ANTD_LOCALES = { "zh-CN": zhCN, "zh-TW": zhTW, "en-US": enUS };
 
@@ -1309,6 +1335,28 @@ export default function App() {
     localStorage.setItem("mousqueau-locale", locale);
     localStorage.setItem("mousqueau-subtitle-font", settings.subtitleFont);
   }, [settings, locale]);
+  useEffect(() => {
+    // A press on a title bar's background moves the window, and one at the
+    // edge of a frameless window resizes it; neither may also start a text
+    // selection that sweeps across the panes.
+    const onDown = (e: MouseEvent) => {
+      const target = e.target instanceof Element ? e.target : null;
+      const edge =
+        customChrome &&
+        Math.min(
+          e.clientX,
+          e.clientY,
+          window.innerWidth - e.clientX,
+          window.innerHeight - e.clientY,
+        ) < RESIZE_EDGE;
+      const titlebar =
+        target?.closest(".titlebar, .set-head") &&
+        !target.closest("button, input, textarea, a, .ant-select");
+      if (edge || titlebar) e.preventDefault();
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
   useLayoutEffect(() => {
     // WebKit uses the document background outside the page during overscroll.
     document.documentElement.dataset.theme = dark ? "dark" : "light";
@@ -1333,6 +1381,7 @@ export default function App() {
         <AntApp>
           <div
             data-theme={dark ? "dark" : "light"}
+            className={edged ? "window-edge" : undefined}
             style={
               { "--subtitle-font": fontStack(subtitleFont) } as CSSProperties
             }

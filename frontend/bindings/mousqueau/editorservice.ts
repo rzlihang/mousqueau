@@ -125,8 +125,8 @@ export function RemoveAPIKey(): $CancellablePromise<$models.SettingsView> {
 }
 
 /**
- * SaveAPIKey stores the key in the macOS keychain. It is kept in Go from here
- * on; no method returns it to the frontend.
+ * SaveAPIKey stores the key in the system credential store. It is kept in Go
+ * from here on; no method returns it to the frontend.
  */
 export function SaveAPIKey(key: string): $CancellablePromise<$models.SettingsView> {
     return $Call.ByID(2270827278, key);

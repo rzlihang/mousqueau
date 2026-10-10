@@ -28,7 +28,15 @@ import {
   themeOptions,
   toolLabel,
 } from "./preferences";
-import { isMac, osName } from "./useSettings";
+import {
+  customChrome,
+  isMac,
+  keyStore,
+  keyStoreName,
+  osName,
+  toolSearch,
+} from "./useSettings";
+import WindowControls from "./WindowControls";
 
 type Props = {
   settings: SettingsView;
@@ -168,7 +176,7 @@ export default function SettingsWindow({
   const language = languageChoice(settings.language);
   const locale = matchLocale(settings.locale);
   const configured = settings.keySource !== "";
-  const os = osName(t);
+  const os = osName;
 
   const apply: Apply = async (action) => {
     try {
@@ -200,7 +208,7 @@ export default function SettingsWindow({
     setSaving(true);
     if (await apply(() => Editor.SaveAPIKey(apiKey))) {
       setApiKey("");
-      void message.success(t.settings.keySaved);
+      void message.success(t.settings.keySaved(keyStore(t)));
     }
     setSaving(false);
   }
@@ -211,7 +219,9 @@ export default function SettingsWindow({
   }
 
   return (
-    <div className={`panel-window settings${isMac ? " mac" : ""}`}>
+    <div
+      className={`panel-window settings${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
+    >
       <nav className="set-side" aria-label={t.settings.nav}>
         <div className="panel-drag" />
         <Input
@@ -245,6 +255,7 @@ export default function SettingsWindow({
       <main className="set-main">
         <div className="set-head">
           <h1>{t.settings.title}</h1>
+          {customChrome && <WindowControls />}
         </div>
         <div className="set-scroll" ref={scroller} onScroll={onScroll}>
           {!any && <div className="set-empty">{t.settings.noMatch(query)}</div>}
@@ -339,7 +350,7 @@ export default function SettingsWindow({
                   name="ffmpeg"
                   label="FFmpeg"
                   need={t.common.required}
-                  hint={t.settings.ffmpegHint}
+                  hint={t.settings.ffmpegHint(toolSearch(t))}
                   tool={settings.ffmpeg}
                   apply={apply}
                 />
@@ -400,7 +411,7 @@ export default function SettingsWindow({
                           <span className="mono">OPENAI_API_KEY</span>
                         </>
                       ) : settings.keySource === "keychain" ? (
-                        t.settings.keychain
+                        keyStoreName(t)
                       ) : (
                         t.common.offlineOnly
                       )}
@@ -430,7 +441,7 @@ export default function SettingsWindow({
                           }
                           onClick={() => void saveKey()}
                         >
-                          {t.settings.saveToKeychain}
+                          {t.settings.saveTo(keyStore(t))}
                         </Button>
                       </div>
                     </label>
@@ -453,7 +464,7 @@ export default function SettingsWindow({
                   <div className="set-row">
                     <span className="set-hint">{t.settings.removeHint}</span>
                     <Popconfirm
-                      title={t.settings.removeConfirm}
+                      title={t.settings.removeConfirm(keyStore(t))}
                       okText={t.settings.remove}
                       cancelText={t.common.cancel}
                       onConfirm={() => void apply(Editor.RemoveAPIKey)}

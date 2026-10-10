@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -180,7 +181,12 @@ func TestSubtitleFont(t *testing.T) {
 
 func TestToolPathFollowsSettings(t *testing.T) {
 	dir := t.TempDir()
-	tool := filepath.Join(dir, "ffmpeg")
+	// Windows only runs files with an executable extension.
+	exe := ""
+	if runtime.GOOS == "windows" {
+		exe = ".exe"
+	}
+	tool := filepath.Join(dir, "ffmpeg"+exe)
 	os.WriteFile(tool, []byte("#!/bin/sh\n"), 0700)
 	s := &EditorService{settings: settings.Default(), settingsPath: filepath.Join(dir, "settings.json")}
 	t.Cleanup(func() { media.SetToolPath("ffmpeg", "") })
@@ -211,7 +217,7 @@ func TestToolPathFollowsSettings(t *testing.T) {
 	blocker := filepath.Join(dir, "blocker")
 	os.WriteFile(blocker, nil, 0600)
 	s.settingsPath = filepath.Join(blocker, "settings.json")
-	other := filepath.Join(dir, "other-ffmpeg")
+	other := filepath.Join(dir, "other-ffmpeg"+exe)
 	os.WriteFile(other, []byte("#!/bin/sh\n"), 0700)
 	view, err = s.SetToolPath("ffmpeg", other)
 	if path, _ := media.Tool("ffmpeg"); err == nil || path != tool || view.FFmpeg.Path != tool {
@@ -276,5 +282,24 @@ func TestUpdateCheckSetupActionAndLastProject(t *testing.T) {
 	s.SetOpenLastProject(false)
 	if next := reopen(); next.GetSnapshot().Project != nil {
 		t.Fatal("last project reopened although disabled")
+	}
+}
+
+func TestWindowURLNamesTheWindowAndItsChrome(t *testing.T) {
+	saved := customChrome
+	defer func() { customChrome = saved }()
+	customChrome = false
+	if got := windowURL(mainWindow); got != "/" {
+		t.Fatalf("main window URL %q", got)
+	}
+	if got := windowURL(settingsWindow); got != "/?window=settings" {
+		t.Fatalf("settings window URL %q", got)
+	}
+	customChrome = true
+	if got := windowURL(mainWindow); got != "/?chrome=custom" {
+		t.Fatalf("frameless main window URL %q", got)
+	}
+	if got := windowURL(welcomeWindow); got != "/?chrome=custom&window=welcome" {
+		t.Fatalf("frameless welcome window URL %q", got)
 	}
 }

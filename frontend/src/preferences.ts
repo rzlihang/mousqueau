@@ -115,7 +115,7 @@ const KEYWORDS = {
   provDefault:
     "供应商 分析 转录 说话人 默认 轉錄 說話者 預設 provider openai analysis transcription speaker default",
   provOpenai:
-    "供应商 密钥 钥匙串 上传 金鑰 鑰匙圈 上傳 provider openai api key keychain openai_api_key upload",
+    "供应商 密钥 钥匙串 凭据 密钥环 上传 金鑰 鑰匙圈 憑證 認證管理員 金鑰圈 上傳 provider openai api key keychain keyring credential openai_api_key upload",
   provAdd: "供应商 添加 加入 provider add",
   updates:
     "更新 检查更新 版本 自动 测试版 檢查更新 自動 測試版 beta update check version automatic github",

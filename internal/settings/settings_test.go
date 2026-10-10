@@ -3,6 +3,7 @@ package settings
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -22,8 +23,9 @@ func TestDefaultsRoundTripAndDamagedFile(t *testing.T) {
 	if err != nil || loaded != want {
 		t.Fatalf("round trip: %+v %v", loaded, err)
 	}
+	// Windows has no permission bits; %AppData% is private to the user.
 	info, _ := os.Stat(path)
-	if info.Mode().Perm()&0077 != 0 {
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0077 != 0 {
 		t.Fatalf("settings readable by others: %v", info.Mode())
 	}
 	leftovers, _ := filepath.Glob(filepath.Join(filepath.Dir(path), "settings-*.json"))

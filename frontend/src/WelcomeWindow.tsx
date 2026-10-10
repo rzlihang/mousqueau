@@ -20,7 +20,16 @@ import {
   themeOptions,
   toolLabel,
 } from "./preferences";
-import { isMac, osName } from "./useSettings";
+import {
+  customChrome,
+  installCommand,
+  isMac,
+  keyStore,
+  keyStoreName,
+  osName,
+  toolSearch,
+} from "./useSettings";
+import WindowControls from "./WindowControls";
 
 type Props = {
   settings: SettingsView;
@@ -81,8 +90,8 @@ function ToolRow({
             ) : (
               <>
                 {missing}
-                {t.welcome.brewInstall}
-                <span className="mono ink">brew install {name}</span>
+                {t.welcome.installWith}
+                <span className="mono ink">{installCommand(name)}</span>
               </>
             )}
           </span>
@@ -174,7 +183,10 @@ export default function WelcomeWindow({
   ];
 
   return (
-    <div className={`panel-window welcome${isMac ? " mac" : ""}`}>
+    <div
+      className={`panel-window welcome${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
+    >
+      {customChrome && <WindowControls minimise={false} />}
       <aside className="welcome-side">
         <div className="panel-drag" />
         <div className="welcome-brand">
@@ -237,7 +249,7 @@ export default function WelcomeWindow({
                   <span className="set-hint">
                     {theme === "system"
                       ? t.welcome.themeFollows(
-                          osName(t),
+                          osName,
                           systemDark ? t.theme.dark : t.theme.light,
                         )
                       : t.welcome.changeLater}
@@ -256,7 +268,9 @@ export default function WelcomeWindow({
           {step === 1 && (
             <>
               <h1>{t.welcome.toolsTitle}</h1>
-              <p className="set-hint">{t.welcome.toolsSearched}</p>
+              <p className="set-hint">
+                {t.welcome.toolsSearched(toolSearch(t))}
+              </p>
               <div className="set-card flat">
                 <ToolRow
                   name="ffmpeg"
@@ -316,7 +330,9 @@ export default function WelcomeWindow({
                       autoComplete="off"
                       disabled={working}
                       placeholder={
-                        settings.keyStored ? t.welcome.keyKept : "sk-…"
+                        settings.keyStored
+                          ? t.welcome.keyKept(keyStore(t))
+                          : "sk-…"
                       }
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
@@ -324,7 +340,7 @@ export default function WelcomeWindow({
                     />
                   </label>
                   <span className="set-hint">
-                    {t.welcome.keyStorage}
+                    {t.welcome.keyStorage(keyStoreName(t))}
                     {hasEnv && t.welcome.envStillWins}
                   </span>
                 </>

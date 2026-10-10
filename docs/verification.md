@@ -89,7 +89,37 @@ Verified on 2026-10-08 in a Linux cloud environment with Go 1.25.0, Node 22.22.0
 - `pnpm run typecheck`, `pnpm test` (17 tests: identical shapes for all three dictionaries, no Taiwan terms such as 本机/开启/载入/套用 in zh-CN, no Simplified-only characters in zh-TW, font stacks, trilingual settings search) and `pnpm run build` passed.
 - Headless Chromium against the real Go service in server mode: with `LANG=zh_TW.UTF-8` the editor and settings rendered in Traditional Chinese with `<html lang="zh-TW">`; with `LANG=zh_CN.UTF-8` the toolbar reads 导入媒体 / 导入 SRT / YouTube 导入 / 加载示例 / 打开项目 / 保存项目 / 导出 SRT. Choosing Songti TC and then typing "My Font" in the settings window changed the cue list font in the open editor without reloading and was saved; `Bad"; x` was refused with the Traditional Chinese error and the field reverted.
 
+After merging the Windows and Linux desktop work (2026-10-10), its new text was brought into the three languages: the key store names (keychain, Credential Manager, keyring), the tool search paths, the frameless window controls, and the Linux and Windows key store errors. `go test ./internal/...`, `CGO_ENABLED=0 go test -tags server ./...`, `GOOS=windows go vet` / `go test -c`, `pnpm test` (17 tests), `pnpm run build` and `node --test scripts/frontend-dependencies.test.mjs` passed; in headless Chromium with `?chrome=custom` the window controls read 縮到最小 / 放到最大 / 關閉 and Minimize / Maximize / Close, and the tool hints name the Linux search path. The native Windows and Linux windows were not run after the merge; CI's `linux-desktop` and `windows-build` jobs cover them.
+
 Not verified: the menu without Help, the zh-Hant AppKit items and the fonts themselves need a Mac; the Linux browser here has none of the macOS Chinese fonts, so the font change was checked through the computed style only.
+
+## Windows and Linux desktop support
+
+Verified on 2026-10-09 in a Linux cloud container (Ubuntu 24.04, amd64) with Go 1.25.0, Node 22.22.0, pnpm 12.10.1, Wails v3.0.0-beta.28, GTK 4.14 and WebKitGTK 2.52 installed from apt. Nothing here was run on macOS or Windows.
+
+| Check | Result |
+| ----- | ------ |
+| `go test ./...` with cgo, GTK4 and WebKitGTK present | PASS, including the root package natively for the first time; new: window URLs with and without `chrome=custom`, and the Linux key store against a fake `secret-tool` (missing item, store, replace, delete twice, key never in argv, failures reported as errors) |
+| `go test -race ./internal/...`, `CGO_ENABLED=0 go test -tags server ./...`, `CGO_ENABLED=0 go build -tags server` | PASS |
+| `pnpm run typecheck`, `pnpm test` (11 tests), `pnpm run build`; `node --test scripts/frontend-dependencies.test.mjs` | PASS |
+| `go build -tags production` native Linux binary | PASS |
+| `scripts/linux-gui-smoke.sh` under `xvfb-run` + openbox | PASS (three consecutive runs): welcome window alone on first launch → its drawn close button shows the editor → maximise sets `_NET_WM_STATE_MAXIMIZED_*` and restore clears it → double-clicking the title bar does the same (implemented in the frontend; the Wails runtime handles it only on macOS) → Ctrl+, opens settings → its close button closes it → the editor's close button quits the app. The same script run against a build of `main` fails at the first close button, as expected |
+| Manual xdotool checks in the same setup | PASS: dragging the title bar moves the window by exactly the pointer offset; dragging the bottom-right edge resizes it; dark theme and the demo render; the window edge is drawn. Pressing a resize edge used to start a text selection across the panes (the Wails runtime does not cancel that press); fixed and rechecked by screenshot |
+| Linux key store against a real GNOME Keyring (unlocked in a D-Bus session) | PASS: empty read, store, replace, read back, delete, delete again; with no D-Bus session every call returns an error rather than "no key" |
+| `GOOS=windows go build -tags production -ldflags "-H windowsgui"` (amd64 and arm64), `GOOS=windows go vet ./...`, `GOOS=windows go test -c` for every package | PASS: compiles only. The Credential Manager code, frameless WebView2 windows, and the Go tests on Windows are not run here; the new `windows-build` CI job runs `go test ./...` on a Windows runner |
+
+First CI run (2026-10-09): `windows-build` failed in an existing settings test that asserted Unix permission bits (now checked outside Windows only), and `linux-desktop` failed because the app died at launch. That was reproduced here by making `bwrap` fail as on GitHub's AppArmor-restricted runners; the workflow now lifts that restriction, and the smoke script stops as soon as the app exits and prints the start and end of its log.
+
+Not verified: Windows GUI at all; Linux under a real desktop session, Wayland, or HiDPI; media playback through GStreamer; native file dialogs (a GTK file chooser did open under Xvfb, but nothing was picked); saving a key from the Settings window on either platform.
+
+## Windows and Linux acceptance checklist (still outstanding)
+
+1. Windows 11: first launch shows only the welcome window, with a native shadow and rounded corners; its close button (red on hover) shows the editor. The editor's minimise, maximise/restore and close buttons work; double-clicking the toolbar's empty space maximises; edges resize; Snap layouts appear when dragging to a screen edge.
+2. Windows: save, replace and remove an API key in Settings; confirm it appears in Credential Manager as `Mousqueau/openai-api-key` and that analysis works when launched from the Start menu.
+3. Windows: `winget install Gyan.FFmpeg` and confirm FFmpeg is found after restarting the app; import an MP4 and confirm playback and the waveform.
+4. Linux (GNOME on Wayland and on X11, and KDE): the same window checks as item 1, plus the 1 px window edge in light and dark themes.
+5. Linux: save a key with GNOME Keyring or KWallet running and confirm it in Seahorse/KWalletManager; confirm Settings reports an error rather than success when no keyring is running.
+6. Both: import/export through native dialogs, unsaved edits on close, theme following the system appearance, and `wails3 package` output (NSIS/MSIX on Windows, AppImage/deb on Linux).
 
 ## Mac acceptance checklist (still outstanding)
 
