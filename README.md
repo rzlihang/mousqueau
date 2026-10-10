@@ -1,6 +1,6 @@
 # Mousqueau v0.1
 
-A Wails v3 desktop application for correcting **existing SRT subtitles** and reviewing speaker identities in conversations. Go + React/TypeScript + Vite + Ant Design v6, bootstrapped from the official Wails v3 React template and pinned to `v3.0.0-beta.28`. macOS is the first target; the core is portable to Windows and Linux.
+A Wails v3 desktop application for correcting **existing SRT subtitles** and reviewing speaker identities in conversations. Go + React/TypeScript + Vite + Ant Design v6, bootstrapped from the official Wails v3 React template and pinned to `v3.0.0-beta.28`. It runs on macOS, Windows, and Linux. macOS is the primary target and the only platform with hand-tested GUI behaviour; the Linux desktop build is exercised automatically under Xvfb, and Windows is compiled and unit-tested in CI only.
 
 ![Mousqueau editor with mock Traditional Chinese diarization](docs/editor-preview.png)
 
@@ -24,14 +24,23 @@ cd ..
 wails3 dev
 ```
 
-For AI analysis, either save an API key under **设置 › 供应商** (⌘,), which stores it in the macOS keychain, or set `OPENAI_API_KEY` in the environment of the **Go application** before launching; the environment variable wins when both exist. The key is typed once into the settings or welcome window and handed to Go; it is never written to project or settings files and never returned to the frontend. The application does not read `.env` files. Launching a packaged app through Finder generally does not inherit terminal exports, so use the keychain there. Key storage is macOS-only; other platforms use the environment variable.
+For AI analysis, either save an API key under **设置 › 供应商** (⌘, or Ctrl+,), which stores it in the system credential store (macOS keychain, Windows Credential Manager, or the Secret Service keyring on Linux through `secret-tool`), or set `OPENAI_API_KEY` in the environment of the **Go application** before launching; the environment variable wins when both exist. The key is typed once into the settings or welcome window and handed to Go; it is never written to project or settings files and never returned to the frontend. The application does not read `.env` files. Launching a packaged app through Finder, the Start menu, or a desktop launcher generally does not inherit terminal exports, so use the credential store there. On Linux, saving a key needs `secret-tool` (Debian/Ubuntu package `libsecret-tools`) and a running keyring such as GNOME Keyring or KWallet; without them, use the environment variable.
 
 ```sh
 export OPENAI_API_KEY='your-key'
 wails3 dev
 ```
 
-FFmpeg and yt-dlp are looked up on that process's `PATH`, then in `/opt/homebrew/bin` and `/usr/local/bin`; **设置 › 外部工具** can pin either to another location. The first launch opens a short welcome window (theme, external tools, optional OpenAI key) that can be run again from Settings. Preferences are kept in `settings.json` under the user configuration directory (`~/Library/Application Support/Mousqueau` on macOS). Update checks only read this repository's GitHub release list, at most once a day when automatic checking is on, and never download anything. Hover the environment indicator at the left of the status bar for dependency/configuration availability. Linux desktop builds require GTK4 and WebKitGTK 6 development packages; Windows requires the WebView2 runtime. See the [Wails setup guide](https://v3.wails.io/getting-started/installation/). The server build described below is only for local testing, not a deployed service.
+FFmpeg and yt-dlp are looked up on that process's `PATH`, then (outside Windows) in `/opt/homebrew/bin` and `/usr/local/bin`; **设置 › 外部工具** can pin either to another location. The first launch opens a short welcome window (theme, external tools, optional OpenAI key) that can be run again from Settings. Preferences are kept in `settings.json` under the user configuration directory (`~/Library/Application Support/Mousqueau` on macOS, `%AppData%\Mousqueau` on Windows, `~/.config/Mousqueau` on Linux). Update checks only read this repository's GitHub release list, at most once a day when automatic checking is on, and never download anything. Hover the environment indicator at the left of the status bar for dependency/configuration availability. See [Develop on Windows or Linux](#develop-on-windows-or-linux) for the other platforms. The server build described below is only for local testing, not a deployed service.
+
+## Develop on Windows or Linux
+
+The same Go, Node and pnpm versions apply, plus `wails3` as above. See the [Wails setup guide](https://v3.wails.io/getting-started/installation/) for the native toolchain.
+
+- **Windows**: the WebView2 runtime (preinstalled on Windows 10/11). FFmpeg and yt-dlp can be installed with `winget install Gyan.FFmpeg` and `winget install yt-dlp.yt-dlp`.
+- **Linux**: GTK4 and WebKitGTK 6 development packages, plus GStreamer plugins for media playback. On Ubuntu 24.04: `sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev gstreamer1.0-plugins-good gstreamer1.0-libav ffmpeg libsecret-tools`. Install yt-dlp from its own releases or `pipx install yt-dlp`, since distribution packages lag behind YouTube changes. WebKitGTK runs its web content in a bubblewrap sandbox; where the system forbids unprivileged user namespaces (as GitHub's Ubuntu 24.04 runners do through AppArmor), the app exits at launch with `bwrap: setting up uid map: Permission denied` in its output.
+
+On both, the windows have no native frame: the toolbar is the title bar (drag it to move the window, double-click to maximise) and the minimise, maximise and close buttons sit at its right, where macOS keeps its traffic lights on the left. Frameless windows resize from their edges. Settings open with Ctrl+, since there is no application menu.
 
 ## Use the editor
 
@@ -62,7 +71,7 @@ pnpm test
 pnpm run build
 cd ..
 node --test scripts/frontend-dependencies.test.mjs
-# Native macOS desktop build / app bundle
+# Native desktop build / package for the current platform
 wails3 build
 wails3 package
 ```
@@ -75,6 +84,15 @@ Bindings are checked in and generated from Go service signatures. Regenerate aft
 wails3 generate bindings -ts -i
 ```
 
+To drive the native Linux build without a desktop (for example in CI or a cloud container), install `xvfb openbox xdotool x11-utils imagemagick` as well, build the frontend and then:
+
+```sh
+go build -tags production -o /tmp/mousqueau .
+xvfb-run -a -s "-screen 0 1700x1050x24" dbus-run-session -- scripts/linux-gui-smoke.sh /tmp/mousqueau /tmp/mousqueau-shots
+```
+
+It opens the welcome window with a fresh configuration, closes it with the drawn close button, maximises and restores the editor with its button and by double-clicking the title bar, opens settings with Ctrl+,, closes it and quits by closing the editor, saving a screenshot of each state. It checks GTK/WebKitGTK behaviour only, not macOS or Windows.
+
 For headless Linux verification without GTK/WebKit, build the frontend first, then:
 
 ```sh
@@ -84,7 +102,7 @@ CGO_ENABLED=0 go build -tags server -o /tmp/mousqueau-headless .
 WAILS_SERVER_HOST=127.0.0.1 WAILS_SERVER_PORT=9246 /tmp/mousqueau-headless
 ```
 
-The headless build uses real Wails bindings and allows a browser to exercise the editor/demo; native file dialogs are unsupported there. Keep it on loopback: this is a desktop application, not a remotely hosted authenticated service. Never claim this verifies macOS GUI behavior. CI checks core/frontend/server and builds a native macOS binary; automated builds also do not replace Mac GUI testing.
+The headless build uses real Wails bindings and allows a browser to exercise the editor/demo; native file dialogs are unsupported there. Keep it on loopback: this is a desktop application, not a remotely hosted authenticated service. Never claim this verifies macOS GUI behavior. CI checks core/frontend/server, builds native macOS and Windows binaries and runs the Go tests on both, and builds the native Linux desktop app and runs the GUI smoke test above; automated builds do not replace GUI testing on a real Mac or Windows PC.
 
 See [verification and Mac checklist](docs/verification.md), [architecture](docs/architecture.md), and [limitations / v0.2](docs/limitations.md).
 

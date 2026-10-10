@@ -39,7 +39,7 @@ const KEYWORDS = {
   ytdlp: "yt-dlp ytdlp youtube 外部工具 位置 路径 下载",
   provDefault: "供应商 provider 分析 转录 说话人 默认 openai",
   provOpenai:
-    "供应商 provider openai api 密钥 key 钥匙串 openai_api_key 上传",
+    "供应商 provider openai api 密钥 key 钥匙串 凭据 密钥环 keyring openai_api_key 上传",
   provAdd: "供应商 provider 添加",
   updates: "更新 检查更新 版本 自动 测试版 beta update version github",
 };

@@ -38,6 +38,7 @@ textarea {
   --wave: #b3c6e3;
   --wave-sel: #2867c7;
   --accent: #2867c7;
+  --edge: rgb(0 0 0 / 22%);
   --mono: ui-monospace, monospace;
   background: var(--bg);
   color: var(--ink);
@@ -53,6 +54,7 @@ textarea {
   --block: #222a39;
   --wave: #3b5680;
   --wave-sel: #6f9de0;
+  --edge: rgb(255 255 255 / 16%);
 }
 h2,
 h3 {
@@ -103,6 +105,8 @@ h3 {
 }
 .titlebar {
   --wails-draggable: drag;
+  -webkit-user-select: none;
+  user-select: none;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -114,6 +118,10 @@ h3 {
 /* Room for the macOS traffic lights of the inset title bar. */
 .shell.mac .titlebar {
   padding-left: 88px;
+}
+/* Elsewhere the window controls take the right edge instead. */
+.shell.custom-chrome .titlebar {
+  padding-right: 0;
 }
 .titlebar button,
 .titlebar input,
@@ -927,6 +935,8 @@ h3 {
 }
 .set-head {
   --wails-draggable: drag;
+  -webkit-user-select: none;
+  user-select: none;
   height: 52px;
   flex: none;
   display: flex;
@@ -934,6 +944,10 @@ h3 {
   padding: 0 24px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
+}
+.custom-chrome .set-head {
+  justify-content: space-between;
+  padding-right: 0;
 }
 .set-head h1,
 .set-scroll h2 {
@@ -1131,4 +1145,53 @@ h3 {
   .cue-columns > :nth-child(3) {
     visibility: hidden;
   }
+}
+
+/* Window controls of frameless windows outside macOS. */
+.window-controls {
+  --wails-draggable: no-drag;
+  display: flex;
+  flex: none;
+  align-self: stretch;
+}
+.welcome > .window-controls {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 52px;
+  z-index: 10;
+}
+.window-controls button {
+  width: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: default;
+}
+.window-controls button:hover,
+.window-controls button:focus-visible {
+  background: var(--select);
+  outline: none;
+}
+.window-controls .close:hover,
+.window-controls .close:focus-visible {
+  background: #c42b1c;
+  color: #fff;
+}
+.window-controls .close:active {
+  background: #b22a1b;
+  color: #fff;
+}
+/* Linux window managers draw no border around frameless windows. */
+.window-edge::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  border: 1px solid var(--edge);
+  pointer-events: none;
+  z-index: 2000;
 }

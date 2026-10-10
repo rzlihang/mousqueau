@@ -45,3 +45,51 @@ jobs:
         working-directory: frontend
       - run: go test ./...
       - run: go build -tags production -o /tmp/mousqueau .
+  linux-desktop:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev ffmpeg xvfb openbox xdotool x11-utils imagemagick
+      - run: pnpm install --frozen-lockfile && pnpm run build
+        working-directory: frontend
+      - run: go test ./...
+      - run: go build -tags production -o /tmp/mousqueau .
+      # WebKitGTK sandboxes its web processes with bubblewrap, which the
+      # runner's AppArmor policy forbids from creating user namespaces.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: xvfb-run -a -s "-screen 0 1700x1050x24" dbus-run-session -- scripts/linux-gui-smoke.sh /tmp/mousqueau linux-gui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-gui-screenshots
+          path: linux-gui
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile && pnpm run build
+        working-directory: frontend
+      - run: go test ./...
+      - run: go build -tags production -ldflags "-H windowsgui" -o mousqueau.exe .
