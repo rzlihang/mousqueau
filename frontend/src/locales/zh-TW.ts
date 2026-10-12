@@ -24,6 +24,13 @@ export const zhTW: Messages = {
     seconds: (n) => `${n} 秒`,
     cues: (n) => `${n} 句`,
   },
+  menu: {
+    title: "應用程式選單",
+    file: "檔案",
+    edit: "編輯",
+    window: "視窗",
+    toggleMaximise: "放到最大 / 還原",
+  },
   platform: {
     keyStore: { mac: "鑰匙圈", windows: "認證管理員", linux: "金鑰圈" },
     keyStoreName: {

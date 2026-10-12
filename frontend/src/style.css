@@ -39,6 +39,8 @@ textarea {
   --wave-sel: #2867c7;
   --accent: #2867c7;
   --edge: rgb(0 0 0 / 22%);
+  --scroll-thumb: #a5afbd;
+  --scroll-thumb-hover: #7c899b;
   --mono: ui-monospace, monospace;
   background: var(--bg);
   color: var(--ink);
@@ -55,6 +57,41 @@ textarea {
   --wave: #3b5680;
   --wave-sel: #6f9de0;
   --edge: rgb(255 255 255 / 16%);
+  --scroll-thumb: #48566b;
+  --scroll-thumb-hover: #687a94;
+}
+/* Apply to the document, including Ant Design portals and all three windows.
+   Keep browser scrolling, keyboard navigation and thumb dragging intact. */
+html[data-platform="desktop"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html[data-platform="desktop"] ::-webkit-scrollbar-track,
+html[data-platform="desktop"] ::-webkit-scrollbar-corner {
+  background: var(--bg);
+}
+html[data-platform="desktop"] ::-webkit-scrollbar-thumb {
+  min-height: 24px;
+  min-width: 24px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
+}
+html[data-platform="desktop"] ::-webkit-scrollbar-thumb:hover,
+html[data-platform="desktop"] ::-webkit-scrollbar-thumb:active {
+  background-color: var(--scroll-thumb-hover);
+}
+html[data-platform="desktop"] ::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+@supports not selector(::-webkit-scrollbar) {
+  html[data-platform="desktop"] * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) var(--bg);
+  }
 }
 h2,
 h3 {

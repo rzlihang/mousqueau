@@ -13,6 +13,7 @@ import {
   Button,
   Checkbox,
   ConfigProvider,
+  Dropdown,
   Empty,
   Input,
   InputNumber,
@@ -140,6 +141,7 @@ function EditorApp({ dark }: { dark: boolean }) {
   const [speakerId, setSpeakerId] = useState("A");
   const [speakerName, setSpeakerName] = useState("");
   const [youtubeOpen, setYoutubeOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [youtubeURL, setYoutubeURL] = useState("");
   const [info, setInfo] = useState<YouTubeInfo | null>(null);
   const [track, setTrack] = useState<number>();
@@ -490,6 +492,142 @@ function EditorApp({ dark }: { dark: boolean }) {
             void Window.ToggleMaximise();
         }}
       >
+        {!isMac && (
+          <Dropdown
+            trigger={["click"]}
+            open={menuOpen}
+            onOpenChange={setMenuOpen}
+            menu={{
+              onClick: () => setMenuOpen(false),
+              items: [
+                {
+                  type: "group",
+                  key: "file",
+                  label: t.menu.file,
+                  children: [
+                    {
+                      key: "open",
+                      label: t.editor.openProject,
+                      disabled: busy,
+                      onClick: () => replaceProject(Editor.OpenProject),
+                    },
+                    {
+                      key: "save",
+                      label: t.editor.saveProject,
+                      disabled: busy || !p,
+                      onClick: () => void save(false),
+                    },
+                    {
+                      key: "export",
+                      label: t.editor.exportSrt,
+                      disabled: busy || !p,
+                      onClick: () => void save(true),
+                    },
+                    {
+                      key: "media",
+                      label: t.common.importMedia,
+                      disabled: busy || draftDirty,
+                      onClick: () => void update(Editor.ImportVideo),
+                    },
+                    {
+                      key: "srt",
+                      label: t.common.importSrt,
+                      disabled: busy,
+                      onClick: () => replaceProject(Editor.ImportSRT),
+                    },
+                    {
+                      key: "youtube",
+                      label: t.editor.importYoutube,
+                      disabled: busy,
+                      onClick: () => setYoutubeOpen(true),
+                    },
+                    {
+                      key: "demo",
+                      label: t.common.loadDemo,
+                      disabled: busy,
+                      onClick: () => replaceProject(Editor.LoadDemo),
+                    },
+                  ],
+                },
+                { type: "divider" },
+                {
+                  type: "group",
+                  key: "edit",
+                  label: t.menu.edit,
+                  children: [
+                    {
+                      key: "undo",
+                      label: t.editor.withShortcut(t.editor.undo, "Ctrl+Z"),
+                      disabled: !canUndo,
+                      onClick: () => void update(Editor.Undo),
+                    },
+                    {
+                      key: "redo",
+                      label: t.editor.withShortcut(t.editor.redo, "Ctrl+Shift+Z"),
+                      disabled: !canRedo,
+                      onClick: () => void update(Editor.Redo),
+                    },
+                    {
+                      key: "settings",
+                      label: t.editor.withShortcut(t.settings.title, settingsShortcut),
+                      onClick: () => void run(Editor.OpenSettings),
+                    },
+                  ],
+                },
+                ...(customChrome
+                  ? [
+                      { type: "divider" as const },
+                      {
+                        type: "group" as const,
+                        key: "window",
+                        label: t.menu.window,
+                        children: [
+                          {
+                            key: "minimise",
+                            label: t.window.minimise,
+                            onClick: () => void Window.Minimise(),
+                          },
+                          {
+                            key: "maximise",
+                            label: t.menu.toggleMaximise,
+                            onClick: () => void Window.ToggleMaximise(),
+                          },
+                          {
+                            key: "close",
+                            label: t.window.close,
+                            onClick: () => void Window.Close(),
+                          },
+                        ],
+                      },
+                    ]
+                  : []),
+              ],
+            }}
+          >
+            <Button
+              type="text"
+              size="small"
+              className="icon-button"
+              aria-label={t.menu.title}
+              title={t.menu.title}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M2 3.5h12M2 8h12M2 12.5h12" />
+              </svg>
+            </Button>
+          </Dropdown>
+        )}
         <div className="project-title">
           <strong>{projectName}</strong>
           <span>
@@ -1360,6 +1498,7 @@ export default function App() {
   useLayoutEffect(() => {
     // WebKit uses the document background outside the page during overscroll.
     document.documentElement.dataset.theme = dark ? "dark" : "light";
+    document.documentElement.dataset.platform = isMac ? "mac" : "desktop";
   }, [dark]);
   useLayoutEffect(() => {
     document.documentElement.lang = locale;

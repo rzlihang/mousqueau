@@ -112,6 +112,22 @@ First CI run (2026-10-09): `windows-build` failed in an existing settings test t
 
 Not verified: Windows GUI at all; Linux under a real desktop session, Wayland, or HiDPI; media playback through GStreamer; native file dialogs (a GTK file chooser did open under Xvfb, but nothing was picked); saving a key from the Settings window on either platform.
 
+## WSL Windows test build (2026-10-12)
+
+Verified in Ubuntu WSL on amd64 with Go 1.26.0, Node 22.22.3 and the pinned pnpm 12.10.1 / Wails v3.0.0-beta.28:
+
+- `pnpm install --frozen-lockfile`, `pnpm run typecheck`, `pnpm test` (17 tests), `pnpm run build`, and `go test ./internal/...` passed.
+- Installed the Wails CLI with `CGO_ENABLED=0` without Linux GTK/WebKit development packages. `wails3 build GOOS=windows ARCH=amd64 CGO_ENABLED=0` produced `bin/mousqueau.exe`; `file` identified a PE32+ x86-64 Windows GUI executable. The build generated Windows icon and DPI manifest resources.
+- Binding generation emitted warnings about missing Linux `pkg-config` / C metadata, but generated all 36 service methods; checked-in bindings were unchanged and the frontend and Windows build succeeded. Vite also reported the existing bundle-size warning.
+
+The executable was not launched on Windows. Window controls, native dialogs, WebView2 playback, Credential Manager, and the checklist below remain unverified. See [WSL build instructions](../README.md#build-a-windows-test-executable-from-wsl).
+
+## Application menu and themed scrollbars (2026-10-12)
+
+The user's Windows screenshot confirms the earlier test executable opens the editor with demo subtitles and the Settings window. It also exposed the missing menu entry point and native white scrollbars. Windows and Linux now show a three-line application menu to the left of the project title and use themed scrollbar tracks/thumbs throughout the document, including secondary windows and Ant Design portals.
+
+Verified for this change: frontend typecheck, all 17 frontend tests and production build; headless Chromium against the real Wails server with isolated settings showed light/dark menus, the menu loaded the demo, Undo removed its suggestions and speaker identities, Redo restored them, and Escape closed the menu. The Settings scrollbar had a 10 px width, dark track and themed thumb without arrow buttons; scrolling changed `scrollTop` to 300. The browser reported no page errors. The Windows amd64 executable was rebuilt with Wails icon and manifest resources. The revised native Windows/Linux GUI, window-control menu actions and native Settings-window opening still require desktop checks; these browser checks do not verify macOS GUI behavior.
+
 ## Windows and Linux acceptance checklist (still outstanding)
 
 1. Windows 11: first launch shows only the welcome window, with a native shadow and rounded corners; its close button (red on hover) shows the editor. The editor's minimise, maximise/restore and close buttons work; double-clicking the toolbar's empty space maximises; edges resize; Snap layouts appear when dragging to a screen edge.
