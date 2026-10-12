@@ -26,6 +26,13 @@ export const enUS: Messages = {
     seconds: (n) => `${n} s`,
     cues: (n) => plural(n, "cue", "cues"),
   },
+  menu: {
+    title: "Application menu",
+    file: "File",
+    edit: "Edit",
+    window: "Window",
+    toggleMaximise: "Maximize / Restore",
+  },
   platform: {
     keyStore: {
       mac: "Keychain",

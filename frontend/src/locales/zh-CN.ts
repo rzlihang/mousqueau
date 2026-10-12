@@ -22,6 +22,13 @@ export const zhCN = {
     seconds: (n: string | number) => `${n} 秒`,
     cues: (n: number) => `${n} 句`,
   },
+  menu: {
+    title: "应用菜单",
+    file: "文件",
+    edit: "编辑",
+    window: "窗口",
+    toggleMaximise: "最大化 / 还原",
+  },
   platform: {
     keyStore: { mac: "钥匙串", windows: "凭据管理器", linux: "密钥环" },
     keyStoreName: {

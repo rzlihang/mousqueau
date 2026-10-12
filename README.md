@@ -40,7 +40,22 @@ The same Go, Node and pnpm versions apply, plus `wails3` as above. See the [Wail
 - **Windows**: the WebView2 runtime (preinstalled on Windows 10/11). FFmpeg and yt-dlp can be installed with `winget install Gyan.FFmpeg` and `winget install yt-dlp.yt-dlp`.
 - **Linux**: GTK4 and WebKitGTK 6 development packages, plus GStreamer plugins for media playback. On Ubuntu 24.04: `sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev gstreamer1.0-plugins-good gstreamer1.0-libav ffmpeg libsecret-tools`. Install yt-dlp from its own releases or `pipx install yt-dlp`, since distribution packages lag behind YouTube changes. WebKitGTK runs its web content in a bubblewrap sandbox; where the system forbids unprivileged user namespaces (as GitHub's Ubuntu 24.04 runners do through AppArmor), the app exits at launch with `bwrap: setting up uid map: Permission denied` in its output.
 
-On both, the windows have no native frame: the toolbar is the title bar (drag it to move the window, double-click to maximise) and the minimise, maximise and close buttons sit at its right, where macOS keeps its traffic lights on the left. Frameless windows resize from their edges. Settings open with Ctrl+, since there is no application menu.
+On both, the windows have no native frame: the toolbar is the title bar (drag it to move the window, double-click to maximise) and the minimise, maximise and close buttons sit at its right, where macOS keeps its traffic lights on the left. Frameless windows resize from their edges. The three-line button to the left of the project title opens the application menu, including Settings (also Ctrl+,). Scrollbars in every window and popup follow the light or dark application theme.
+
+### Build a Windows test executable from WSL
+
+Install Go 1.25+ and the pinned pnpm in WSL, then run from the repository root:
+
+```sh
+CGO_ENABLED=0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+export PATH="$(go env GOPATH)/bin:$PATH"
+wails3 build GOOS=windows ARCH=amd64 CGO_ENABLED=0
+wslpath -w "$PWD/bin/mousqueau.exe"
+```
+
+This uses Go cross-compilation; Docker and Linux GTK/WebKit development packages are unnecessary for the Windows target. Use `ARCH=arm64` for Windows on ARM. The build embeds the frontend and generates the Windows icon and DPI manifest. It produces a test executable, not an installer.
+
+Open the path printed by `wslpath` in Windows Explorer. Windows needs the WebView2 runtime; FFmpeg and yt-dlp must also be Windows executables, configured in Settings or available on the Windows process's `PATH`. WSL's Linux tools do not supply those dependencies. Start with **加载示例** without an API key, then check window controls, native SRT import/export, undo/redo, project save/reopen, and local media playback. See the [outstanding Windows acceptance checklist](docs/verification.md#windows-and-linux-acceptance-checklist-still-outstanding). A successful WSL build does not verify Windows GUI behavior.
 
 ## Use the editor
 
