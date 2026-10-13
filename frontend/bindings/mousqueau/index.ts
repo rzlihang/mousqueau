@@ -7,6 +7,7 @@ export {
 };
 
 export type {
+    ProviderView,
     SettingsView,
     Snapshot,
     Status,

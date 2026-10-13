@@ -114,9 +114,10 @@ const KEYWORDS = {
     "yt-dlp ytdlp youtube 外部工具 位置 路径 下载 路徑 下載 external tools location path download",
   provDefault:
     "供应商 分析 转录 说话人 默认 轉錄 說話者 預設 provider openai analysis transcription speaker default",
-  provOpenai:
-    "供应商 密钥 钥匙串 凭据 密钥环 上传 金鑰 鑰匙圈 憑證 認證管理員 金鑰圈 上傳 provider openai api key keychain keyring credential openai_api_key upload",
-  provAdd: "供应商 添加 加入 provider add",
+  provList:
+    "供应商 密钥 钥匙串 凭据 密钥环 上传 模型 地址 金鑰 鑰匙圈 憑證 認證管理員 金鑰圈 上傳 網址 provider api key keychain keyring credential openai_api_key upload model endpoint url openai deepgram assemblyai elevenlabs alibaba dashscope 阿里云 百炼 阿里雲 百煉 tencent 腾讯 騰訊 custom 自定义 自訂",
+  provAdd:
+    "供应商 添加 加入 provider add openai deepgram assemblyai elevenlabs alibaba dashscope 阿里云 百炼 阿里雲 百煉 tencent 腾讯 騰訊 custom 自定义 自訂",
   updates:
     "更新 检查更新 版本 自动 测试版 檢查更新 自動 測試版 beta update check version automatic github",
 };
@@ -125,7 +126,7 @@ export type SettingRow = keyof typeof KEYWORDS;
 const ROWS: Record<SectionId, SettingRow[]> = {
   general: ["theme", "language", "font", "startup", "setup"],
   tools: ["ffmpeg", "ytdlp"],
-  providers: ["provDefault", "provOpenai", "provAdd"],
+  providers: ["provDefault", "provList", "provAdd"],
   updates: ["updates"],
 };
 
@@ -150,4 +151,16 @@ export function formatChecked(iso: string, t: Messages): string {
   return t.settings.lastChecked(
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`,
   );
+}
+
+// The warning shown before audio goes to a provider under mainland Chinese
+// law or to a custom endpoint; undefined for the others.
+export function providerCaution(
+  provider: { caution: boolean; region: string },
+  t: Messages,
+): string | undefined {
+  if (!provider.caution) return undefined;
+  return provider.region === "china"
+    ? t.settings.cautionChina
+    : t.settings.cautionCustom;
 }

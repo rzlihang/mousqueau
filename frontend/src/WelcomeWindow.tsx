@@ -120,14 +120,16 @@ export default function WelcomeWindow({
   const [step, setStep] = useState(0);
   const [working, setWorking] = useState(false);
   const [apiKey, setApiKey] = useState("");
-  const hasEnv = settings.keySource === "env";
+  // Setup offers OpenAI; other providers are added in Settings.
+  const openai = settings.providers?.find((p) => p.id === "openai");
+  const hasEnv = openai?.keySource === "env";
   const [choice, setChoice] = useState<KeyChoice>(
     hasEnv ? "env" : settings.keychainAvailable ? "key" : "none",
   );
   const theme = themeChoice(settings.theme);
   const language = languageChoice(settings.language);
   const locale = matchLocale(settings.locale);
-  const configured = settings.keySource !== "";
+  const configured = !!openai?.keySource;
 
   const apply: Apply = async (action) => {
     try {
@@ -142,11 +144,13 @@ export default function WelcomeWindow({
     if (step === 2 && choice === "key") {
       if (apiKey.trim()) {
         setWorking(true);
-        const saved = await apply(() => Editor.SaveAPIKey(apiKey));
+        const saved = await apply(() =>
+          Editor.SaveProviderKey("openai", [apiKey]),
+        );
         setWorking(false);
         if (!saved) return;
         setApiKey("");
-      } else if (!settings.keyStored) {
+      } else if (!openai?.keyStored) {
         void message.warning(t.welcome.needKey);
         return;
       }
@@ -297,6 +301,7 @@ export default function WelcomeWindow({
             <>
               <h1>{t.welcome.openaiTitle}</h1>
               <p>{t.welcome.openaiIntro}</p>
+              <p className="set-hint">{t.welcome.otherProviders}</p>
               <Radio.Group
                 vertical
                 value={choice}
@@ -330,7 +335,7 @@ export default function WelcomeWindow({
                       autoComplete="off"
                       disabled={working}
                       placeholder={
-                        settings.keyStored
+                        openai?.keyStored
                           ? t.welcome.keyKept(keyStore(t))
                           : "sk-…"
                       }

@@ -6,8 +6,44 @@
 import * as project$0 from "./internal/project/models.js";
 
 /**
+ * ProviderView is an analysis provider as Settings shows it. It never
+ * contains credentials, only where they come from.
+ */
+export interface ProviderView {
+    "id": string;
+    "name": string;
+
+    /**
+     * "international", "china" or "custom"
+     */
+    "region": string;
+
+    /**
+     * warn before sensitive uploads
+     */
+    "caution": boolean;
+    "credentials": string[] | null;
+    "envVars": string[] | null;
+    "defaultModel": string;
+    "models": string[] | null;
+    "needsEndpoint": boolean;
+    "keyOptional": boolean;
+    "diarization": boolean;
+    "added": boolean;
+    "model": string;
+    "endpoint": string;
+
+    /**
+     * "env", "keychain" or ""
+     */
+    "keySource": string;
+    "keyStored": boolean;
+    "ready": boolean;
+}
+
+/**
  * SettingsView is what the settings and welcome windows show. It never
- * contains the API key, only where one comes from.
+ * contains an API key, only where one comes from.
  */
 export interface SettingsView {
     "theme": string;
@@ -28,10 +64,10 @@ export interface SettingsView {
     "ytdlp": ToolStatus;
 
     /**
-     * "env", "keychain" or ""
+     * in use; "" when none is added
      */
-    "keySource": string;
-    "keyStored": boolean;
+    "provider": string;
+    "providers": ProviderView[] | null;
     "keychainAvailable": boolean;
     "autoUpdate": boolean;
     "beta": boolean;
@@ -51,7 +87,24 @@ export interface Status {
     "phase": string;
     "ffmpeg": boolean;
     "ytdlp": boolean;
+
+    /**
+     * the provider in use can analyze
+     */
     "apiConfigured": boolean;
+
+    /**
+     * its name; "" when none is added
+     */
+    "provider": string;
+
+    /**
+     * ProviderCaution marks a provider under mainland China's jurisdiction
+     * (region "china") or a custom endpoint, so the upload confirmation can
+     * advise care.
+     */
+    "providerCaution": boolean;
+    "providerRegion": string;
 }
 
 export interface ToolStatus {

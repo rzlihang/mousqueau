@@ -18,8 +18,9 @@ var (
 	procCredFree    = advapi32.NewProc("CredFree")
 )
 
+func target(account string) string { return service + "/" + account }
+
 const (
-	target                  = service + "/" + account
 	credTypeGeneric         = 1
 	credPersistLocalMachine = 2
 )
@@ -43,11 +44,14 @@ type credential struct {
 func Available() bool { return procCredReadW.Find() == nil }
 
 // Get returns "" when no key has been stored.
-func Get(ctx context.Context) (string, error) {
+func Get(ctx context.Context, account string) (string, error) {
+	if err := validAccount(account); err != nil {
+		return "", err
+	}
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	name, err := windows.UTF16PtrFromString(target)
+	name, err := windows.UTF16PtrFromString(target(account))
 	if err != nil {
 		return "", err
 	}
@@ -67,14 +71,17 @@ func Get(ctx context.Context) (string, error) {
 }
 
 // Set stores or replaces the key.
-func Set(ctx context.Context, key string) error {
+func Set(ctx context.Context, account, key string) error {
+	if err := validAccount(account); err != nil {
+		return err
+	}
 	if err := Validate(key); err != nil {
 		return err
 	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	name, err := windows.UTF16PtrFromString(target)
+	name, err := windows.UTF16PtrFromString(target(account))
 	if err != nil {
 		return err
 	}
@@ -93,11 +100,14 @@ func Set(ctx context.Context, key string) error {
 	return nil
 }
 
-func Delete(ctx context.Context) error {
+func Delete(ctx context.Context, account string) error {
+	if err := validAccount(account); err != nil {
+		return err
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	name, err := windows.UTF16PtrFromString(target)
+	name, err := windows.UTF16PtrFromString(target(account))
 	if err != nil {
 		return err
 	}

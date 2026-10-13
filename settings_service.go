@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"mousqueau/internal/analysis"
 	"mousqueau/internal/i18n"
 	"mousqueau/internal/keychain"
 	"mousqueau/internal/media"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -57,42 +59,69 @@ type ToolStatus struct {
 	Ready  bool   `json:"ready"`
 }
 
+// ProviderView is an analysis provider as Settings shows it. It never
+// contains credentials, only where they come from.
+type ProviderView struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Region        string   `json:"region"`  // "international", "china" or "custom"
+	Caution       bool     `json:"caution"` // warn before sensitive uploads
+	Credentials   []string `json:"credentials"`
+	EnvVars       []string `json:"envVars"`
+	DefaultModel  string   `json:"defaultModel"`
+	Models        []string `json:"models"`
+	NeedsEndpoint bool     `json:"needsEndpoint"`
+	KeyOptional   bool     `json:"keyOptional"`
+	Diarization   bool     `json:"diarization"`
+	Added         bool     `json:"added"`
+	Model         string   `json:"model"`
+	Endpoint      string   `json:"endpoint"`
+	KeySource     string   `json:"keySource"` // "env", "keychain" or ""
+	KeyStored     bool     `json:"keyStored"`
+	Ready         bool     `json:"ready"`
+}
+
 // SettingsView is what the settings and welcome windows show. It never
-// contains the API key, only where one comes from.
+// contains an API key, only where one comes from.
 type SettingsView struct {
-	Theme             string     `json:"theme"`
-	Language          string     `json:"language"` // "system", "zh-CN", "zh-TW" or "en-US"
-	Locale            string     `json:"locale"`   // the language in use
-	SubtitleFont      string     `json:"subtitleFont"`
-	OpenLastProject   bool       `json:"openLastProject"`
-	SetupDone         bool       `json:"setupDone"`
-	FFmpeg            ToolStatus `json:"ffmpeg"`
-	YTDLP             ToolStatus `json:"ytdlp"`
-	KeySource         string     `json:"keySource"` // "env", "keychain" or ""
-	KeyStored         bool       `json:"keyStored"`
-	KeychainAvailable bool       `json:"keychainAvailable"`
-	AutoUpdate        bool       `json:"autoUpdate"`
-	Beta              bool       `json:"beta"`
-	Version           string     `json:"version"`
-	LastUpdateCheck   string     `json:"lastUpdateCheck"`
-	UpdateVersion     string     `json:"updateVersion"`
+	Theme             string         `json:"theme"`
+	Language          string         `json:"language"` // "system", "zh-CN", "zh-TW" or "en-US"
+	Locale            string         `json:"locale"`   // the language in use
+	SubtitleFont      string         `json:"subtitleFont"`
+	OpenLastProject   bool           `json:"openLastProject"`
+	SetupDone         bool           `json:"setupDone"`
+	FFmpeg            ToolStatus     `json:"ffmpeg"`
+	YTDLP             ToolStatus     `json:"ytdlp"`
+	Provider          string         `json:"provider"` // in use; "" when none is added
+	Providers         []ProviderView `json:"providers"`
+	KeychainAvailable bool           `json:"keychainAvailable"`
+	AutoUpdate        bool           `json:"autoUpdate"`
+	Beta              bool           `json:"beta"`
+	Version           string         `json:"version"`
+	LastUpdateCheck   string         `json:"lastUpdateCheck"`
+	UpdateVersion     string         `json:"updateVersion"`
 }
 
 // credentialStore is the keychain, or a stand-in under test.
+// Each provider's credential is one item, named by keychain.Account.
 type credentialStore interface {
 	Available() bool
-	Get(context.Context) (string, error)
-	Set(context.Context, string) error
-	Delete(context.Context) error
+	Get(ctx context.Context, account string) (string, error)
+	Set(ctx context.Context, account, key string) error
+	Delete(ctx context.Context, account string) error
 }
 type systemKeychain struct{}
 
-func (systemKeychain) Available() bool                         { return keychain.Available() }
-func (systemKeychain) Get(ctx context.Context) (string, error) { return keychain.Get(ctx) }
-func (systemKeychain) Set(ctx context.Context, key string) error {
-	return keychain.Set(ctx, key)
+func (systemKeychain) Available() bool { return keychain.Available() }
+func (systemKeychain) Get(ctx context.Context, account string) (string, error) {
+	return keychain.Get(ctx, account)
 }
-func (systemKeychain) Delete(ctx context.Context) error { return keychain.Delete(ctx) }
+func (systemKeychain) Set(ctx context.Context, account, key string) error {
+	return keychain.Set(ctx, account, key)
+}
+func (systemKeychain) Delete(ctx context.Context, account string) error {
+	return keychain.Delete(ctx, account)
+}
 
 func (s *EditorService) keyStore() credentialStore {
 	if s.keys != nil {
@@ -106,27 +135,84 @@ func toolStatus(name, custom string) ToolStatus {
 	return ToolStatus{Path: path, Custom: custom != "", Ready: ready}
 }
 
-// apiKeyLocked prefers the environment, then the key stored in the keychain.
-func (s *EditorService) apiKeyLocked() string {
-	if key := os.Getenv("OPENAI_API_KEY"); key != "" {
-		return key
+// secretLocked returns a provider's credential parts and where they come
+// from: the environment when all of its variables are set, then the keychain.
+// Several parts are stored joined by colons.
+func (s *EditorService) secretLocked(info analysis.Info) ([]string, string) {
+	if len(info.EnvVars) > 0 {
+		parts := make([]string, len(info.EnvVars))
+		for i, name := range info.EnvVars {
+			parts[i] = os.Getenv(name)
+		}
+		if !slices.Contains(parts, "") {
+			return parts, "env"
+		}
 	}
-	return s.storedKey
+	if stored := s.storedKeys[info.ID]; stored != "" {
+		return strings.SplitN(stored, ":", len(info.Credentials)), "keychain"
+	}
+	return nil, ""
 }
-func (s *EditorService) apiKey() string { s.mu.Lock(); defer s.mu.Unlock(); return s.apiKeyLocked() }
+
+// readyLocked reports whether an added provider can be used for analysis.
+func (s *EditorService) readyLocked(id string) bool {
+	info, ok := analysis.Lookup(id)
+	i := s.settings.Find(id)
+	if !ok || i < 0 {
+		return false
+	}
+	if cfg := s.settings.Providers[i]; info.Endpoint && (cfg.Endpoint == "" || cfg.Model == "") {
+		return false
+	}
+	_, source := s.secretLocked(info)
+	return source != "" || info.KeyOptional
+}
+
+// activeProvider is what an analysis needs of the provider in use.
+type activeProvider struct {
+	info   analysis.Info
+	name   string
+	config analysis.Config
+	secret []string
+	ready  bool
+}
+
+func (s *EditorService) activeLocked() (activeProvider, bool) {
+	info, ok := analysis.Lookup(s.settings.Provider)
+	i := s.settings.Find(info.ID)
+	if !ok || i < 0 {
+		return activeProvider{}, false
+	}
+	cfg := s.settings.Providers[i]
+	secret, _ := s.secretLocked(info)
+	return activeProvider{info: info, name: i18n.T(info.Name), config: analysis.Config{Model: cfg.Model, Endpoint: cfg.Endpoint}, secret: secret, ready: s.readyLocked(info.ID)}, true
+}
+
+func (s *EditorService) providerViews() []ProviderView {
+	views := []ProviderView{}
+	for _, info := range analysis.Providers() {
+		v := ProviderView{
+			ID: info.ID, Name: i18n.T(info.Name), Region: info.Region, Caution: info.Caution(),
+			Credentials: info.Credentials, EnvVars: info.EnvVars, DefaultModel: info.DefaultModel, Models: info.Models,
+			NeedsEndpoint: info.Endpoint, KeyOptional: info.KeyOptional, Diarization: info.Diarization,
+			KeyStored: s.storedKeys[info.ID] != "", Ready: s.readyLocked(info.ID),
+		}
+		_, v.KeySource = s.secretLocked(info)
+		if i := s.settings.Find(info.ID); i >= 0 {
+			v.Added, v.Model, v.Endpoint = true, s.settings.Providers[i].Model, s.settings.Providers[i].Endpoint
+		}
+		views = append(views, v)
+	}
+	return views
+}
 
 func (s *EditorService) settingsView() SettingsView {
 	view := SettingsView{
 		Theme: s.settings.Theme, Language: s.settings.Language, Locale: string(i18n.Current()), SubtitleFont: s.settings.SubtitleFont, OpenLastProject: s.settings.OpenLastProject, SetupDone: s.settings.SetupDone,
 		FFmpeg: toolStatus("ffmpeg", s.settings.FFmpegPath), YTDLP: toolStatus("yt-dlp", s.settings.YTDLPPath),
-		KeyStored: s.storedKey != "", KeychainAvailable: s.keyStore().Available(),
+		Provider: s.settings.Provider, Providers: s.providerViews(), KeychainAvailable: s.keyStore().Available(),
 		AutoUpdate: s.settings.AutoUpdate, Beta: s.settings.Beta,
 		Version: version, UpdateVersion: s.update.Version,
-	}
-	if os.Getenv("OPENAI_API_KEY") != "" {
-		view.KeySource = "env"
-	} else if s.storedKey != "" {
-		view.KeySource = "keychain"
 	}
 	if !s.settings.LastUpdateCheck.IsZero() {
 		view.LastUpdateCheck = s.settings.LastUpdateCheck.Format(time.RFC3339)
@@ -150,7 +236,10 @@ func (s *EditorService) loadSettings() {
 	// Read once: like other Mac apps, a new system language applies on relaunch.
 	s.languages = i18n.SystemLanguages(ctx, appID)
 	i18n.SetCurrent(i18n.Resolve(s.settings.Language, s.languages))
-	s.storedKey, _ = s.keyStore().Get(ctx)
+	s.storedKeys = map[string]string{}
+	for _, p := range s.settings.Providers {
+		s.storedKeys[p.ID], _ = s.keyStore().Get(ctx, keychain.Account(p.ID))
+	}
 	if !s.settings.OpenLastProject || !s.settings.SetupDone || s.settings.LastProject == "" {
 		return
 	}
@@ -295,36 +384,149 @@ func (s *EditorService) ChooseToolPath(name string) (SettingsView, error) {
 	return s.SetToolPath(name, path)
 }
 
-// SaveAPIKey stores the key in the system credential store. It is kept in Go
+// AddProvider makes a provider available for analysis, picking up a
+// credential the keychain still holds for it. The first provider added
+// becomes the one in use.
+func (s *EditorService) AddProvider(id string) (SettingsView, error) {
+	if _, ok := analysis.Lookup(id); !ok {
+		return s.GetSettings(), i18n.Errorf("unknown analysis provider")
+	}
+	s.keyMu.Lock()
+	defer s.keyMu.Unlock()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	stored, _ := s.keyStore().Get(ctx, keychain.Account(id))
+	return s.change(func(next *settings.Settings) error {
+		addProvider(next, id)
+		return nil
+	}, func() { s.setStoredKeyLocked(id, stored) })
+}
+func addProvider(next *settings.Settings, id string) {
+	if next.Find(id) < 0 {
+		next.Providers = append(slices.Clone(next.Providers), settings.ProviderConfig{ID: id})
+	}
+	if next.Provider == "" {
+		next.Provider = id
+	}
+}
+func (s *EditorService) setStoredKeyLocked(id, key string) {
+	if s.storedKeys == nil {
+		s.storedKeys = map[string]string{}
+	}
+	s.storedKeys[id] = key
+}
+
+// RemoveProvider removes a provider together with its stored credential.
+func (s *EditorService) RemoveProvider(id string) (SettingsView, error) {
+	s.keyMu.Lock()
+	defer s.keyMu.Unlock()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := s.keyStore().Delete(ctx, keychain.Account(id)); err != nil {
+		return s.GetSettings(), err
+	}
+	return s.change(func(next *settings.Settings) error {
+		i := next.Find(id)
+		if i < 0 {
+			return nil
+		}
+		next.Providers = slices.Delete(slices.Clone(next.Providers), i, i+1)
+		if next.Provider == id {
+			next.Provider = ""
+			if len(next.Providers) > 0 {
+				next.Provider = next.Providers[0].ID
+			}
+		}
+		return nil
+	}, func() { s.setStoredKeyLocked(id, "") })
+}
+
+// SetProvider chooses which added provider analyses use.
+func (s *EditorService) SetProvider(id string) (SettingsView, error) {
+	return s.change(func(next *settings.Settings) error {
+		if next.Find(id) < 0 {
+			return i18n.Errorf("unknown analysis provider")
+		}
+		next.Provider = id
+		return nil
+	})
+}
+
+// SetProviderOptions sets an added provider's model, empty for its default,
+// and the service URL of a custom provider.
+func (s *EditorService) SetProviderOptions(id, model, endpoint string) (SettingsView, error) {
+	model, endpoint = strings.TrimSpace(model), strings.TrimSpace(endpoint)
+	return s.change(func(next *settings.Settings) error {
+		info, _ := analysis.Lookup(id)
+		i := next.Find(id)
+		if i < 0 {
+			return i18n.Errorf("unknown analysis provider")
+		}
+		if err := analysis.ValidateModel(model); err != nil {
+			return err
+		}
+		if !info.Endpoint {
+			endpoint = ""
+		} else if err := analysis.ValidateEndpoint(endpoint); err != nil {
+			return err
+		}
+		next.Providers = slices.Clone(next.Providers)
+		next.Providers[i] = settings.ProviderConfig{ID: id, Model: model, Endpoint: endpoint}
+		return nil
+	})
+}
+
+// SaveProviderKey stores a provider's credential, one value per part, in the
+// system credential store, adding the provider if needed. It is kept in Go
 // from here on; no method returns it to the frontend.
-func (s *EditorService) SaveAPIKey(key string) (SettingsView, error) {
-	key = strings.TrimSpace(key)
+func (s *EditorService) SaveProviderKey(id string, parts []string) (SettingsView, error) {
+	info, ok := analysis.Lookup(id)
+	if !ok {
+		return s.GetSettings(), i18n.Errorf("unknown analysis provider")
+	}
+	if len(parts) != len(info.Credentials) {
+		return s.GetSettings(), i18n.Errorf("enter an API key")
+	}
+	for i := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
+		if err := keychain.Validate(parts[i]); err != nil {
+			return s.GetSettings(), err
+		}
+		if len(parts) > 1 && strings.Contains(parts[i], ":") {
+			return s.GetSettings(), i18n.Errorf("credentials cannot contain colons")
+		}
+	}
+	key := strings.Join(parts, ":")
 	// One credential change at a time, so the cached key always matches the
 	// keychain even when two windows act at once.
 	s.keyMu.Lock()
 	defer s.keyMu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := s.keyStore().Set(ctx, key); err != nil {
+	if err := s.keyStore().Set(ctx, keychain.Account(id), key); err != nil {
 		return s.GetSettings(), err
 	}
+	view, err := s.change(func(next *settings.Settings) error {
+		addProvider(next, id)
+		return nil
+	})
 	s.mu.Lock()
-	s.storedKey = key
-	view := s.settingsView()
+	s.setStoredKeyLocked(id, key)
+	view = s.settingsView()
 	s.mu.Unlock()
 	s.notify()
-	return view, nil
+	return view, err
 }
-func (s *EditorService) RemoveAPIKey() (SettingsView, error) {
+func (s *EditorService) RemoveProviderKey(id string) (SettingsView, error) {
 	s.keyMu.Lock()
 	defer s.keyMu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := s.keyStore().Delete(ctx); err != nil {
+	if err := s.keyStore().Delete(ctx, keychain.Account(id)); err != nil {
 		return s.GetSettings(), err
 	}
 	s.mu.Lock()
-	s.storedKey = ""
+	s.setStoredKeyLocked(id, "")
 	view := s.settingsView()
 	s.mu.Unlock()
 	s.notify()

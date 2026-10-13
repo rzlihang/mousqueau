@@ -136,6 +136,14 @@ Verified in a Linux cloud environment with Go 1.25.0, Node 22.22.0, pnpm 12.10.1
 
 Not verified: the real Go service behind the new buttons in a browser, any native window, Windows WebView2 font rendering (the computed font stack was checked; on Linux it resolved to DejaVu Sans Mono), trackpad pinch on macOS, and wheel behaviour in WebView2 and WKWebView.
 
+## Transcription providers (2026-10-13)
+
+Analysis can now use OpenAI, Deepgram, AssemblyAI, ElevenLabs, Alibaba Cloud Model Studio, Tencent Cloud ASR or a custom OpenAI-compatible endpoint, chosen and configured under Settings › Providers. Adding a provider under mainland Chinese law or a custom endpoint asks for confirmation with a warning about sensitive audio; the card and the upload confirmation repeat it.
+
+Verified in a Linux cloud environment with Go 1.25.0, Node 22.22.0, pnpm 12.10.1, Wails v3.0.0-beta.28, GTK 4 and WebKitGTK 6 development packages: `go test ./...` (including the root package) and `CGO_ENABLED=0 go test -tags server ./...`; frontend typecheck, all 21 frontend tests and the production build; regenerated bindings. Provider tests run each client against a local HTTP fixture: request shape and authentication, Deepgram's utterances, AssemblyAI's upload, polling and deletion, ElevenLabs' word grouping, DashScope's policy, temporary upload, task polling and result document, Tencent's signed requests (checked for a stable TC3 signature, not against Tencent's own example) and error codes, cancellation during polling, and the custom endpoint over `verbose_json`. Settings tests cover adding, configuring, choosing and removing providers, two-part credentials, environment precedence and that credentials never reach settings or the frontend. Headless Chromium against the server build with an isolated configuration and a fake `secret-tool`: the add list, the warning dialog for Tencent Cloud and none for Deepgram, saving a SecretId/SecretKey pair (stored as one keyring item), choosing the provider in use, and the persisted `settings.json`; no page errors.
+
+Not verified: any live provider. The documentation sites were unreachable from this environment, so request and response formats follow the providers' APIs as remembered and need a check with real keys, beginning with Tencent's signature and DashScope's temporary upload. Native windows, the upload confirmation with a real media file, and the macOS and Windows credential stores with several items were not exercised.
+
 ## Windows and Linux acceptance checklist (still outstanding)
 
 1. Windows 11: first launch shows only the welcome window, with a native shadow and rounded corners; its close button (red on hover) shows the editor. The editor's minimise, maximise/restore and close buttons work; double-clicking the toolbar's empty space maximises; edges resize; Snap layouts appear when dragging to a screen edge.
@@ -145,6 +153,7 @@ Not verified: the real Go service behind the new buttons in a browser, any nativ
 5. Linux: save a key with GNOME Keyring or KWallet running and confirm it in Seahorse/KWalletManager; confirm Settings reports an error rather than success when no keyring is running.
 6. Both: import/export through native dialogs, unsaved edits on close, theme following the system appearance, and `wails3 package` output (NSIS/MSIX on Windows, AppImage/deb on Linux).
 7. Both: times in the cue list, inspector, clock and ruler render in Cascadia Mono or Consolas (Windows) with digits that keep their width. Split a cue at the cursor with the playhead inside and outside it, merge with the previous and next cue, undo and redo each, and export an SRT with sequential numbering. Drag the timeline scrollbar's ends to zoom, Ctrl + wheel over the tracks without the page zooming, and scroll a full-length episode's cue list.
+8. Each provider with a real key: a 60-second Mandarin range returns speakers and timestamps; a wrong key, an exhausted quota and cancelling during upload and during polling each show a clear error; the Tencent and Alibaba Cloud warnings appear when adding them and in the upload confirmation.
 
 ## Mac acceptance checklist (still outstanding)
 

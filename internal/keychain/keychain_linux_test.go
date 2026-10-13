@@ -31,19 +31,19 @@ func TestSecretToolStoreReadsAndRemovesTheKey(t *testing.T) {
 	if !Available() {
 		t.Fatal("secret-tool on PATH not found")
 	}
-	if key, err := Get(ctx); key != "" || err != nil {
+	if key, err := Get(ctx, "openai-api-key"); key != "" || err != nil {
 		t.Fatalf("missing item: %q %v", key, err)
 	}
-	if err := Set(ctx, "sk-test-123"); err != nil {
+	if err := Set(ctx, "openai-api-key", "sk-test-123"); err != nil {
 		t.Fatal(err)
 	}
-	if key, err := Get(ctx); key != "sk-test-123" || err != nil {
+	if key, err := Get(ctx, "openai-api-key"); key != "sk-test-123" || err != nil {
 		t.Fatalf("stored item: %q %v", key, err)
 	}
-	if err := Delete(ctx); err != nil {
+	if err := Delete(ctx, "openai-api-key"); err != nil {
 		t.Fatal(err)
 	}
-	if err := Delete(ctx); err != nil {
+	if err := Delete(ctx, "openai-api-key"); err != nil {
 		t.Fatalf("deleting a missing item: %v", err)
 	}
 	args, _ := os.ReadFile(filepath.Join(dir, "args"))
@@ -51,14 +51,18 @@ func TestSecretToolStoreReadsAndRemovesTheKey(t *testing.T) {
 		t.Fatalf("arguments: %s", args)
 	}
 
+	if _, err := Get(ctx, "bad account; rm"); err == nil {
+		t.Fatal("unsafe item name accepted")
+	}
+
 	t.Setenv("FAKE_FAIL", "1")
-	if _, err := Get(ctx); err == nil {
+	if _, err := Get(ctx, "openai-api-key"); err == nil {
 		t.Fatal("a failing keyring read as empty")
 	}
-	if err := Set(ctx, "sk-test-123"); err == nil {
+	if err := Set(ctx, "openai-api-key", "sk-test-123"); err == nil {
 		t.Fatal("a failing keyring accepted the key")
 	}
-	if err := Delete(ctx); err == nil {
+	if err := Delete(ctx, "openai-api-key"); err == nil {
 		t.Fatal("a failing keyring reported the key removed")
 	}
 }
