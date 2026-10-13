@@ -128,6 +128,14 @@ The user's Windows screenshot confirms the earlier test executable opens the edi
 
 Verified for this change: frontend typecheck, all 17 frontend tests and production build; headless Chromium against the real Wails server with isolated settings showed light/dark menus, the menu loaded the demo, Undo removed its suggestions and speaker identities, Redo restored them, and Escape closed the menu. The Settings scrollbar had a 10 px width, dark track and themed thumb without arrow buttons; scrolling changed `scrollTop` to 300. The browser reported no page errors. The Windows amd64 executable was rebuilt with Wails icon and manifest resources. The revised native Windows/Linux GUI, window-control menu actions and native Settings-window opening still require desktop checks; these browser checks do not verify macOS GUI behavior.
 
+## Timeline zoom, split/merge and the virtual cue list (2026-10-13)
+
+Following a Windows trial: time displays now use an explicit monospace stack (SF Mono, Menlo, Cascadia Mono, Consolas, DejaVu Sans Mono, Liberation Mono) with tabular figures, since `ui-monospace` is Safari-only and a bare `monospace` can resolve to a CJK font under a Chinese page language on Windows. The inspector can split the selected cue at the text cursor and merge it with the previous or next cue. The timeline's native scrollbar is replaced by one whose thumb ends zoom, Ctrl/⌘ + wheel zooms around the pointer, the plain wheel scrolls sideways, and zooming out stops once the whole media fits. The cue list renders only the rows in view.
+
+Verified in a Linux cloud environment with Go 1.25.0, Node 22.22.0, pnpm 12.10.1 and Wails v3.0.0-beta.28: `go test ./internal/...` (new split/merge, undo/redo, invalid split points, merged suggestions staying unacceptable, CJK-aware text joining), frontend typecheck, all 20 frontend tests and the production build; regenerated bindings add only `SplitCue` and `MergeCues`. A headless Chromium smoke against the Vite dev server with a stubbed Wails runtime (not the Go service) and 3,000 cues rendered 19–25 cue rows at a time, dragged both ends of the zoom thumb, panned it, zoomed with Ctrl + wheel, zoomed out to the full 100 minutes, split a cue at the cursor and merged it back, with no page errors.
+
+Not verified: the real Go service behind the new buttons in a browser, any native window, Windows WebView2 font rendering (the computed font stack was checked; on Linux it resolved to DejaVu Sans Mono), trackpad pinch on macOS, and wheel behaviour in WebView2 and WKWebView.
+
 ## Windows and Linux acceptance checklist (still outstanding)
 
 1. Windows 11: first launch shows only the welcome window, with a native shadow and rounded corners; its close button (red on hover) shows the editor. The editor's minimise, maximise/restore and close buttons work; double-clicking the toolbar's empty space maximises; edges resize; Snap layouts appear when dragging to a screen edge.
@@ -136,6 +144,7 @@ Verified for this change: frontend typecheck, all 17 frontend tests and producti
 4. Linux (GNOME on Wayland and on X11, and KDE): the same window checks as item 1, plus the 1 px window edge in light and dark themes.
 5. Linux: save a key with GNOME Keyring or KWallet running and confirm it in Seahorse/KWalletManager; confirm Settings reports an error rather than success when no keyring is running.
 6. Both: import/export through native dialogs, unsaved edits on close, theme following the system appearance, and `wails3 package` output (NSIS/MSIX on Windows, AppImage/deb on Linux).
+7. Both: times in the cue list, inspector, clock and ruler render in Cascadia Mono or Consolas (Windows) with digits that keep their width. Split a cue at the cursor with the playhead inside and outside it, merge with the previous and next cue, undo and redo each, and export an SRT with sequential numbering. Drag the timeline scrollbar's ends to zoom, Ctrl + wheel over the tracks without the page zooming, and scroll a full-length episode's cue list.
 
 ## Mac acceptance checklist (still outstanding)
 

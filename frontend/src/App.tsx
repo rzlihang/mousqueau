@@ -1,4 +1,5 @@
 import {
+  type ComponentRef,
   type CSSProperties,
   useCallback,
   useEffect,
@@ -35,9 +36,11 @@ import type { YouTubeInfo } from "../bindings/mousqueau/internal/media/models";
 import { activeCue, formatTime, parseTime } from "./editor";
 import {
   type CueFilter,
+  codePointOffset,
   cueStatus,
   filterCues,
   formatSeconds,
+  splitTime,
 } from "./workspace";
 import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
@@ -53,7 +56,8 @@ import {
 } from "./i18n";
 import { fontStack, resolveDark, themeChoice } from "./preferences";
 import SettingsWindow from "./SettingsWindow";
-import SuggestionCard, { SpeakerTag, SpeakerTags } from "./SuggestionCard";
+import CueRows from "./CueRows";
+import SuggestionCard, { SpeakerTag } from "./SuggestionCard";
 import Timeline from "./Timeline";
 import {
   customChrome,
@@ -147,12 +151,15 @@ function EditorApp({ dark }: { dark: boolean }) {
   const [track, setTrack] = useState<number>();
   const [audioAuthorized, setAudioAuthorized] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
-  const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const textArea = useRef<ComponentRef<typeof Input.TextArea>>(null);
   const p = snapshot?.project;
   const cues = p?.state.cues ?? [];
   const speakers = p?.state.speakers ?? [];
   const suggestions = p?.state.suggestions ?? [];
-  const cue = cues.find((c) => c.id === selected);
+  const cueIndex = cues.findIndex((c) => c.id === selected);
+  const cue = cueIndex < 0 ? undefined : cues[cueIndex];
+  const previousCue = cueIndex > 0 ? cues[cueIndex - 1] : undefined;
+  const nextCue = cueIndex < 0 ? undefined : cues[cueIndex + 1];
   const active = activeCue(cues, playhead);
   const busy = working || !!status?.busy;
   const mediaUrl = snapshot?.mediaUrl ?? "";
@@ -199,12 +206,6 @@ function EditorApp({ dark }: { dark: boolean }) {
   useEffect(() => {
     if (!cue && cues.length) setSelected(cues[0].id);
   }, [cue, cues]);
-  useEffect(() => {
-    rowRefs.current[selected]?.scrollIntoView({
-      block: "nearest",
-      behavior: "smooth",
-    });
-  }, [selected]);
   useEffect(() => {
     const prevent = (e: BeforeUnloadEvent) => {
       if (dirty || draftDirty) {
@@ -354,6 +355,24 @@ function EditorApp({ dark }: { dark: boolean }) {
     if (!v) return;
     if (v.paused) void v.play().catch((e) => message.error(errorText(e)));
     else v.pause();
+  }
+  // Splits at the text cursor; the time follows the playhead when it is
+  // inside the cue, otherwise the share of text before the cursor.
+  function splitCue() {
+    if (!cue) return;
+    const caret = textArea.current?.resizableTextArea?.textArea.selectionStart;
+    const offset = codePointOffset(cue.text, caret ?? 0);
+    const length = Array.from(cue.text).length;
+    if (offset <= 0 || offset >= length) {
+      void message.info(t.inspector.splitNeedsCursor);
+      return;
+    }
+    const at = splitTime(cue.start, cue.end, playhead, offset / length);
+    void update(() => Editor.SplitCue(cue.id, at, offset));
+  }
+  // Merging with the previous cue keeps the previous cue's ID, so select it.
+  async function mergeCues(first: Cue) {
+    if (await update(() => Editor.MergeCues(first.id))) setSelected(first.id);
   }
   function changeDraft(patch: Partial<Draft>) {
     setDraft((d) => ({ ...d, ...patch }));
@@ -767,7 +786,15 @@ function EditorApp({ dark }: { dark: boolean }) {
             <span>{t.cueList.columns.text}</span>
             <span>{t.cueList.columns.status}</span>
           </div>
-          <div className="grid-body">
+          <CueRows
+            cues={shown}
+            speakers={speakers}
+            suggestions={suggestions}
+            selectedId={selected}
+            activeId={active?.id ?? ""}
+            busy={busy}
+            onSelect={selectCue}
+          >
             {!cues.length && (
               <Empty description={t.common.emptyProject}>
                 <Space>
@@ -789,42 +816,7 @@ function EditorApp({ dark }: { dark: boolean }) {
             {!!cues.length && !shown.length && (
               <p className="muted grid-empty">{t.cueList.noMatch}</p>
             )}
-            {shown.map((c) => {
-              const st = cueStatus(c, suggestions);
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  ref={(el) => {
-                    rowRefs.current[c.id] = el;
-                  }}
-                  disabled={busy}
-                  aria-pressed={selected === c.id}
-                  className={`cue-row cue-columns${selected === c.id ? " selected" : ""}${active?.id === c.id ? " playing" : ""}`}
-                  onClick={() => selectCue(c)}
-                >
-                  <span className="mono muted small">{c.identifier}</span>
-                  <span className="mono">{formatTime(c.start)}</span>
-                  <span className="mono muted small">
-                    {t.common.seconds((c.end - c.start).toFixed(1))}
-                  </span>
-                  <span className="tag-row">
-                    <SpeakerTags ids={c.speakerIds} speakers={speakers} />
-                  </span>
-                  <span className="row-text">{c.text}</span>
-                  <span>
-                    {st && (
-                      <Tag color={st === "review" ? "orange" : "blue"}>
-                        {st === "review"
-                          ? t.cueList.review
-                          : t.common.pendingDecision}
-                      </Tag>
-                    )}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          </CueRows>
         </section>
 
         <section className="viewer" aria-label={t.viewer.label}>
@@ -974,6 +966,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                   <label className="field">
                     {t.inspector.text}
                     <Input.TextArea
+                      ref={textArea}
                       className="subtitle-text"
                       disabled={busy}
                       autoSize={{ minRows: 2, maxRows: 5 }}
@@ -1023,6 +1016,31 @@ function EditorApp({ dark }: { dark: boolean }) {
                       onClick={() => void applyDraft()}
                     >
                       {t.inspector.apply}
+                    </Button>
+                  </div>
+                  <div className="structure-row">
+                    <Button
+                      size="small"
+                      disabled={busy || draftDirty || !previousCue}
+                      onClick={() => previousCue && void mergeCues(previousCue)}
+                    >
+                      {t.inspector.mergePrevious}
+                    </Button>
+                    <Tooltip title={t.inspector.splitHint}>
+                      <Button
+                        size="small"
+                        disabled={busy || draftDirty}
+                        onClick={splitCue}
+                      >
+                        {t.inspector.split}
+                      </Button>
+                    </Tooltip>
+                    <Button
+                      size="small"
+                      disabled={busy || draftDirty || !nextCue}
+                      onClick={() => void mergeCues(cue)}
+                    >
+                      {t.inspector.mergeNext}
                     </Button>
                   </div>
                   <div className="rule" />

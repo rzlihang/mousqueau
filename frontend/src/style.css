@@ -41,7 +41,11 @@ textarea {
   --edge: rgb(0 0 0 / 22%);
   --scroll-thumb: #a5afbd;
   --scroll-thumb-hover: #7c899b;
-  --mono: ui-monospace, monospace;
+  /* ui-monospace only exists in Safari, and a bare monospace resolves to
+     a CJK font such as SimSun under a Chinese page language on Windows. */
+  --mono:
+    ui-monospace, "SF Mono", Menlo, "Cascadia Mono", Consolas,
+    "DejaVu Sans Mono", "Liberation Mono", monospace;
   background: var(--bg);
   color: var(--ink);
 }
@@ -106,6 +110,14 @@ h3 {
 }
 .mono {
   font-family: var(--mono);
+}
+/* Times keep their width as digits change, even in a fallback font. */
+.mono,
+.clock,
+.tick-label,
+.block-id,
+.mono-input input {
+  font-variant-numeric: tabular-nums;
 }
 .muted {
   font-size: 12px;
@@ -255,6 +267,13 @@ h3 {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+.grid-rows {
+  position: relative;
+}
+.grid-rows > .cue-row {
+  position: absolute;
+  left: 0;
 }
 .grid-body .ant-empty {
   margin-top: 48px;
@@ -463,6 +482,11 @@ h3 {
 .apply-row .ant-tag {
   margin: 0;
 }
+.structure-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .speaker-row {
   display: flex;
   align-items: center;
@@ -609,6 +633,61 @@ h3 {
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior: contain;
+}
+/* The zoom scrollbar below replaces the native one. */
+html .track-scroll {
+  scrollbar-width: none;
+}
+html[data-platform] .track-scroll::-webkit-scrollbar {
+  display: none;
+}
+.zoom-scrollbar {
+  position: relative;
+  height: 14px;
+  margin-left: 112px;
+  background: var(--bg);
+  touch-action: none;
+  user-select: none;
+}
+.zoom-scrollbar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.zoom-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  min-width: 24px;
+  border-radius: 5px;
+  background: var(--scroll-thumb);
+}
+.zoom-thumb:hover,
+.zoom-thumb.dragging {
+  background: var(--scroll-thumb-hover);
+}
+.zoom-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+.zoom-handle::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--panel);
+  opacity: 0.8;
+}
+.zoom-handle.start {
+  left: 0;
+}
+.zoom-handle.end {
+  right: 0;
 }
 .track-content {
   position: relative;

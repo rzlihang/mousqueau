@@ -150,6 +150,12 @@ export const zhTW: Messages = {
     nothingUnapplied: "沒有未套用的修改",
     revert: "復原修改",
     apply: "套用編輯",
+    split: "分割",
+    splitHint:
+      "在文字游標處分割文字。播放頭位於本句內時在播放頭處切分時間，否則依文字比例切分。",
+    splitNeedsCursor: "請先在文字中將游標放在要分割的位置",
+    mergePrevious: "合併上一句",
+    mergeNext: "合併下一句",
     cueSuggestions: "本句校正建議",
     noCueSuggestions: "本句沒有校正建議。在時間軸上選取範圍後即可上傳分析。",
     speakersHint: "不同分析範圍的標籤各自編號，可手動命名與指派。",
@@ -209,6 +215,9 @@ export const zhTW: Messages = {
     suggestions: "校正建議",
     rulerHint: "點按以移動播放頭；拖曳以選取分析範圍",
     selectCue: (id) => `選擇第 ${id} 句`,
+    scrollbar: "時間軸捲動與縮放",
+    scrollbarHint: (mod) =>
+      `拖曳以捲動；拖曳兩端以縮放。也可按住 ${mod} 並捲動滑鼠滾輪縮放。`,
   },
   suggestion: {
     cue: (id) => `字幕 #${id}`,

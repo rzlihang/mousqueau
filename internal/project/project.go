@@ -3,9 +3,15 @@ package project
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"mousqueau/internal/analysis"
 	"mousqueau/internal/i18n"
 	"mousqueau/internal/subtitle"
+	"slices"
+	"strconv"
+	"strings"
+	"unicode"
 )
 
 type State struct {
@@ -53,6 +59,127 @@ func (p *Project) Edit(cue subtitle.Cue) error {
 		}
 	}
 	return i18n.Errorf("subtitle no longer exists")
+}
+
+// Split divides a cue at a time and a text offset counted in Unicode code
+// points. The first part keeps the cue's ID, and with it any suggestions.
+func (p *Project) Split(id string, at float64, offset int) error {
+	next := clone(p.State)
+	i := slices.IndexFunc(next.Cues, func(c subtitle.Cue) bool { return c.ID == id })
+	if i < 0 {
+		return i18n.Errorf("subtitle no longer exists")
+	}
+	first := next.Cues[i]
+	ms := func(t float64) int64 { return int64(math.Round(t * 1000)) }
+	if math.IsNaN(at) || ms(at) <= ms(first.Start) || ms(at) >= ms(first.End) {
+		return i18n.Errorf("the split time must fall inside the subtitle")
+	}
+	text := []rune(first.Text)
+	if offset <= 0 || offset >= len(text) {
+		return i18n.Errorf("the split must leave text on both sides")
+	}
+	second := first
+	second.ID = p.newCueID()
+	second.SpeakerIDs = slices.Clone(first.SpeakerIDs)
+	first.Text = strings.TrimRightFunc(string(text[:offset]), unicode.IsSpace)
+	second.Text = strings.TrimLeftFunc(string(text[offset:]), unicode.IsSpace)
+	if first.Text == "" || second.Text == "" {
+		return i18n.Errorf("the split must leave text on both sides")
+	}
+	first.End = float64(ms(at)) / 1000
+	second.Start = first.End
+	next.Cues = slices.Insert(next.Cues, i+1, second)
+	next.Cues[i] = first
+	return p.commitStructure(next)
+}
+
+// Merge joins a cue with the one after it. The merged cue keeps the first
+// ID; suggestions for the second move to it and, since the text no longer
+// matches what was analyzed, can only be rejected.
+func (p *Project) Merge(id string) error {
+	next := clone(p.State)
+	i := slices.IndexFunc(next.Cues, func(c subtitle.Cue) bool { return c.ID == id })
+	if i < 0 {
+		return i18n.Errorf("subtitle no longer exists")
+	}
+	if i+1 >= len(next.Cues) {
+		return i18n.Errorf("there is no following subtitle to merge with")
+	}
+	a, b := next.Cues[i], next.Cues[i+1]
+	// Cues need not be in time order, so cover both intervals.
+	a.Start = math.Min(a.Start, b.Start)
+	a.End = math.Max(a.End, b.End)
+	a.Text = joinText(a.Text, b.Text)
+	for _, s := range b.SpeakerIDs {
+		if !slices.Contains(a.SpeakerIDs, s) {
+			a.SpeakerIDs = append(a.SpeakerIDs, s)
+		}
+	}
+	if a.SpeakerIDs == nil {
+		a.SpeakerIDs = []string{}
+	}
+	a.Review = a.Review || b.Review
+	next.Cues[i] = a
+	next.Cues = slices.Delete(next.Cues, i+1, i+2)
+	for k, s := range next.Suggestions {
+		if s.CueID == b.ID {
+			next.Suggestions[k].CueID = a.ID
+		}
+	}
+	return p.commitStructure(next)
+}
+
+// joinText joins two subtitle texts with a space, or with nothing where
+// either side of the join is CJK, which is written without spaces.
+func joinText(a, b string) string {
+	a = strings.TrimRightFunc(a, unicode.IsSpace)
+	b = strings.TrimLeftFunc(b, unicode.IsSpace)
+	if a == "" || b == "" {
+		return a + b
+	}
+	ra, rb := []rune(a), []rune(b)
+	if unbroken(ra[len(ra)-1]) || unbroken(rb[0]) {
+		return a + b
+	}
+	return a + " " + b
+}
+func unbroken(r rune) bool {
+	return unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana, unicode.Hangul) ||
+		(r >= 0x3000 && r <= 0x303f) || (r >= 0xff00 && r <= 0xffef)
+}
+
+// commitStructure renumbers SRT identifiers after cues were added or removed,
+// so the exported file stays sequential, then validates and commits.
+func (p *Project) commitStructure(next State) error {
+	for i := range next.Cues {
+		next.Cues[i].Identifier = strconv.Itoa(i + 1)
+	}
+	if _, err := subtitle.Render(next.Cues); err != nil {
+		return err
+	}
+	p.commit(next)
+	return nil
+}
+
+// newCueID returns an ID that no cue in the project, its originals or its
+// history has used.
+func (p *Project) newCueID() string {
+	used := map[string]bool{}
+	for _, cues := range [][]subtitle.Cue{p.Original, p.State.Cues} {
+		for _, c := range cues {
+			used[c.ID] = true
+		}
+	}
+	for _, s := range append(slices.Clone(p.Undo), p.Redo...) {
+		for _, c := range s.Cues {
+			used[c.ID] = true
+		}
+	}
+	for n := len(used) + 1; ; n++ {
+		if id := fmt.Sprintf("cue-%d", n); !used[id] {
+			return id
+		}
+	}
 }
 func (p *Project) UndoEdit() {
 	if len(p.Undo) == 0 {
@@ -106,6 +233,9 @@ func (p *Project) Decide(id, decision string) error {
 				return i18n.Errorf("suggestion already reviewed")
 			}
 			if decision == "accepted" {
+				if !slices.ContainsFunc(next.Cues, func(c subtitle.Cue) bool { return c.ID == s.CueID }) {
+					return i18n.Errorf("subtitle no longer exists")
+				}
 				for j, c := range next.Cues {
 					if c.ID == s.CueID {
 						if c.Text != s.Original {

@@ -94,6 +94,13 @@ export function LoadDemo(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(2920927275);
 }
 
+/**
+ * MergeCues joins a cue with the one after it.
+ */
+export function MergeCues(id: string): $CancellablePromise<$models.Snapshot> {
+    return $Call.ByID(3108585604, id);
+}
+
 export function OpenProject(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(3448282533);
 }
@@ -178,6 +185,13 @@ export function SetTheme(theme: string): $CancellablePromise<$models.SettingsVie
  */
 export function SetToolPath(name: string, path: string): $CancellablePromise<$models.SettingsView> {
     return $Call.ByID(680364449, name, path);
+}
+
+/**
+ * SplitCue divides a cue at a time and a text offset in Unicode code points.
+ */
+export function SplitCue(id: string, at: number, offset: number): $CancellablePromise<$models.Snapshot> {
+    return $Call.ByID(3268591467, id, at, offset);
 }
 
 /**

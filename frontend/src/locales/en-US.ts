@@ -158,6 +158,12 @@ export const enUS: Messages = {
     nothingUnapplied: "No unapplied changes",
     revert: "Revert",
     apply: "Apply Edit",
+    split: "Split",
+    splitHint:
+      "Splits at the text cursor. The time splits at the playhead when it is inside this cue, otherwise in proportion to the text.",
+    splitNeedsCursor: "Place the text cursor where the subtitle should split",
+    mergePrevious: "Merge Previous",
+    mergeNext: "Merge Next",
     cueSuggestions: "Suggestions for this cue",
     noCueSuggestions:
       "No suggestions for this cue. Select a range on the timeline to upload it for analysis.",
@@ -224,6 +230,9 @@ export const enUS: Messages = {
     suggestions: "Suggestions",
     rulerHint: "Click to move the playhead; drag to select the analysis range",
     selectCue: (id) => `Select cue ${id}`,
+    scrollbar: "Timeline scroll and zoom",
+    scrollbarHint: (mod) =>
+      `Drag to scroll; drag either end to zoom. ${mod} + mouse wheel also zooms.`,
   },
   suggestion: {
     cue: (id) => `Cue #${id}`,
