@@ -136,6 +136,18 @@ func TestSplitAndMergeRejectInvalidInput(t *testing.T) {
 		t.Fatal("invalid merge accepted")
 	}
 }
+func TestMergeCoversOutOfOrderCues(t *testing.T) {
+	p := New([]subtitle.Cue{
+		{ID: "cue-1", Identifier: "1", Start: 4, End: 6, Text: "later", SpeakerIDs: []string{}},
+		{ID: "cue-2", Identifier: "2", Start: 1, End: 3, Text: "earlier", SpeakerIDs: []string{}},
+	}, "")
+	if err := p.Merge("cue-1"); err != nil {
+		t.Fatal(err)
+	}
+	if c := p.State.Cues[0]; c.Start != 1 || c.End != 6 {
+		t.Fatalf("merged range %v–%v", c.Start, c.End)
+	}
+}
 func TestMergeMovesSuggestionsAndKeepsThemStale(t *testing.T) {
 	p := pair()
 	p.AddAnalysis(analysis.Align(p.State.Cues, []analysis.Segment{{Speaker: "B", Start: 3, End: 5, Text: "我们走吧"}}, 0, 60))

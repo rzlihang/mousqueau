@@ -106,6 +106,8 @@ func (p *Project) Merge(id string) error {
 		return i18n.Errorf("there is no following subtitle to merge with")
 	}
 	a, b := next.Cues[i], next.Cues[i+1]
+	// Cues need not be in time order, so cover both intervals.
+	a.Start = math.Min(a.Start, b.Start)
 	a.End = math.Max(a.End, b.End)
 	a.Text = joinText(a.Text, b.Text)
 	for _, s := range b.SpeakerIDs {
