@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -70,7 +71,7 @@ func TestAssemblyAIUploadsPollsAndDeletes(t *testing.T) {
 		case r.Method == http.MethodPost && r.URL.Path == "/v2/transcript":
 			var req map[string]any
 			json.NewDecoder(r.Body).Decode(&req)
-			if req["audio_url"] != "https://cdn.example/u1" || req["speaker_labels"] != true || req["speech_model"] != "best" {
+			if req["audio_url"] != "https://cdn.example/u1" || req["speaker_labels"] != true || fmt.Sprint(req["speech_models"]) != "[universal-2]" {
 				t.Errorf("bad transcript request %v", req)
 			}
 			w.Write([]byte(`{"id":"t1","status":"queued"}`))
@@ -88,7 +89,7 @@ func TestAssemblyAIUploadsPollsAndDeletes(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	s, err := AssemblyAI{Key: "aai", Model: "best", BaseURL: server.URL}.Transcribe(context.Background(), audioFile(t))
+	s, err := AssemblyAI{Key: "aai", Model: "universal-2", BaseURL: server.URL}.Transcribe(context.Background(), audioFile(t))
 	expect(t, s, err, Segment{Speaker: "A", Start: 1, End: 2.5, Text: "第一句"})
 	if deleted.Load() != 1 {
 		t.Fatal("transcript left on the service")
@@ -295,6 +296,12 @@ func TestRegistry(t *testing.T) {
 		if p.Caution() != (p.Region == "china" || p.Region == "custom") {
 			t.Errorf("%s: caution", p.ID)
 		}
+	}
+	if p, _ := New("elevenlabs", Config{Model: "scribe_v1"}, []string{"k"}, nil); p.(ElevenLabs).Model != "scribe_v2" {
+		t.Error("retired ElevenLabs model kept")
+	}
+	if p, _ := New("assemblyai", Config{Model: "best"}, []string{"k"}, nil); p.(AssemblyAI).Model != "" {
+		t.Error("retired AssemblyAI model kept")
 	}
 	if _, err := New("nope", Config{}, nil, nil); err == nil {
 		t.Fatal("unknown provider accepted")

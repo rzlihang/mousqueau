@@ -35,15 +35,24 @@ var providers = []Info{
 	{ID: "deepgram", Name: "Deepgram", Region: "international", Credentials: []string{"apiKey"}, EnvVars: []string{"DEEPGRAM_API_KEY"},
 		DefaultModel: "nova-2", Models: []string{"nova-2", "nova-3"}, Diarization: true},
 	{ID: "assemblyai", Name: "AssemblyAI", Region: "international", Credentials: []string{"apiKey"}, EnvVars: []string{"ASSEMBLYAI_API_KEY"},
-		Models: []string{"universal", "best", "nano"}, Diarization: true},
+		Models: []string{"universal-3-5-pro", "universal-2"}, Diarization: true},
 	{ID: "elevenlabs", Name: "ElevenLabs", Region: "international", Credentials: []string{"apiKey"}, EnvVars: []string{"ELEVENLABS_API_KEY"},
-		DefaultModel: "scribe_v2", Models: []string{"scribe_v2", "scribe_v1"}, Diarization: true},
+		DefaultModel: "scribe_v2", Models: []string{"scribe_v2"}, Diarization: true},
 	{ID: "alibaba", Name: i18n.N("Alibaba Cloud Model Studio"), Region: "china", Credentials: []string{"apiKey"}, EnvVars: []string{"DASHSCOPE_API_KEY"},
 		DefaultModel: "paraformer-v2", Models: []string{"paraformer-v2", "fun-asr"}, Diarization: true},
 	{ID: "tencent", Name: i18n.N("Tencent Cloud ASR"), Region: "china", Credentials: []string{"secretId", "secretKey"}, EnvVars: []string{"TENCENTCLOUD_SECRET_ID", "TENCENTCLOUD_SECRET_KEY"},
 		DefaultModel: "16k_zh", Models: []string{"16k_zh", "16k_zh_video"}, Diarization: true},
 	{ID: "custom", Name: i18n.N("Custom (OpenAI-compatible)"), Region: "custom", Credentials: []string{"apiKey"}, EnvVars: []string{},
 		Models: []string{}, Endpoint: true, KeyOptional: true},
+}
+
+// retired maps model IDs a provider no longer accepts, which may still be in
+// saved settings, to their replacement; "" means the provider's default.
+var retired = map[string]map[string]string{
+	// AssemblyAI replaced these with the speech_models IDs.
+	"assemblyai": {"universal": "", "best": "", "nano": ""},
+	// ElevenLabs removed Scribe v1 on 2026-07-09.
+	"elevenlabs": {"scribe_v1": "scribe_v2"},
 }
 
 // Providers lists every provider in the order Settings offers them.
@@ -77,6 +86,9 @@ func New(id string, cfg Config, secret []string, c *http.Client) (Provider, erro
 		return ""
 	}
 	model := cfg.Model
+	if replacement, ok := retired[id][model]; ok {
+		model = replacement
+	}
 	if model == "" {
 		model = info.DefaultModel
 	}

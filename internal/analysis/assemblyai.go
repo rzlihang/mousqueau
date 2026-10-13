@@ -10,7 +10,8 @@ import (
 )
 
 // AssemblyAI takes the audio as an upload, transcribes it asynchronously and
-// labels utterances with speaker letters. The finished transcript is deleted
+// labels utterances with speaker letters. Without a model the service picks
+// its current default, falling back by language. The finished transcript is deleted
 // from the service once it has been read.
 type AssemblyAI struct {
 	Key     string
@@ -57,7 +58,7 @@ func (p AssemblyAI) Transcribe(ctx context.Context, path string) ([]Segment, err
 	}
 	request := map[string]any{"audio_url": upload.URL, "speaker_labels": true, "language_code": "zh"}
 	if p.Model != "" {
-		request["speech_model"] = p.Model
+		request["speech_models"] = []string{p.Model}
 	}
 	body, _ := json.Marshal(request)
 	type transcript struct {

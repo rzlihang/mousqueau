@@ -140,7 +140,7 @@ func (p Tencent) call(ctx context.Context, name, action string, params map[strin
 // TC3-HMAC-SHA256 scheme describes.
 func tc3Authorization(id, key, host, action string, payload []byte, t time.Time) string {
 	const service = "asr"
-	date := t.Format("2006-01-02")
+	date := t.UTC().Format("2006-01-02") // Tencent dates the scope in UTC
 	signed := "content-type;host;x-tc-action"
 	canonical := strings.Join([]string{
 		http.MethodPost, "/", "",

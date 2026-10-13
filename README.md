@@ -30,8 +30,8 @@ For AI analysis, choose a provider under **设置 › 供应商** (⌘, or Ctrl+
 | --- | --- | --- | --- |
 | OpenAI | `gpt-4o-transcribe-diarize` | API key | `OPENAI_API_KEY` |
 | Deepgram | `nova-2`, `nova-3` | API key | `DEEPGRAM_API_KEY` |
-| AssemblyAI | service default, `universal`, `best` | API key | `ASSEMBLYAI_API_KEY` |
-| ElevenLabs | `scribe_v2`, `scribe_v1` | API key | `ELEVENLABS_API_KEY` |
+| AssemblyAI | service default, `universal-3-5-pro`, `universal-2` | API key | `ASSEMBLYAI_API_KEY` |
+| ElevenLabs | `scribe_v2` | API key | `ELEVENLABS_API_KEY` |
 | Alibaba Cloud Model Studio (阿里云百炼) | `paraformer-v2`, `fun-asr` | DashScope API key | `DASHSCOPE_API_KEY` |
 | Tencent Cloud ASR (腾讯云语音识别) | engine `16k_zh`, `16k_zh_video` | SecretId + SecretKey | `TENCENTCLOUD_SECRET_ID`, `TENCENTCLOUD_SECRET_KEY` |
 | Custom (OpenAI-compatible) | any; speakers only with a model that returns `diarized_json` | optional API key | none |
