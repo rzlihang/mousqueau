@@ -309,7 +309,7 @@ export const enUS: Messages = {
     regionChina: "Mainland China",
     regionCustom: "Custom",
     cautionChina:
-      "This provider is subject to mainland Chinese law, which requires content review and lets authorities obtain data on request. Think carefully before uploading audio about political, religious or other sensitive topics.",
+      "This provider is subject to the laws of the People's Republic of China, which require content review and let authorities obtain data on request. Think carefully before uploading audio about political, religious or other sensitive topics.",
     cautionCustom:
       "A third party you choose runs this service; Mousqueau cannot verify how it stores, reviews or shares audio. Think carefully before uploading audio about sensitive topics or private matters.",
     addCautionTitle: (name) => `Add ${name}?`,

@@ -285,7 +285,7 @@ export const zhTW: Messages = {
     regionChina: "中國大陸",
     regionCustom: "自訂",
     cautionChina:
-      "此供應商受中國大陸法律管轄，須配合內容審查，並可能依法向有關單位提供資料。涉及政治、宗教等敏感議題的音訊，請謹慎上傳。",
+      "此供應商受中華人民共和國法律管轄，須配合內容審查，並可能依法向有關單位提供資料。涉及政治、宗教等敏感議題的音訊，請謹慎上傳。",
     cautionCustom:
       "此服務由你指定的第三方營運，Mousqueau 無法核實其如何保存、審查或分享音訊。涉及敏感議題或個人隱私的音訊，請謹慎上傳。",
     addCautionTitle: (name) => `要加入 ${name} 嗎？`,
