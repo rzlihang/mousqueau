@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  codePointOffset,
   cueStatus,
   filterCues,
   formatSeconds,
   majorStep,
+  minPps,
   peakBetween,
+  ppsToZoom,
+  rowWindow,
+  splitTime,
   zoomToPps,
 } from "./workspace";
 
@@ -58,6 +63,26 @@ describe("workspace helpers", () => {
     expect(majorStep(200)).toBe(1);
     expect(majorStep(30)).toBe(5);
     expect(majorStep(4)).toBe(30);
+  });
+  it("zooms out far enough to fit long media and back again", () => {
+    expect(minPps(60, 800)).toBe(4);
+    expect(minPps(3600, 720)).toBeCloseTo(0.2);
+    const min = minPps(3600, 720);
+    expect(zoomToPps(0, min)).toBeCloseTo(min);
+    expect(ppsToZoom(zoomToPps(37, min), min)).toBeCloseTo(37);
+    expect(ppsToZoom(1000)).toBe(100);
+  });
+  it("splits at the playhead inside a cue, otherwise by text", () => {
+    expect(splitTime(1, 3, 2.25, 0.5)).toBe(2.25);
+    expect(splitTime(1, 3, 3, 0.25)).toBe(1.5);
+    expect(splitTime(1, 3, 0, 1 / 3)).toBe(1.667);
+    expect(codePointOffset("a😀bc", 3)).toBe(2);
+  });
+  it("renders only the rows in view plus overscan", () => {
+    expect(rowWindow(0, 320, 32, 1000, 2)).toEqual([0, 12]);
+    expect(rowWindow(3200, 320, 32, 1000, 2)).toEqual([98, 112]);
+    expect(rowWindow(31990, 320, 32, 1000, 2)).toEqual([997, 1000]);
+    expect(rowWindow(0, 320, 32, 0)).toEqual([0, 0]);
   });
   it("keeps the loudest peak in a window", () => {
     const peaks = [0, 10, 80, 5, 0];

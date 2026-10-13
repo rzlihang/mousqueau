@@ -227,6 +227,32 @@ func (s *EditorService) EditCue(cue subtitle.Cue) (Snapshot, error) {
 	}
 	return s.snapshot(), nil
 }
+
+// SplitCue divides a cue at a time and a text offset in Unicode code points.
+func (s *EditorService) SplitCue(id string, at float64, offset int) (Snapshot, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.requireProject(); err != nil {
+		return Snapshot{}, err
+	}
+	if err := s.project.Split(id, at, offset); err != nil {
+		return Snapshot{}, err
+	}
+	return s.snapshot(), nil
+}
+
+// MergeCues joins a cue with the one after it.
+func (s *EditorService) MergeCues(id string) (Snapshot, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.requireProject(); err != nil {
+		return Snapshot{}, err
+	}
+	if err := s.project.Merge(id); err != nil {
+		return Snapshot{}, err
+	}
+	return s.snapshot(), nil
+}
 func (s *EditorService) Undo() (Snapshot, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

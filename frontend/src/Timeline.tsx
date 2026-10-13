@@ -14,11 +14,15 @@ import type {
 import type { Cue } from "../bindings/mousqueau/internal/subtitle/models";
 import { formatTime } from "./editor";
 import { useT } from "./i18n";
+import { isMac } from "./useSettings";
 import {
+  MAX_PPS,
   cueStatus,
   formatSeconds,
   majorStep,
+  minPps,
   peakBetween,
+  ppsToZoom,
   zoomToPps,
 } from "./workspace";
 
@@ -45,6 +49,7 @@ type Props = {
 const RULER = 26;
 const AUDIO = 150;
 const BAR = 3; // waveform bar width 2px plus 1px gap
+const PAD = 40; // room after the end of the media
 const MINOR: Record<number, number> = {
   1: 0.2,
   2: 0.5,
@@ -82,11 +87,13 @@ export default function Timeline(props: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ x: number; moved: boolean } | null>(null);
   const pendingScroll = useRef<number | null>(null);
-  const [zoom, setZoom] = useState(50);
+  const [zoomPps, setZoomPps] = useState(() => zoomToPps(50));
   const [scrollLeft, setScrollLeft] = useState(0);
   const [viewW, setViewW] = useState(800);
-  const pps = zoomToPps(zoom);
-  const contentW = Math.max(viewW, Math.ceil(duration * pps) + 40);
+  // Zooming out stops once the whole duration fits.
+  const leastPps = minPps(duration, viewW - PAD);
+  const pps = Math.min(MAX_PPS, Math.max(leastPps, zoomPps));
+  const contentW = Math.max(viewW, Math.ceil(duration * pps) + PAD);
   const viewStart = scrollLeft / pps;
   const viewEnd = (scrollLeft + viewW) / pps;
   const selected = cues.find((c) => c.id === selectedId);
@@ -124,21 +131,58 @@ export default function Timeline(props: Props) {
     if (selected) reveal(selected.start, 0.25);
   }, [selectedId]);
 
-  function changeZoom(next: number) {
+  // Zooms so that time stays offset pixels from the left edge of the view.
+  function zoomAround(next: number, time: number, offset: number) {
     const el = scroller.current;
-    const nextPps = zoomToPps(next);
-    if (el) {
-      // Keep the playhead where it is on screen when visible, otherwise the left edge.
-      const offset = playhead * pps - el.scrollLeft;
-      const anchor =
-        offset >= 0 && offset <= el.clientWidth
-          ? playhead
-          : el.scrollLeft / pps;
-      const keep = anchor === playhead ? offset : 0;
-      pendingScroll.current = Math.max(0, anchor * nextPps - keep);
+    const nextPps = Math.min(MAX_PPS, Math.max(leastPps, next));
+    const left = Math.max(0, time * nextPps - offset);
+    if (nextPps === pps) {
+      if (el) el.scrollLeft = left;
+      return;
     }
-    setZoom(next);
+    pendingScroll.current = left;
+    setZoomPps(nextPps);
   }
+  function changeZoom(zoom: number) {
+    const el = scroller.current;
+    if (!el) return;
+    // Keep the playhead where it is on screen when visible, otherwise the left edge.
+    const offset = playhead * pps - el.scrollLeft;
+    const visible = offset >= 0 && offset <= el.clientWidth;
+    zoomAround(
+      zoomToPps(zoom, leastPps),
+      visible ? playhead : el.scrollLeft / pps,
+      visible ? offset : 0,
+    );
+  }
+  // Ctrl or ⌘ with the wheel, or a trackpad pinch, zooms around the pointer;
+  // the plain wheel scrolls sideways. React's wheel listener is passive, so
+  // this one is added by hand to be able to stop the page from zooming.
+  const onWheel = useRef<(e: WheelEvent) => void>(() => {});
+  onWheel.current = (e) => {
+    const el = scroller.current;
+    if (!el) return;
+    const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const offset = e.clientX - el.getBoundingClientRect().left;
+      zoomAround(
+        pps * Math.exp(-delta * 0.0025),
+        (el.scrollLeft + offset) / pps,
+        offset,
+      );
+    } else if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.preventDefault();
+      el.scrollLeft += delta;
+    }
+  };
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const listener = (e: WheelEvent) => onWheel.current(e);
+    el.addEventListener("wheel", listener, { passive: false });
+    return () => el.removeEventListener("wheel", listener);
+  }, []);
 
   useEffect(() => {
     const el = canvas.current;
@@ -235,7 +279,8 @@ export default function Timeline(props: Props) {
         <div className="zoom">
           <span className="muted">{t.timeline.zoom}</span>
           <Slider
-            value={zoom}
+            value={ppsToZoom(pps, leastPps)}
+            step={0.1}
             onChange={changeZoom}
             tooltip={{ open: false }}
             aria-label={t.timeline.zoomLabel}
@@ -254,6 +299,7 @@ export default function Timeline(props: Props) {
         </div>
         <div
           className="track-scroll"
+          id="timeline-tracks"
           ref={scroller}
           onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}
         >
@@ -409,6 +455,145 @@ export default function Timeline(props: Props) {
           </div>
         </div>
       </div>
+      <ZoomScrollbar
+        total={contentW / pps}
+        start={viewStart}
+        span={viewW / pps}
+        label={t.timeline.scrollbar}
+        hint={t.timeline.scrollbarHint(isMac ? "⌘" : "Ctrl")}
+        onScroll={(time) => {
+          if (scroller.current) scroller.current.scrollLeft = time * pps;
+        }}
+        onZoom={(start, end, edge) =>
+          edge === "start"
+            ? zoomAround(viewW / (end - start), end, viewW)
+            : zoomAround(viewW / (end - start), start, 0)
+        }
+      />
     </section>
+  );
+}
+
+type ScrollbarProps = {
+  total: number; // seconds the content spans
+  start: number; // first second in view
+  span: number; // seconds in view
+  label: string;
+  hint: string;
+  onScroll: (start: number) => void;
+  onZoom: (start: number, end: number, edge: "start" | "end") => void;
+};
+type Drag = {
+  mode: "pan" | "start" | "end";
+  x: number;
+  width: number;
+  total: number;
+  start: number;
+  end: number;
+};
+
+// A horizontal scrollbar whose thumb ends can be dragged to zoom, as in
+// video and audio editors. Arrow keys scroll it from the keyboard.
+function ZoomScrollbar(props: ScrollbarProps) {
+  const { total, start, span } = props;
+  const bar = useRef<HTMLDivElement>(null);
+  const drag = useRef<Drag | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const left = total > 0 ? Math.min(1, start / total) : 0;
+  const width = total > 0 ? Math.min(1 - left, span / total) : 1;
+
+  function down(e: PointerEvent<HTMLDivElement>) {
+    const el = bar.current;
+    if (e.button !== 0 || !el) return;
+    const rect = el.getBoundingClientRect();
+    const target = e.target as HTMLElement;
+    const mode = target.classList.contains("zoom-handle")
+      ? target.classList.contains("start")
+        ? "start"
+        : "end"
+      : target.closest(".zoom-thumb")
+        ? "pan"
+        : null;
+    if (!mode) {
+      // A press beside the thumb centres the view there.
+      const at = ((e.clientX - rect.left) / rect.width) * total;
+      props.onScroll(Math.max(0, at - span / 2));
+      return;
+    }
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = {
+      mode,
+      x: e.clientX,
+      width: rect.width,
+      total,
+      start,
+      end: start + span,
+    };
+    setDragging(true);
+  }
+  function move(e: PointerEvent<HTMLDivElement>) {
+    const d = drag.current;
+    if (!d) return;
+    const dt = ((e.clientX - d.x) / d.width) * d.total;
+    // At least a quarter second stays in view; MAX_PPS limits it further.
+    if (d.mode === "pan") props.onScroll(Math.max(0, d.start + dt));
+    else if (d.mode === "start")
+      props.onZoom(
+        Math.min(d.end - 0.25, Math.max(0, d.start + dt)),
+        d.end,
+        "start",
+      );
+    else
+      props.onZoom(
+        d.start,
+        Math.max(d.start + 0.25, Math.min(d.total, d.end + dt)),
+        "end",
+      );
+  }
+  function up() {
+    drag.current = null;
+    setDragging(false);
+  }
+
+  return (
+    <div
+      ref={bar}
+      className="zoom-scrollbar"
+      role="scrollbar"
+      tabIndex={0}
+      aria-label={props.label}
+      aria-controls="timeline-tracks"
+      aria-orientation="horizontal"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(
+        total > span ? (start / (total - span)) * 100 : 0,
+      )}
+      title={props.hint}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={up}
+      onKeyDown={(e) => {
+        const step = {
+          ArrowLeft: -0.1,
+          ArrowRight: 0.1,
+          PageUp: -1,
+          PageDown: 1,
+        }[e.key];
+        if (step === undefined) return;
+        e.preventDefault();
+        props.onScroll(Math.max(0, start + step * span));
+      }}
+    >
+      <div
+        className={`zoom-thumb${dragging ? " dragging" : ""}`}
+        style={{ left: `${left * 100}%`, width: `${width * 100}%` }}
+      >
+        <div className="zoom-handle start" />
+        <div className="zoom-handle end" />
+      </div>
+    </div>
   );
 }

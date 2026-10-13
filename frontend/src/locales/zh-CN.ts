@@ -149,6 +149,12 @@ export const zhCN = {
     nothingUnapplied: "没有未应用的修改",
     revert: "还原",
     apply: "应用编辑",
+    split: "拆分",
+    splitHint:
+      "在文本光标处拆分文字。播放头位于本句内时在播放头处切分时间，否则按文字比例切分。",
+    splitNeedsCursor: "请先在文本中把光标放在要拆分的位置",
+    mergePrevious: "合并上一句",
+    mergeNext: "合并下一句",
     cueSuggestions: "本句校正建议",
     noCueSuggestions: "本句没有校正建议。在时间轴上选择范围后可上传分析。",
     speakersHint: "不同分析范围的标签独立编号，可手动命名与分配。",
@@ -208,6 +214,9 @@ export const zhCN = {
     suggestions: "校正建议",
     rulerHint: "点击定位播放头；拖动选择分析范围",
     selectCue: (id: string) => `选择第 ${id} 句`,
+    scrollbar: "时间轴滚动与缩放",
+    scrollbarHint: (mod: string) =>
+      `拖动以滚动；拖动两端以缩放。也可按住 ${mod} 并滚动鼠标滚轮缩放。`,
   },
   suggestion: {
     cue: (id: string) => `字幕 #${id}`,

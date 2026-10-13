@@ -84,3 +84,85 @@ func TestInvalidProjectAndEdit(t *testing.T) {
 		}
 	}
 }
+func pair() *Project {
+	return New([]subtitle.Cue{
+		{ID: "cue-1", Identifier: "1", Start: 1, End: 3, Text: "Hello there", SpeakerIDs: []string{"A"}},
+		{ID: "cue-2", Identifier: "2", Start: 3, End: 5, Text: "我們走吧", SpeakerIDs: []string{"B"}, Review: true},
+	}, "original.srt")
+}
+func TestSplitAndMergeAreUndoable(t *testing.T) {
+	p := pair()
+	if err := p.Split("cue-1", 2.0004, 5); err != nil {
+		t.Fatal(err)
+	}
+	c := p.State.Cues
+	if len(c) != 3 || c[0].Text != "Hello" || c[1].Text != "there" || c[0].End != 2 || c[1].Start != 2 || c[1].End != 3 {
+		t.Fatalf("split: %+v", c)
+	}
+	if c[0].ID != "cue-1" || c[1].ID == "cue-1" || c[1].ID == "cue-2" || c[2].Identifier != "3" || c[1].SpeakerIDs[0] != "A" {
+		t.Fatalf("split identity: %+v", c)
+	}
+	if len(p.Original) != 2 || p.Original[0].Text != "Hello there" {
+		t.Fatal("original mutated")
+	}
+	if err := p.Merge(c[1].ID); err != nil {
+		t.Fatal(err)
+	}
+	c = p.State.Cues
+	if len(c) != 2 || c[1].Text != "there我們走吧" || c[1].Start != 2 || c[1].End != 5 || !c[1].Review || len(c[1].SpeakerIDs) != 2 || c[1].Identifier != "2" {
+		t.Fatalf("merge: %+v", c)
+	}
+	p.UndoEdit()
+	p.UndoEdit()
+	if len(p.State.Cues) != 2 || p.State.Cues[0].Text != "Hello there" {
+		t.Fatal("undo")
+	}
+	p.RedoEdit()
+	if len(p.State.Cues) != 3 {
+		t.Fatal("redo")
+	}
+}
+func TestSplitAndMergeRejectInvalidInput(t *testing.T) {
+	p := pair()
+	for _, tc := range []struct {
+		at     float64
+		offset int
+	}{{1, 5}, {3, 5}, {1.0004, 5}, {2, 0}, {2, 11}, {2, 99}} {
+		if p.Split("cue-1", tc.at, tc.offset) == nil {
+			t.Fatalf("split accepted at %v offset %d", tc.at, tc.offset)
+		}
+	}
+	if p.Merge("cue-2") == nil || p.Merge("missing") == nil || len(p.Undo) != 0 {
+		t.Fatal("invalid merge accepted")
+	}
+}
+func TestMergeMovesSuggestionsAndKeepsThemStale(t *testing.T) {
+	p := pair()
+	p.AddAnalysis(analysis.Align(p.State.Cues, []analysis.Segment{{Speaker: "B", Start: 3, End: 5, Text: "我们走吧"}}, 0, 60))
+	if len(p.State.Suggestions) == 0 {
+		t.Fatal("no suggestion to move")
+	}
+	if err := p.Merge("cue-1"); err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range p.State.Suggestions {
+		if s.CueID != "cue-1" {
+			t.Fatalf("suggestion left on removed cue: %+v", s)
+		}
+		if p.Decide(s.ID, "accepted") == nil {
+			t.Fatal("stale suggestion accepted after merge")
+		}
+	}
+}
+func TestJoinText(t *testing.T) {
+	for _, tc := range [][3]string{
+		{"Hello", "there", "Hello there"},
+		{"你好，", "世界", "你好，世界"},
+		{"Line one\n", "  two", "Line one two"},
+		{"OK", "。", "OK。"},
+	} {
+		if got := joinText(tc[0], tc[1]); got != tc[2] {
+			t.Errorf("joinText(%q, %q) = %q", tc[0], tc[1], got)
+		}
+	}
+}
