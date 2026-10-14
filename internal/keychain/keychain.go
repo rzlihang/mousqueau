@@ -1,5 +1,6 @@
-// Package keychain keeps the OpenAI API key in the operating system's
-// credential store, so it never reaches project or settings files.
+// Package keychain keeps provider credentials in the operating system's
+// credential store, so they never reach project or settings files. Each
+// provider has its own item, named by Account.
 package keychain
 
 import (
@@ -7,10 +8,24 @@ import (
 	"strings"
 )
 
-const (
-	service = "Mousqueau"
-	account = "openai-api-key"
-)
+const service = "Mousqueau"
+
+// Account names a provider's item; OpenAI's keeps the name it always had.
+func Account(provider string) string { return provider + "-api-key" }
+
+// validAccount keeps item names to the lowercase letters, digits and hyphens
+// Account produces, which the keychain tools take as they are.
+func validAccount(account string) error {
+	if account == "" || len(account) > 64 {
+		return i18n.Errorf("invalid credential name")
+	}
+	for _, r := range account {
+		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-') {
+			return i18n.Errorf("invalid credential name")
+		}
+	}
+	return nil
+}
 
 // Validate accepts the printable, unquoted form API keys take. Rejecting
 // everything else also keeps the value safe to hand to the keychain tool.

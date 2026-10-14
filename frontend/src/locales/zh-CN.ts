@@ -92,7 +92,7 @@ export const zhCN = {
     invalidTime: "请输入 HH:MM:SS,mmm，分与秒须为 00–59。",
     rangeLength: "请选择 60–300 秒的范围。",
     rangeBeyondMedia: "所选范围超出媒体时长。",
-    uploadTitle: "将选定范围的音频上传到 OpenAI？",
+    uploadTitle: (provider: string) => `将选定范围的音频上传到 ${provider}？`,
     uploadContent: (range: string) =>
       `${range}。此操作会将音频发送到外部 API，并可能产生费用。返回结果仅作为待审建议；不会自动修改字幕。`,
     uploadOk: "确认上传并分析",
@@ -180,7 +180,8 @@ export const zhCN = {
   status: {
     environment: "运行环境",
     optionalMissing: "未安装 · 可选",
-    addKeyHint: "在设置中添加 OpenAI API 密钥后即可使用分析。",
+    provider: "分析供应商",
+    addKeyHint: "在设置中配置分析供应商后即可使用分析。",
     privacy: "文件保留在本地。仅在确认分析时上传所选音频。",
     openSettings: (keys: string) => `打开设置（${keys}）`,
     allReady: "环境就绪",
@@ -201,7 +202,7 @@ export const zhCN = {
     importCaption: "下载并导入所选字幕",
     authorized: "我确认有权下载此视频的音频",
     downloadAudio: "单独下载音频到本地并加载",
-    noUpload: "下载不会自动上传到 OpenAI。开始分析仍需单独确认。",
+    noUpload: "下载不会自动上传到任何地方。开始分析仍需单独确认。",
   },
   timeline: {
     label: "时间轴",
@@ -261,7 +262,7 @@ export const zhCN = {
     autoDetect: "自动检测",
     ffmpegHint: (search: string) =>
       `用于读取媒体与截取分析音频。留空时在 ${search} 中查找。`,
-    ytdlpHint: "仅 YouTube 导入需要。下载不会自动上传到 OpenAI。",
+    ytdlpHint: "仅 YouTube 导入需要。下载的内容不会被上传。",
     analysisProvider: "分析使用",
     analysisProviderHint: "音频转录建议与说话人分析都发给这里选的供应商。",
     analysisProviderLabel: "分析使用的供应商",
@@ -281,7 +282,32 @@ export const zhCN = {
     removeConfirm: (store: string) => `从${store}移除 API 密钥？`,
     remove: "移除",
     removeKey: "移除密钥",
-    onlyOpenai: "目前仅支持 OpenAI。",
+    addProviderHint: "添加后即可用其分析。凭据保存在系统凭据库中。",
+    addProviderPlaceholder: "选择供应商",
+    noProviders: "尚未添加供应商；本地编辑不受影响。",
+    regionChina: "中国大陆",
+    regionCustom: "自定义",
+    cautionChina:
+      "该服务商受中华人民共和国法律管辖，须配合内容审核，并可能依法向有关部门提供数据。涉及政治、宗教等敏感话题的音频，请谨慎上传。",
+    cautionCustom:
+      "该服务由你指定的第三方运营，Mousqueau 无法核实其如何保存、审核或共享音频。涉及敏感话题或个人隐私的音频，请谨慎上传。",
+    addCautionTitle: (name: string) => `添加 ${name}？`,
+    addCautionOk: "仍然添加",
+    model: "模型",
+    modelDefault: (model: string) => (model ? `默认：${model}` : "服务默认"),
+    endpoint: "服务地址",
+    endpointHint:
+      "OpenAI 兼容的基础地址，例如 https://api.example.com/v1；只有这台电脑上的服务可以使用 http。",
+    noDiarization:
+      "只有返回 diarized_json 的模型会区分说话人，否则说话人会标为未知。",
+    credentialLabels: {
+      apiKey: "API 密钥",
+      secretId: "SecretId",
+      secretKey: "SecretKey",
+    },
+    useProvider: "用于分析",
+    removeProvider: "移除供应商",
+    removeProviderConfirm: (name: string) => `移除 ${name} 及其保存的凭据？`,
     addProvider: "添加供应商",
     uploadNote: "仅在你确认分析时，选定的音频会上传到所选供应商。",
     currentVersion: "当前版本",
@@ -337,6 +363,8 @@ export const zhCN = {
     keyStorage: (name: string) => `密钥保存在${name}，不写入项目文件。`,
     envStillWins: "已设置的环境变量仍会优先使用。",
     needKey: "请输入 API 密钥，或选择暂不配置。",
+    otherProviders:
+      "Deepgram、AssemblyAI、ElevenLabs、阿里云百炼、腾讯云或自定义服务，可稍后在设置中添加。",
     doneTitle: "设置完成",
     changeAnytime: (keys: string) =>
       `这些设置之后都能在 设置（${keys}）中修改。`,

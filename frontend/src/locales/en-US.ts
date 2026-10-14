@@ -102,7 +102,7 @@ export const enUS: Messages = {
       "Enter HH:MM:SS,mmm; minutes and seconds must be between 00 and 59.",
     rangeLength: "Select a range of 60–300 seconds.",
     rangeBeyondMedia: "The selected range extends past the end of the media.",
-    uploadTitle: "Upload the selected audio to OpenAI?",
+    uploadTitle: (provider) => `Upload the selected audio to ${provider}?`,
     uploadContent: (range) =>
       `${range}. This sends audio to an external API and may incur charges. Results are only suggestions for review; subtitles are never changed automatically.`,
     uploadOk: "Upload and Analyze",
@@ -192,7 +192,8 @@ export const enUS: Messages = {
   status: {
     environment: "Environment",
     optionalMissing: "Not installed · optional",
-    addKeyHint: "Add an OpenAI API key in Settings to enable analysis.",
+    provider: "Analysis provider",
+    addKeyHint: "Set up an analysis provider in Settings to enable analysis.",
     privacy:
       "Files stay on this computer. Selected audio is uploaded only when you confirm an analysis.",
     openSettings: (keys) => `Open Settings (${keys})`,
@@ -217,7 +218,7 @@ export const enUS: Messages = {
     authorized: "I confirm I am authorized to download this video's audio",
     downloadAudio: "Download Audio Separately and Load It",
     noUpload:
-      "Downloading never uploads to OpenAI. Analysis still needs its own confirmation.",
+      "Downloading never uploads anything. Analysis still needs its own confirmation.",
   },
   timeline: {
     label: "Timeline",
@@ -280,7 +281,7 @@ export const enUS: Messages = {
     ffmpegHint: (search) =>
       `Reads media and extracts audio for analysis. When empty, it is looked for in ${search}.`,
     ytdlpHint:
-      "Only needed for YouTube import. Downloads are never uploaded to OpenAI.",
+      "Only needed for YouTube import. Downloads are never uploaded anywhere.",
     analysisProvider: "Analyze with",
     analysisProviderHint:
       "Transcription suggestions and speaker analysis both go to the provider chosen here.",
@@ -301,7 +302,34 @@ export const enUS: Messages = {
     removeConfirm: (store) => `Remove the API key from ${store}?`,
     remove: "Remove",
     removeKey: "Remove Key",
-    onlyOpenai: "Only OpenAI is supported for now.",
+    addProviderHint:
+      "Add a provider to analyze with it. Its credentials are kept in the system credential store.",
+    addProviderPlaceholder: "Choose a provider",
+    noProviders: "No provider added yet; local editing still works.",
+    regionChina: "Mainland China",
+    regionCustom: "Custom",
+    cautionChina:
+      "This provider is subject to the laws of the People's Republic of China, which require content review and let authorities obtain data on request. Think carefully before uploading audio about political, religious or other sensitive topics.",
+    cautionCustom:
+      "A third party you choose runs this service; Mousqueau cannot verify how it stores, reviews or shares audio. Think carefully before uploading audio about sensitive topics or private matters.",
+    addCautionTitle: (name) => `Add ${name}?`,
+    addCautionOk: "Add Anyway",
+    model: "Model",
+    modelDefault: (model) => (model ? `Default: ${model}` : "Service default"),
+    endpoint: "Service URL",
+    endpointHint:
+      "An OpenAI-compatible base URL such as https://api.example.com/v1; plain http only for this computer.",
+    noDiarization:
+      "Speakers are labelled only by models that return diarized_json; otherwise they come back unknown.",
+    credentialLabels: {
+      apiKey: "API key",
+      secretId: "SecretId",
+      secretKey: "SecretKey",
+    },
+    useProvider: "Use for Analysis",
+    removeProvider: "Remove Provider",
+    removeProviderConfirm: (name) =>
+      `Remove ${name} and its stored credentials?`,
     addProvider: "Add Provider",
     uploadNote:
       "Selected audio is uploaded to the chosen provider only when you confirm an analysis.",
@@ -359,6 +387,8 @@ export const enUS: Messages = {
       `The key is stored in ${name} and never written to project files. `,
     envStillWins: "The environment variable still takes priority when set.",
     needKey: "Enter an API key, or choose to skip for now.",
+    otherProviders:
+      "Deepgram, AssemblyAI, ElevenLabs, Alibaba Cloud, Tencent Cloud or a custom service can be added later in Settings.",
     doneTitle: "Setup Complete",
     changeAnytime: (keys) =>
       `You can change all of these later in Settings (${keys}).`,

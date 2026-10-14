@@ -1,5 +1,6 @@
 import { type UIEvent, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   App as AntApp,
   AutoComplete,
   Button,
@@ -12,7 +13,11 @@ import {
   Tag,
 } from "antd";
 import * as Editor from "../bindings/mousqueau/editorservice";
-import type { SettingsView, ToolStatus } from "../bindings/mousqueau/models";
+import type {
+  ProviderView,
+  SettingsView,
+  ToolStatus,
+} from "../bindings/mousqueau/models";
 import { LANGUAGE_NAMES, errorText, matchLocale, useT } from "./i18n";
 import { ICON_PATHS, PathIcon } from "./icons";
 import {
@@ -24,6 +29,7 @@ import {
   languageChoice,
   languageOptions,
   matchSettings,
+  providerCaution,
   themeChoice,
   themeOptions,
   toolLabel,
@@ -105,6 +111,225 @@ function ToolCard({
   );
 }
 
+function ProviderCard({
+  provider,
+  inUse,
+  keychainAvailable,
+  apply,
+}: {
+  provider: ProviderView;
+  inUse: boolean;
+  keychainAvailable: boolean;
+  apply: Apply;
+}) {
+  const { message } = AntApp.useApp();
+  const t = useT();
+  const credentials = provider.credentials ?? [];
+  const envVars = provider.envVars ?? [];
+  const [parts, setParts] = useState(() => credentials.map(() => ""));
+  const [model, setModel] = useState(provider.model);
+  const [endpoint, setEndpoint] = useState(provider.endpoint);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => setModel(provider.model), [provider.model]);
+  useEffect(() => setEndpoint(provider.endpoint), [provider.endpoint]);
+  const caution = providerCaution(provider, t);
+  const filled = parts.every((v) => v.trim());
+  const commitOptions = (nextModel = model) => {
+    if (
+      nextModel.trim() === provider.model &&
+      endpoint.trim() === provider.endpoint
+    )
+      return;
+    void apply(() =>
+      Editor.SetProviderOptions(provider.id, nextModel, endpoint),
+    ).then((ok) => {
+      if (!ok) {
+        setModel(provider.model);
+        setEndpoint(provider.endpoint);
+      }
+    });
+  };
+  async function save() {
+    setSaving(true);
+    if (await apply(() => Editor.SaveProviderKey(provider.id, parts))) {
+      setParts(credentials.map(() => ""));
+      void message.success(t.settings.keySaved(keyStore(t)));
+    }
+    setSaving(false);
+  }
+  const envList = (
+    <>
+      {envVars.map((name, i) => (
+        <span key={name}>
+          {i > 0 && " + "}
+          <span className="mono">{name}</span>
+        </span>
+      ))}
+    </>
+  );
+  return (
+    <div className="set-card">
+      <div className="set-row set-line">
+        <strong>{provider.name}</strong>
+        {provider.region !== "international" && (
+          <Tag color={provider.region === "china" ? "orange" : "default"}>
+            {provider.region === "china"
+              ? t.settings.regionChina
+              : t.settings.regionCustom}
+          </Tag>
+        )}
+        {inUse ? (
+          <span className="set-hint">{t.settings.inUse}</span>
+        ) : (
+          <Button
+            size="small"
+            type="link"
+            onClick={() => void apply(() => Editor.SetProvider(provider.id))}
+          >
+            {t.settings.useProvider}
+          </Button>
+        )}
+        <div className="spacer" />
+        <Tag color={provider.ready ? "green" : "default"}>
+          {provider.ready ? t.common.configured : t.common.notConfigured}
+        </Tag>
+      </div>
+      {caution && (
+        <div className="set-row">
+          <Alert type="warning" showIcon title={caution} />
+        </div>
+      )}
+      {provider.needsEndpoint && (
+        <div className="set-row set-field">
+          <label>
+            {t.settings.endpoint}
+            <Input
+              size="small"
+              className="mono-input"
+              placeholder="https://api.example.com/v1"
+              value={endpoint}
+              onChange={(e) => setEndpoint(e.target.value)}
+              onBlur={() => commitOptions()}
+              onPressEnter={() => commitOptions()}
+            />
+          </label>
+          <span className="set-hint">{t.settings.endpointHint}</span>
+        </div>
+      )}
+      <div className="set-row">
+        <div className="set-label">
+          <span>{t.settings.model}</span>
+          {!provider.diarization && (
+            <span className="set-hint">{t.settings.noDiarization}</span>
+          )}
+        </div>
+        <AutoComplete
+          size="small"
+          allowClear
+          aria-label={t.settings.model}
+          placeholder={t.settings.modelDefault(provider.defaultModel)}
+          value={model}
+          options={(provider.models ?? []).map((value) => ({ value }))}
+          onChange={setModel}
+          onSelect={(value: string) => commitOptions(value)}
+          onClear={() => commitOptions("")}
+          onBlur={() => commitOptions()}
+          onKeyDown={(e) => e.key === "Enter" && commitOptions()}
+          style={{ width: 200 }}
+        />
+      </div>
+      <div className="set-row">
+        <span>{t.settings.keySource}</span>
+        <span className="set-hint">
+          {provider.keySource === "env" ? (
+            <>
+              {t.settings.envVar} {envList}
+            </>
+          ) : provider.keySource === "keychain" ? (
+            keyStoreName(t)
+          ) : (
+            t.common.offlineOnly
+          )}
+        </span>
+      </div>
+      <div className="set-row set-field">
+        {credentials.map((c, i) => (
+          <label key={c}>
+            {provider.keyStored && credentials.length === 1
+              ? t.settings.replaceKey
+              : (t.settings.credentialLabels[
+                  c as keyof typeof t.settings.credentialLabels
+                ] ?? c)}
+            {provider.keyOptional && ` (${t.common.optional})`}
+            <Input.Password
+              size="small"
+              placeholder={provider.id === "openai" ? "sk-…" : undefined}
+              autoComplete="off"
+              disabled={!keychainAvailable || saving}
+              value={parts[i]}
+              onChange={(e) =>
+                setParts((p) => p.map((v, k) => (k === i ? e.target.value : v)))
+              }
+              onPressEnter={() => filled && void save()}
+            />
+          </label>
+        ))}
+        <div className="set-line end">
+          <Button
+            size="small"
+            disabled={!keychainAvailable || saving || !filled}
+            onClick={() => void save()}
+          >
+            {t.settings.saveTo(keyStore(t))}
+          </Button>
+        </div>
+        {envVars.length > 0 && (
+          <span className="set-hint">
+            {keychainAvailable ? (
+              <>
+                {t.settings.envWins[0]} {envList} {t.settings.envWins[1]}
+              </>
+            ) : (
+              <>
+                {t.settings.noKeychain[0]} {envList} {t.settings.noKeychain[1]}
+              </>
+            )}
+          </span>
+        )}
+      </div>
+      <div className="set-row">
+        <span className="set-hint">{t.settings.removeHint}</span>
+        <div className="set-line">
+          <Popconfirm
+            title={t.settings.removeConfirm(keyStore(t))}
+            okText={t.settings.remove}
+            cancelText={t.common.cancel}
+            onConfirm={() =>
+              void apply(() => Editor.RemoveProviderKey(provider.id))
+            }
+          >
+            <Button size="small" disabled={!provider.keyStored}>
+              {t.settings.removeKey}
+            </Button>
+          </Popconfirm>
+          <Popconfirm
+            title={t.settings.removeProviderConfirm(provider.name)}
+            okText={t.settings.remove}
+            cancelText={t.common.cancel}
+            onConfirm={() =>
+              void apply(() => Editor.RemoveProvider(provider.id))
+            }
+          >
+            <Button size="small" danger>
+              {t.settings.removeProvider}
+            </Button>
+          </Popconfirm>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Mixed scripts so a font's coverage of each shows at a glance.
 const FONT_SAMPLE = "字幕預覽 字幕预览 Subtitle 0123";
 
@@ -162,12 +387,11 @@ export default function SettingsWindow({
   dark,
   systemDark,
 }: Props) {
-  const { message } = AntApp.useApp();
+  const { message, modal } = AntApp.useApp();
   const t = useT();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<SectionId>("general");
-  const [apiKey, setApiKey] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState<string>();
   const [checking, setChecking] = useState(false);
   const [justChecked, setJustChecked] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
@@ -175,7 +399,9 @@ export default function SettingsWindow({
   const theme = themeChoice(settings.theme);
   const language = languageChoice(settings.language);
   const locale = matchLocale(settings.locale);
-  const configured = settings.keySource !== "";
+  const providers = settings.providers ?? [];
+  const added = providers.filter((p) => p.added);
+  const addable = providers.filter((p) => !p.added);
   const os = osName;
 
   const apply: Apply = async (action) => {
@@ -204,13 +430,24 @@ export default function SettingsWindow({
       box.scrollTo({ top: target.offsetTop, behavior: "smooth" });
     setActive(id);
   };
-  async function saveKey() {
-    setSaving(true);
-    if (await apply(() => Editor.SaveAPIKey(apiKey))) {
-      setApiKey("");
-      void message.success(t.settings.keySaved(keyStore(t)));
-    }
-    setSaving(false);
+  // Adding a provider under mainland Chinese law, or a custom endpoint,
+  // first says what uploading to it means.
+  function addProvider(id: string) {
+    const provider = providers.find((p) => p.id === id);
+    if (!provider) return;
+    const perform = async () => {
+      if (await apply(() => Editor.AddProvider(id))) setAdding(undefined);
+    };
+    const caution = providerCaution(provider, t);
+    if (caution)
+      modal.confirm({
+        title: t.settings.addCautionTitle(provider.name),
+        content: caution,
+        okText: t.settings.addCautionOk,
+        cancelText: t.common.cancel,
+        onOk: perform,
+      });
+    else void perform();
   }
   async function checkUpdate() {
     setChecking(true);
@@ -377,112 +614,66 @@ export default function SettingsWindow({
                     <div className="set-label">
                       <span>{t.settings.analysisProvider}</span>
                       <span className="set-hint">
-                        {t.settings.analysisProviderHint}
+                        {added.length
+                          ? t.settings.analysisProviderHint
+                          : t.settings.noProviders}
                       </span>
                     </div>
                     <Select
                       size="small"
                       aria-label={t.settings.analysisProviderLabel}
-                      value="openai"
-                      options={[{ value: "openai", label: "OpenAI" }]}
-                      style={{ width: 128 }}
+                      value={settings.provider || undefined}
+                      disabled={!added.length}
+                      options={added.map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      }))}
+                      onChange={(v) => void apply(() => Editor.SetProvider(v))}
+                      style={{ width: 200 }}
                     />
                   </div>
                 </div>
               )}
-              {rows.provOpenai && (
-                <div className="set-card">
-                  <div className="set-row set-line">
-                    <strong>OpenAI</strong>
-                    <span className="set-hint">{t.settings.inUse}</span>
-                    <div className="spacer" />
-                    <Tag color={configured ? "green" : "default"}>
-                      {configured
-                        ? t.common.configured
-                        : t.common.notConfigured}
-                    </Tag>
-                  </div>
-                  <div className="set-row">
-                    <span>{t.settings.keySource}</span>
-                    <span className="set-hint">
-                      {settings.keySource === "env" ? (
-                        <>
-                          {t.settings.envVar}{" "}
-                          <span className="mono">OPENAI_API_KEY</span>
-                        </>
-                      ) : settings.keySource === "keychain" ? (
-                        keyStoreName(t)
-                      ) : (
-                        t.common.offlineOnly
-                      )}
-                    </span>
-                  </div>
-                  <div className="set-row set-field">
-                    <label>
-                      {settings.keyStored
-                        ? t.settings.replaceKey
-                        : t.settings.apiKey}
-                      <div className="set-line">
-                        <Input.Password
-                          size="small"
-                          placeholder="sk-…"
-                          autoComplete="off"
-                          disabled={!settings.keychainAvailable || saving}
-                          value={apiKey}
-                          onChange={(e) => setApiKey(e.target.value)}
-                          onPressEnter={() => apiKey.trim() && void saveKey()}
-                        />
-                        <Button
-                          size="small"
-                          disabled={
-                            !settings.keychainAvailable ||
-                            saving ||
-                            !apiKey.trim()
-                          }
-                          onClick={() => void saveKey()}
-                        >
-                          {t.settings.saveTo(keyStore(t))}
-                        </Button>
-                      </div>
-                    </label>
-                    <span className="set-hint">
-                      {settings.keychainAvailable ? (
-                        <>
-                          {t.settings.envWins[0]}{" "}
-                          <span className="mono">OPENAI_API_KEY</span>{" "}
-                          {t.settings.envWins[1]}
-                        </>
-                      ) : (
-                        <>
-                          {t.settings.noKeychain[0]}{" "}
-                          <span className="mono">OPENAI_API_KEY</span>{" "}
-                          {t.settings.noKeychain[1]}
-                        </>
-                      )}
-                    </span>
-                  </div>
-                  <div className="set-row">
-                    <span className="set-hint">{t.settings.removeHint}</span>
-                    <Popconfirm
-                      title={t.settings.removeConfirm(keyStore(t))}
-                      okText={t.settings.remove}
-                      cancelText={t.common.cancel}
-                      onConfirm={() => void apply(Editor.RemoveAPIKey)}
-                    >
-                      <Button size="small" disabled={!settings.keyStored}>
-                        {t.settings.removeKey}
-                      </Button>
-                    </Popconfirm>
-                  </div>
-                </div>
-              )}
-              {rows.provAdd && (
+              {rows.provList &&
+                added.map((p) => (
+                  <ProviderCard
+                    key={p.id}
+                    provider={p}
+                    inUse={p.id === settings.provider}
+                    keychainAvailable={settings.keychainAvailable}
+                    apply={apply}
+                  />
+                ))}
+              {rows.provAdd && addable.length > 0 && (
                 <div className="set-card dashed">
                   <div className="set-row">
-                    <span className="set-hint">{t.settings.onlyOpenai}</span>
-                    <Button size="small" disabled>
-                      {t.settings.addProvider}
-                    </Button>
+                    <span className="set-hint">
+                      {t.settings.addProviderHint}
+                    </span>
+                    <div className="set-line">
+                      <Select
+                        size="small"
+                        aria-label={t.settings.addProviderPlaceholder}
+                        placeholder={t.settings.addProviderPlaceholder}
+                        value={adding}
+                        onChange={setAdding}
+                        options={addable.map((p) => ({
+                          value: p.id,
+                          label:
+                            p.region === "international"
+                              ? p.name
+                              : `${p.name} · ${p.region === "china" ? t.settings.regionChina : t.settings.regionCustom}`,
+                        }))}
+                        style={{ width: 220 }}
+                      />
+                      <Button
+                        size="small"
+                        disabled={!adding}
+                        onClick={() => adding && addProvider(adding)}
+                      >
+                        {t.settings.addProvider}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

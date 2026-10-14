@@ -6,6 +6,7 @@ import {
   languageChoice,
   languageOptions,
   matchSettings,
+  providerCaution,
   resolveDark,
   themeChoice,
   toolLabel,
@@ -57,13 +58,26 @@ describe("preferences", () => {
     );
   });
 
+  it("warns about providers under Chinese law and custom endpoints only", () => {
+    expect(
+      providerCaution({ caution: false, region: "international" }, zh),
+    ).toBeUndefined();
+    expect(providerCaution({ caution: true, region: "china" }, zh)).toBe(
+      zh.settings.cautionChina,
+    );
+    expect(providerCaution({ caution: true, region: "custom" }, en)).toBe(
+      en.settings.cautionCustom,
+    );
+    expect(matchSettings("腾讯").rows.provAdd).toBe(true);
+  });
+
   it("filters settings rows and their sections by keyword", () => {
     const all = matchSettings("  ");
     expect(all.any).toBe(true);
     expect(Object.values(all.rows).every(Boolean)).toBe(true);
 
     const key = matchSettings("密钥");
-    expect(key.rows.provOpenai).toBe(true);
+    expect(key.rows.provList).toBe(true);
     expect(key.rows.provAdd).toBe(false);
     expect(key.sections).toEqual({
       general: false,
@@ -83,7 +97,7 @@ describe("preferences", () => {
     expect(matchSettings("language").sections.general).toBe(true);
     expect(matchSettings("字體").rows.font).toBe(true);
     expect(matchSettings("字体").rows.font).toBe(true);
-    expect(matchSettings("金鑰").rows.provOpenai).toBe(true);
+    expect(matchSettings("金鑰").rows.provList).toBe(true);
 
     expect(matchSettings("没有这个设置").any).toBe(false);
   });

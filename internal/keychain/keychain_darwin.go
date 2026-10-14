@@ -17,7 +17,10 @@ const notFound = 44
 func Available() bool { return true }
 
 // Get returns "" when no key has been stored.
-func Get(ctx context.Context) (string, error) {
+func Get(ctx context.Context, account string) (string, error) {
+	if err := validAccount(account); err != nil {
+		return "", err
+	}
 	out, err := exec.CommandContext(ctx, tool, "find-generic-password", "-s", service, "-a", account, "-w").Output()
 	if err != nil {
 		var exit *exec.ExitError
@@ -31,7 +34,10 @@ func Get(ctx context.Context) (string, error) {
 
 // Set stores or replaces the key. The command goes through stdin so the key
 // never appears in the process list.
-func Set(ctx context.Context, key string) error {
+func Set(ctx context.Context, account, key string) error {
+	if err := validAccount(account); err != nil {
+		return err
+	}
 	if err := Validate(key); err != nil {
 		return err
 	}
@@ -41,14 +47,17 @@ func Set(ctx context.Context, key string) error {
 		return i18n.Errorf("cannot save to the macOS keychain")
 	}
 	// The interactive tool exits 0 even when a command fails, so confirm.
-	stored, err := Get(ctx)
+	stored, err := Get(ctx, account)
 	if err != nil || stored != key {
 		return i18n.Errorf("cannot save to the macOS keychain")
 	}
 	return nil
 }
 
-func Delete(ctx context.Context) error {
+func Delete(ctx context.Context, account string) error {
+	if err := validAccount(account); err != nil {
+		return err
+	}
 	err := exec.CommandContext(ctx, tool, "delete-generic-password", "-s", service, "-a", account).Run()
 	var exit *exec.ExitError
 	if err != nil && !(errors.As(err, &exit) && exit.ExitCode() == notFound) {

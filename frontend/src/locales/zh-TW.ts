@@ -94,7 +94,7 @@ export const zhTW: Messages = {
     invalidTime: "請輸入 HH:MM:SS,mmm，分與秒須為 00–59。",
     rangeLength: "請選擇 60–300 秒的範圍。",
     rangeBeyondMedia: "所選範圍超出媒體長度。",
-    uploadTitle: "要將所選範圍的音訊上傳至 OpenAI 嗎？",
+    uploadTitle: (provider) => `要將所選範圍的音訊上傳至 ${provider} 嗎？`,
     uploadContent: (range) =>
       `${range}。此動作會將音訊傳送至外部 API，並可能產生費用。傳回的結果僅作為待審建議，不會自動修改字幕。`,
     uploadOk: "確認上傳並分析",
@@ -181,7 +181,8 @@ export const zhTW: Messages = {
   status: {
     environment: "執行環境",
     optionalMissing: "未安裝 · 選用",
-    addKeyHint: "在設定中加入 OpenAI API 金鑰後即可使用分析。",
+    provider: "分析供應商",
+    addKeyHint: "在設定中設定分析供應商後即可使用分析。",
     privacy: "檔案保留在本機。僅在確認分析時上傳所選音訊。",
     openSettings: (keys) => `開啟設定（${keys}）`,
     allReady: "環境就緒",
@@ -202,7 +203,7 @@ export const zhTW: Messages = {
     importCaption: "下載並匯入所選字幕",
     authorized: "我確認有權下載此影片的音訊",
     downloadAudio: "另外下載音訊至本機並載入",
-    noUpload: "下載不會自動上傳至 OpenAI。開始分析仍需另外確認。",
+    noUpload: "下載不會自動上傳至任何地方。開始分析仍需另外確認。",
   },
   timeline: {
     label: "時間軸",
@@ -260,7 +261,7 @@ export const zhTW: Messages = {
     autoDetect: "自動偵測",
     ffmpegHint: (search) =>
       `用於讀取媒體與擷取分析音訊。留空時會在 ${search} 中尋找。`,
-    ytdlpHint: "僅 YouTube 匯入需要。下載不會自動上傳至 OpenAI。",
+    ytdlpHint: "僅 YouTube 匯入需要。下載的內容不會被上傳。",
     analysisProvider: "分析使用",
     analysisProviderHint:
       "音訊轉錄建議與說話者分析都會傳送給這裡選擇的供應商。",
@@ -278,7 +279,32 @@ export const zhTW: Messages = {
     removeConfirm: (store) => `要從${store}移除 API 金鑰嗎？`,
     remove: "移除",
     removeKey: "移除金鑰",
-    onlyOpenai: "目前僅支援 OpenAI。",
+    addProviderHint: "加入後即可用其分析。憑證儲存在系統憑證庫中。",
+    addProviderPlaceholder: "選擇供應商",
+    noProviders: "尚未加入供應商；本機編輯不受影響。",
+    regionChina: "中國大陸",
+    regionCustom: "自訂",
+    cautionChina:
+      "此供應商受中華人民共和國法律管轄，須配合內容審查，並可能依法向有關單位提供資料。涉及政治、宗教等敏感議題的音訊，請謹慎上傳。",
+    cautionCustom:
+      "此服務由你指定的第三方營運，Mousqueau 無法核實其如何保存、審查或分享音訊。涉及敏感議題或個人隱私的音訊，請謹慎上傳。",
+    addCautionTitle: (name) => `要加入 ${name} 嗎？`,
+    addCautionOk: "仍要加入",
+    model: "模型",
+    modelDefault: (model) => (model ? `預設：${model}` : "服務預設"),
+    endpoint: "服務網址",
+    endpointHint:
+      "OpenAI 相容的基礎網址，例如 https://api.example.com/v1；僅本機服務可用 http。",
+    noDiarization:
+      "只有回傳 diarized_json 的模型會區分說話者，否則說話者會標為未知。",
+    credentialLabels: {
+      apiKey: "API 金鑰",
+      secretId: "SecretId",
+      secretKey: "SecretKey",
+    },
+    useProvider: "用於分析",
+    removeProvider: "移除供應商",
+    removeProviderConfirm: (name) => `要移除 ${name} 及其儲存的憑證嗎？`,
     addProvider: "加入供應商",
     uploadNote: "僅在你確認分析時，所選音訊才會上傳至選擇的供應商。",
     currentVersion: "目前版本",
@@ -333,6 +359,8 @@ export const zhTW: Messages = {
     keyStorage: (name) => `金鑰儲存在${name}，不會寫入專案檔案。`,
     envStillWins: "已設定的環境變數仍會優先使用。",
     needKey: "請輸入 API 金鑰，或選擇暫不設定。",
+    otherProviders:
+      "Deepgram、AssemblyAI、ElevenLabs、阿里雲百煉、騰訊雲或自訂服務，可稍後在設定中加入。",
     doneTitle: "設定完成",
     changeAnytime: (keys) => `這些設定之後都能在 設定（${keys}）中修改。`,
     skip: "略過設定",
