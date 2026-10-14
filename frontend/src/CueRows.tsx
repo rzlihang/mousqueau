@@ -4,7 +4,9 @@ import type {
   Speaker,
   Suggestion,
 } from "../bindings/mousqueau/internal/analysis/models";
+import type { Match } from "../bindings/mousqueau/internal/dictionary/models";
 import type { Cue } from "../bindings/mousqueau/internal/subtitle/models";
+import { HighlightedText } from "./dictionaryHighlight";
 import { formatTime } from "./editor";
 import { useT } from "./i18n";
 import { SpeakerTags } from "./SuggestionCard";
@@ -17,6 +19,7 @@ type Props = {
   cues: Cue[];
   speakers: Speaker[];
   suggestions: Suggestion[];
+  matchesByCue?: Record<string, Match[]>;
   selectedId: string;
   activeId: string;
   busy: boolean;
@@ -26,7 +29,15 @@ type Props = {
 
 // The cue list renders only the rows in view, so long episodes stay cheap.
 export default function CueRows(props: Props) {
-  const { cues, speakers, suggestions, selectedId, activeId, busy } = props;
+  const {
+    cues,
+    speakers,
+    suggestions,
+    matchesByCue,
+    selectedId,
+    activeId,
+    busy,
+  } = props;
   const t = useT();
   const body = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -81,7 +92,12 @@ export default function CueRows(props: Props) {
                 <span className="tag-row">
                   <SpeakerTags ids={c.speakerIds} speakers={speakers} />
                 </span>
-                <span className="row-text">{c.text}</span>
+                <span className="row-text">
+                  <HighlightedText
+                    text={c.text}
+                    matches={matchesByCue?.[c.id]}
+                  />
+                </span>
                 <span>
                   {st && (
                     <Tag color={st === "review" ? "orange" : "blue"}>

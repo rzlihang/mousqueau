@@ -166,6 +166,41 @@ func TestMergeMovesSuggestionsAndKeepsThemStale(t *testing.T) {
 		}
 	}
 }
+func TestAudioAndDictionarySuggestionsCoexist(t *testing.T) {
+	p := initial()
+	p.AddAnalysis(analysis.Align(p.State.Cues, []analysis.Segment{{Speaker: "A", Start: 1, End: 3, Text: "建議"}}, 0, 60))
+	cue := p.State.Cues[0]
+	cue.SpeakerIDs = []string{"keep"}
+	cue.Review = true
+	if err := p.Edit(cue); err != nil {
+		t.Fatal(err)
+	}
+	// Dictionary suggestion for the same cue must not drop the audio one.
+	p.AddAnalysis(analysis.Result{Suggestions: []analysis.Suggestion{{
+		ID: "suggestion-dictionary-c1", CueID: "c1", Original: "原文", Proposed: "词典修正",
+		SpeakerIDs: []string{"ignored"}, Review: false, Status: "pending", Source: analysis.SourceDictionary,
+	}}})
+	if len(p.State.Suggestions) != 2 {
+		t.Fatalf("want both sources, got %+v", p.State.Suggestions)
+	}
+	var dictID string
+	for _, s := range p.State.Suggestions {
+		if analysis.SuggestionSource(s) == analysis.SourceDictionary {
+			dictID = s.ID
+		}
+	}
+	if err := p.Decide(dictID, "accepted"); err != nil {
+		t.Fatal(err)
+	}
+	c := p.State.Cues[0]
+	if c.Text != "词典修正" || !c.Review || len(c.SpeakerIDs) != 1 || c.SpeakerIDs[0] != "keep" {
+		t.Fatalf("dictionary accept changed more than text: %+v", c)
+	}
+	p.UndoEdit()
+	if p.State.Cues[0].Text != "原文" {
+		t.Fatal("undo after dictionary accept")
+	}
+}
 func TestJoinText(t *testing.T) {
 	for _, tc := range [][3]string{
 		{"Hello", "there", "Hello there"},

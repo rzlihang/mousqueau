@@ -136,6 +136,12 @@ Verified in a Linux cloud environment with Go 1.25.0, Node 22.22.0, pnpm 12.10.1
 
 Not verified: the real Go service behind the new buttons in a browser, any native window, Windows WebView2 font rendering (the computed font stack was checked; on Linux it resolved to DejaVu Sans Mono), trackpad pinch on macOS, and wheel behaviour in WebView2 and WKWebView.
 
+## User dictionary v1 (2026-10-14)
+
+Verified in Linux cloud: `go test ./internal/...` (dictionary load/save/read-only damage, matching with correct forms before misspellings, case/fullwidth fold, import preview/apply, project audio+dictionary coexistence and text-only dictionary accept/undo), `CGO_ENABLED=0 go test -tags server ./...`, `wails3 generate bindings -ts -i -f '-tags=server'` (50 service methods), frontend `pnpm run typecheck`, `pnpm test` (20 tests), `pnpm run build`.
+
+Not verified on a real Mac: dictionary management window (`?window=dictionary`), inspector dictionary tab, cue-list highlighting, JSON import/export native dialogs, adding a selection to the dictionary, and “check all cues” producing undoable suggestions in the live app.
+
 ## Windows and Linux acceptance checklist (still outstanding)
 
 1. Windows 11: first launch shows only the welcome window, with a native shadow and rounded corners; its close button (red on hover) shows the editor. The editor's minimise, maximise/restore and close buttons work; double-clicking the toolbar's empty space maximises; edges resize; Snap layouts appear when dragging to a screen edge.
@@ -157,6 +163,7 @@ Not verified: the real Go service behind the new buttons in a browser, any nativ
 7. Check the hidden-inset title bar: traffic lights do not overlap the project title, the toolbar drags the window while its buttons still click, and ⌘Z / ⇧⌘Z undo and redo outside text fields. Import a full-length episode and confirm the waveform appears without blocking editing.
 8. Test unsupported media, moved media paths, unsaved field edits, theme switching, window resize/close, and the packaged `.app` launched from a configured shell.
 9. Build/package on macOS, check embedded license notices, and configure developer signing/notarization before a public release.
+10. User dictionary: open the dictionary window from the inspector, add a person with a wrong spelling (≥2 characters) and a Traditional/Taiwan variant, run “check all cues”, accept a dictionary suggestion (text only; speakers unchanged), undo, export SRT and confirm it has no dictionary metadata. Import/export JSON via native dialogs; confirm a damaged `dictionary.json` becomes read-only.
 
 CI includes a native macOS compilation job; its future result must be checked in GitHub and does not establish GUI testing.
 10. First launch with no `settings.json`: only the welcome window appears; finishing or closing it shows the editor, and "加载示例" / "导入 SRT" run there. Relaunch opens the editor directly, with the last saved or opened project when that preference is on.
@@ -165,3 +172,4 @@ CI includes a native macOS compilation job; its future result must be checked in
 13. "检查更新" against the real repository, with and without 接收测试版.
 14. With macOS set to English, launch and confirm the menu bar (Mousqueau, File, Edit, View, Window and their items, including Settings…; there is no Help menu), the editor, file dialogs and an error message are all English. Switch macOS to 简体中文, relaunch, and confirm the same in Simplified Chinese with mainland wording; then to 繁體中文（台灣）and confirm Traditional Chinese with Taiwan wording, including AppKit's Start Dictation / Emoji & Symbols items. Then set Settings › General › Language to the other language and confirm the menu bar, the settings and welcome window titles and every open window change at once, and that the choice survives a relaunch. Set a per-application language for Mousqueau in System Settings and confirm "跟随系统" follows it.
 15. In Settings › General, choose PingFang TC, Songti TC and Kaiti TC as the subtitle font and confirm the cue list, viewer overlay, timeline blocks, text field and suggestion texts change in every open window, that a family that is not installed falls back to the interface font, that the choice survives a relaunch, and that an exported SRT is byte-identical whatever the font.
+16. User dictionary: open the dictionary window from the inspector, add a person with a wrong spelling (≥2 characters) and a Traditional/Taiwan variant, run “check all cues”, accept a dictionary suggestion (text only; speakers unchanged), undo, export SRT and confirm it has no dictionary metadata. Import/export JSON via native dialogs; confirm a damaged `dictionary.json` becomes read-only.

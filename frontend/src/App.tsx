@@ -38,6 +38,7 @@ import {
   type CueFilter,
   codePointOffset,
   cueStatus,
+  dictionaryIssueIds,
   filterCues,
   formatSeconds,
   splitTime,
@@ -56,7 +57,9 @@ import {
 } from "./i18n";
 import { fontStack, resolveDark, themeChoice } from "./preferences";
 import SettingsWindow from "./SettingsWindow";
+import DictionaryWindow from "./DictionaryWindow";
 import CueRows from "./CueRows";
+import { HighlightedText } from "./dictionaryHighlight";
 import SuggestionCard, { SpeakerTag } from "./SuggestionCard";
 import Timeline from "./Timeline";
 import {
@@ -68,6 +71,7 @@ import {
 } from "./useSettings";
 import WindowControls from "./WindowControls";
 import WelcomeWindow from "./WelcomeWindow";
+import type { Entry, Match } from "../bindings/mousqueau/internal/dictionary/models";
 import "./style.css";
 
 type Draft = {
@@ -84,7 +88,7 @@ const EMPTY_DRAFT: Draft = {
   speakerIds: [],
   review: false,
 };
-type Tab = "edit" | "speakers" | "suggestions";
+type Tab = "edit" | "speakers" | "suggestions" | "dictionary";
 type Wave =
   | { url: string; peaks: number[]; rate: number }
   | { url: string; error: string }
@@ -150,6 +154,18 @@ function EditorApp({ dark }: { dark: boolean }) {
   const [info, setInfo] = useState<YouTubeInfo | null>(null);
   const [track, setTrack] = useState<number>();
   const [audioAuthorized, setAudioAuthorized] = useState(false);
+  const [matchesByCue, setMatchesByCue] = useState<Record<string, Match[]>>(
+    {},
+  );
+  const [draftMatches, setDraftMatches] = useState<Match[]>([]);
+  const [dictEntries, setDictEntries] = useState<Entry[]>([]);
+  const [addDictOpen, setAddDictOpen] = useState(false);
+  const [addDictMode, setAddDictMode] = useState<
+    "canonical" | "misspelling" | "variant"
+  >("canonical");
+  const [addDictText, setAddDictText] = useState("");
+  const [addDictTarget, setAddDictTarget] = useState<string>();
+  const [addDictCategory, setAddDictCategory] = useState("term");
   const video = useRef<HTMLVideoElement>(null);
   const textArea = useRef<ComponentRef<typeof Input.TextArea>>(null);
   const p = snapshot?.project;
@@ -165,9 +181,19 @@ function EditorApp({ dark }: { dark: boolean }) {
   const mediaUrl = snapshot?.mediaUrl ?? "";
   const pendingCount = suggestions.filter((s) => s.status === "pending").length;
   const todoCount = cues.filter((c) => cueStatus(c, suggestions)).length;
+  const dictIssueIds = useMemo(
+    () =>
+      dictionaryIssueIds(
+        Object.entries(matchesByCue).map(([cueId, matches]) => ({
+          cueId,
+          matches,
+        })),
+      ),
+    [matchesByCue],
+  );
   const shown = useMemo(
-    () => filterCues(cues, suggestions, query, filter),
-    [cues, suggestions, query, filter],
+    () => filterCues(cues, suggestions, query, filter, dictIssueIds),
+    [cues, suggestions, query, filter, dictIssueIds],
   );
   const duration = Math.max(
     60,
@@ -183,14 +209,55 @@ function EditorApp({ dark }: { dark: boolean }) {
       /* runtime may be starting */
     }
   }, []);
+  const refreshDictionaryMatches = useCallback(async () => {
+    try {
+      const groups = (await Editor.MatchProjectCues()) ?? [];
+      const map: Record<string, Match[]> = {};
+      for (const g of groups) map[g.cueId] = g.matches ?? [];
+      setMatchesByCue(map);
+    } catch {
+      setMatchesByCue({});
+    }
+  }, []);
   useEffect(() => {
     void Editor.GetSnapshot()
       .then(setSnapshot)
       .catch((e) => message.error(errorText(e)));
     void refreshStatus();
+    void Editor.GetDictionary()
+      .then((v) => setDictEntries(v.entries ?? []))
+      .catch(() => setDictEntries([]));
     const timer = setInterval(() => void refreshStatus(), 700);
-    return () => clearInterval(timer);
-  }, [message, refreshStatus]);
+    const off = Events.On("dictionary", () => {
+      void Editor.GetDictionary()
+        .then((v) => setDictEntries(v.entries ?? []))
+        .catch(() => undefined);
+      void refreshDictionaryMatches();
+    });
+    return () => {
+      clearInterval(timer);
+      off();
+    };
+  }, [message, refreshStatus, refreshDictionaryMatches]);
+  useEffect(() => {
+    if (!p) {
+      setMatchesByCue({});
+      return;
+    }
+    void refreshDictionaryMatches();
+  }, [p, refreshDictionaryMatches]);
+  useEffect(() => {
+    if (!draftDirty) {
+      setDraftMatches(matchesByCue[selected] ?? []);
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      void Editor.MatchText(draft.text)
+        .then((m) => setDraftMatches(m ?? []))
+        .catch(() => setDraftMatches([]));
+    }, 150);
+    return () => clearTimeout(handle);
+  }, [draft.text, draftDirty, matchesByCue, selected]);
   useEffect(() => {
     if (cue) {
       setDraft({
@@ -770,11 +837,15 @@ function EditorApp({ dark }: { dark: boolean }) {
               aria-label={t.cueList.filter}
               value={filter}
               onChange={setFilter}
-              style={{ width: 96 }}
+              style={{ width: 128 }}
               options={[
                 { value: "all", label: t.cueList.all },
                 { value: "todo", label: t.cueList.todoFilter },
                 { value: "unknown", label: t.common.unknownSpeaker },
+                {
+                  value: "dictionary",
+                  label: t.cueList.dictionaryFilter,
+                },
               ]}
             />
           </div>
@@ -790,6 +861,7 @@ function EditorApp({ dark }: { dark: boolean }) {
             cues={shown}
             speakers={speakers}
             suggestions={suggestions}
+            matchesByCue={matchesByCue}
             selectedId={selected}
             activeId={active?.id ?? ""}
             busy={busy}
@@ -920,6 +992,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                   label: `${t.inspector.suggestions}${pendingCount ? ` ${pendingCount}` : ""}`,
                   value: "suggestions",
                 },
+                { label: t.inspector.dictionary, value: "dictionary" },
               ]}
             />
           </div>
@@ -974,6 +1047,14 @@ function EditorApp({ dark }: { dark: boolean }) {
                       onChange={(e) => changeDraft({ text: e.target.value })}
                     />
                   </label>
+                  {!!draftMatches.length && (
+                    <p className="dict-preview muted small">
+                      <HighlightedText
+                        text={draft.text}
+                        matches={draftMatches}
+                      />
+                    </p>
+                  )}
                   <label className="field">
                     {t.inspector.speaker}
                     <Select
@@ -1168,6 +1249,97 @@ function EditorApp({ dark }: { dark: boolean }) {
                     }}
                   />
                 ))}
+              </div>
+            )}
+
+            {tab === "dictionary" && (
+              <div className="stack">
+                <span className="muted">{t.inspector.dictionaryHint}</span>
+                <strong>{t.inspector.dictionaryHits}</strong>
+                {!draftMatches.length && (
+                  <span className="muted">{t.inspector.dictionaryNone}</span>
+                )}
+                {draftMatches.map((m, i) => (
+                  <div key={`${m.entryId}-${i}`} className="dict-hit-row">
+                    <Tag
+                      color={m.kind === "misspelled" ? "error" : "default"}
+                    >
+                      {m.kind === "misspelled"
+                        ? t.dictionary.kindMisspelled
+                        : t.dictionary.kindKnown}
+                    </Tag>
+                    <span>
+                      {m.kind === "misspelled"
+                        ? `${m.text} → ${m.canonical}`
+                        : m.text}
+                    </span>
+                    {m.kind === "misspelled" && cue && (
+                      <Button
+                        size="small"
+                        disabled={busy || draftDirty}
+                        onClick={() =>
+                          void update(() =>
+                            Editor.FixCueFromDictionary(cue.id),
+                          ).then(() => void refreshDictionaryMatches())
+                        }
+                      >
+                        {t.inspector.dictionaryFix}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Space wrap>
+                  <Button
+                    size="small"
+                    disabled={busy || !p}
+                    onClick={() => {
+                      const el =
+                        textArea.current?.resizableTextArea?.textArea;
+                      const start = el?.selectionStart ?? 0;
+                      const end = el?.selectionEnd ?? 0;
+                      const raw =
+                        el && end > start
+                          ? draft.text.slice(start, end).trim()
+                          : "";
+                      setAddDictText(raw);
+                      setAddDictMode(raw ? "misspelling" : "canonical");
+                      setAddDictTarget(undefined);
+                      setAddDictOpen(true);
+                      if (!raw)
+                        void message.info(t.inspector.dictionaryNeedSelection);
+                    }}
+                  >
+                    {t.inspector.dictionaryAddSelection}
+                  </Button>
+                  <Button
+                    size="small"
+                    type="primary"
+                    disabled={busy || !p}
+                    onClick={() =>
+                      void update(async () => {
+                        const snap = await Editor.CheckDictionary();
+                        const count = (
+                          snap.project?.state.suggestions ?? []
+                        ).filter(
+                          (s) =>
+                            s.source === "dictionary" &&
+                            s.status === "pending",
+                        ).length;
+                        void message.success(t.dictionary.checked(count));
+                        void refreshDictionaryMatches();
+                        return snap;
+                      })
+                    }
+                  >
+                    {t.inspector.dictionaryCheck}
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => void Editor.OpenDictionary()}
+                  >
+                    {t.inspector.dictionaryOpen}
+                  </Button>
+                </Space>
               </div>
             )}
           </div>
@@ -1438,6 +1610,102 @@ function EditorApp({ dark }: { dark: boolean }) {
         </Button>
         <p className="muted">{t.youtube.noUpload}</p>
       </Modal>
+
+      <Modal
+        title={t.inspector.dictionaryAddSelection}
+        open={addDictOpen}
+        onCancel={() => setAddDictOpen(false)}
+        onOk={() =>
+          void (async () => {
+            try {
+              if (addDictMode === "canonical") {
+                await Editor.UpsertDictionaryEntry({
+                  id: "",
+                  canonical: addDictText,
+                  category: addDictCategory,
+                  variants: [],
+                  misspellings: [],
+                  original: [],
+                  note: "",
+                });
+              } else {
+                const target = dictEntries.find((e) => e.id === addDictTarget);
+                if (!target) throw new Error(t.dictionary.pickEntry);
+                const variants =
+                  addDictMode === "variant"
+                    ? [...(target.variants ?? []), addDictText]
+                    : (target.variants ?? []);
+                const misspellings =
+                  addDictMode === "misspelling"
+                    ? [...(target.misspellings ?? []), addDictText]
+                    : (target.misspellings ?? []);
+                await Editor.UpsertDictionaryEntry({
+                  ...target,
+                  variants,
+                  misspellings,
+                });
+              }
+              setAddDictOpen(false);
+              void message.success(t.dictionary.saved);
+              void refreshDictionaryMatches();
+              const v = await Editor.GetDictionary();
+              setDictEntries(v.entries ?? []);
+            } catch (e) {
+              void message.error(errorText(e));
+            }
+          })()
+        }
+        okText={t.dictionary.addSelected}
+        okButtonProps={{
+          disabled:
+            !addDictText.trim() ||
+            (addDictMode !== "canonical" && !addDictTarget),
+        }}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <Input value={addDictText} onChange={(e) => setAddDictText(e.target.value)} />
+          <Select
+            style={{ width: "100%" }}
+            value={addDictMode}
+            onChange={setAddDictMode}
+            options={[
+              {
+                value: "canonical",
+                label: t.dictionary.asCanonical,
+              },
+              {
+                value: "misspelling",
+                label: t.dictionary.asMisspelling,
+              },
+              { value: "variant", label: t.dictionary.asVariant },
+            ]}
+          />
+          {addDictMode === "canonical" ? (
+            <Select
+              style={{ width: "100%" }}
+              value={addDictCategory}
+              onChange={setAddDictCategory}
+              options={(
+                ["person", "nickname", "term", "catchphrase", "other"] as const
+              ).map((c) => ({
+                value: c,
+                label: t.dictionary.categories[c],
+              }))}
+            />
+          ) : (
+            <Select
+              style={{ width: "100%" }}
+              placeholder={t.dictionary.pickEntry}
+              value={addDictTarget}
+              onChange={setAddDictTarget}
+              options={dictEntries.map((e) => ({
+                value: e.id,
+                label: `${e.canonical} · ${t.dictionary.categories[e.category as keyof typeof t.dictionary.categories] ?? e.category}`,
+              }))}
+            />
+          )}
+        </Space>
+      </Modal>
     </div>
   );
 }
@@ -1560,6 +1828,8 @@ export default function App() {
                   systemDark={systemDark}
                 />
               )
+            ) : windowKind === "dictionary" ? (
+              <DictionaryWindow />
             ) : (
               <EditorApp dark={dark} />
             )}

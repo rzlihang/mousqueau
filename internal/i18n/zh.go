@@ -139,6 +139,24 @@ var zhCN = map[string]string{
 	"invalid diarized_json response: %w":                                           "diarized_json 响应无效：%w",
 	"no speech segments returned for this range":                                   "此范围没有返回语音片段",
 
+	// Dictionary
+	"Mousqueau Dictionary":                            "Mousqueau 词典",
+	"User dictionary":                                 "用户词典",
+	"dictionary file is damaged and cannot be overwritten": "词典文件已损坏，无法覆盖写入",
+	"unsupported dictionary version %d":               "不支持的词典版本 %d",
+	"dictionary is read-only because the file could not be loaded safely": "词典为只读：文件未能安全加载",
+	"dictionary entry %d: missing ID":                 "词典词条 %d：缺少 ID",
+	"duplicate dictionary entry ID %q":                "词典词条 ID %q 重复",
+	"dictionary entry %q: invalid category":           "词典词条 %q：类别无效",
+	"dictionary entry %q: canonical form is required": "词典词条 %q：需要标准写法",
+	"misspellings must be at least %d characters":     "错误写法至少需要 %d 个字",
+	"only nickname entries may link to a person":      "只有称呼类词条可以关联人物",
+	"nickname %q links to an unknown person":          "称呼 %q 关联了未知人物",
+	"spelling %q conflicts between dictionary entries": "写法 %q 与其他词条冲突",
+	"dictionary entry not found":                      "找不到该词典词条",
+	"invalid dictionary JSON: %w":                     "词典 JSON 无效：%w",
+	"preview a dictionary import first":               "请先预览词典导入",
+
 	// Keychain and updates
 	"enter an API key":    "请输入 API 密钥",
 	"API key is too long": "API 密钥过长",

@@ -24,4 +24,9 @@ export interface Suggestion {
     "review": boolean;
     "reason": string;
     "status": string;
+
+    /**
+     * audio | dictionary; empty means audio
+     */
+    "source"?: string;
 }

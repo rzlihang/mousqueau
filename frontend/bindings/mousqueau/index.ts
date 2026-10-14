@@ -7,6 +7,7 @@ export {
 };
 
 export type {
+    DictionaryView,
     SettingsView,
     Snapshot,
     Status,

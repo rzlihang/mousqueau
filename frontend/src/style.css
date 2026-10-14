@@ -324,6 +324,62 @@ h3 {
   text-overflow: ellipsis;
   padding-right: 8px;
 }
+.dict-misspelled {
+  text-decoration: underline wavy #cf1322;
+  text-underline-offset: 2px;
+}
+.dict-known {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-radius: 2px;
+}
+[data-theme="dark"] .dict-misspelled {
+  text-decoration-color: #ff7875;
+}
+.dict-preview {
+  margin: 0;
+  padding: 6px 8px;
+  background: var(--block);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  white-space: pre-wrap;
+}
+.dict-hit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.dict-window .dict-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.dict-window .dict-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 8px 16px;
+}
+.dict-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.dict-preview-list {
+  max-height: 280px;
+  overflow: auto;
+  padding-left: 1.2em;
+}
+.dict-preview-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
 .tag-row {
   display: flex;
   flex-wrap: wrap;
