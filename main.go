@@ -16,6 +16,9 @@ func main() {
 	service := &EditorService{}
 	// Settings come first so the language is known before any native text.
 	service.loadSettings()
+	if first, _ := i18n.Match(firstOf(service.languages)); first != i18n.Current() {
+		preferLanguage(appleLanguage[i18n.Current()], service.languages)
+	}
 	app := application.New(application.Options{
 		Name: "Mousqueau", Description: i18n.T("Correct existing subtitles and identify speakers"),
 		Services: []application.Service{application.NewService(service)},
