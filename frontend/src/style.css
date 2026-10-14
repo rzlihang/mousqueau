@@ -368,6 +368,10 @@ h3 {
   flex-direction: column;
   height: 100%;
 }
+/* No sidebar here to sit under the inset title bar's traffic lights. */
+.dict-window.mac .set-head {
+  padding-left: 88px;
+}
 .dict-preview-list {
   max-height: 280px;
   overflow: auto;

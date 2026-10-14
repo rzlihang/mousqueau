@@ -21,7 +21,7 @@ import type {
 } from "../bindings/mousqueau/internal/dictionary/models";
 import type { DictionaryView } from "../bindings/mousqueau/models";
 import { errorText, useT } from "./i18n";
-import { customChrome } from "./useSettings";
+import { customChrome, isMac } from "./useSettings";
 import WindowControls from "./WindowControls";
 
 const CATEGORIES = [
@@ -143,7 +143,9 @@ export default function DictionaryWindow() {
   };
 
   return (
-    <div className="settings-window dict-window">
+    <div
+      className={`settings-window dict-window${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
+    >
       <header className="set-head titlebar" data-wails-drag>
         <div className="set-title">
           <strong>{t.dictionary.title}</strong>
