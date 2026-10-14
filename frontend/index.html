@@ -22,8 +22,11 @@
       html[data-theme="dark"] { background: #0f0f0f; color-scheme: dark; }
     </style>
     <script>
-      // Go passes a theme chosen in Settings; "system" uses the query above.
-      var theme = new URLSearchParams(location.search).get("theme");
+      // Native appearance is available before a new webview's media query.
+      var query = new URLSearchParams(location.search);
+      var theme = query.get("theme");
+      if (theme !== "dark" && theme !== "light")
+        theme = query.get("systemTheme");
       if (theme === "dark" || theme === "light") {
         document.documentElement.dataset.theme = theme;
         var scheme = document.querySelector('meta[name="color-scheme"]');

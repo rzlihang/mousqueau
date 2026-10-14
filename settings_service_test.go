@@ -434,17 +434,20 @@ func TestWindowURLNamesTheWindowAndItsChrome(t *testing.T) {
 	saved := customChrome
 	defer func() { customChrome = saved }()
 	customChrome = false
-	if got := windowURL(mainWindow, "system"); got != "/" {
+	if got := windowURL(mainWindow, "system", "dark"); got != "/?systemTheme=dark&theme=system" {
 		t.Fatalf("main window URL %q", got)
 	}
-	if got := windowURL(settingsWindow, "dark"); got != "/?theme=dark&window=settings" {
+	if got := windowURL(settingsWindow, "dark", "light"); got != "/?systemTheme=light&theme=dark&window=settings" {
 		t.Fatalf("settings window URL %q", got)
 	}
 	customChrome = true
-	if got := windowURL(mainWindow, "system"); got != "/?chrome=custom" {
+	if got := windowURL(mainWindow, "system", "light"); got != "/?chrome=custom&systemTheme=light&theme=system" {
 		t.Fatalf("frameless main window URL %q", got)
 	}
-	if got := windowURL(welcomeWindow, "light"); got != "/?chrome=custom&theme=light&window=welcome" {
+	if got := windowURL(welcomeWindow, "light", "dark"); got != "/?chrome=custom&systemTheme=dark&theme=light&window=welcome" {
 		t.Fatalf("frameless welcome window URL %q", got)
+	}
+	if got := windowURL(mainWindow, "system", ""); got != "/?chrome=custom&theme=system" {
+		t.Fatalf("window without native system appearance URL %q", got)
 	}
 }

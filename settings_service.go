@@ -40,8 +40,9 @@ var customChrome = runtime.GOOS != "darwin"
 
 // windowURL tells the frontend which window it is, whether to draw the
 // window controls, and a theme chosen in Settings to paint before its
-// settings arrive. With "system" the page's own media query is exact.
-func windowURL(name, theme string) string {
+// settings arrive. Seed the system appearance too: a new hidden web view's
+// media query can lag the native appearance.
+func windowURL(name, theme, systemTheme string) string {
 	query := url.Values{}
 	if name != mainWindow {
 		query.Set("window", name)
@@ -49,11 +50,11 @@ func windowURL(name, theme string) string {
 	if customChrome {
 		query.Set("chrome", "custom")
 	}
-	if theme == "dark" || theme == "light" {
+	if theme == "dark" || theme == "light" || theme == "system" {
 		query.Set("theme", theme)
 	}
-	if len(query) == 0 {
-		return "/"
+	if systemTheme == "dark" || systemTheme == "light" {
+		query.Set("systemTheme", systemTheme)
 	}
 	return "/?" + query.Encode()
 }
@@ -81,7 +82,7 @@ func (s *EditorService) darkTheme() bool {
 	case "light":
 		return false
 	}
-	return s.app != nil && s.app.Env.IsDarkMode()
+	return systemDarkTheme(s.app)
 }
 
 // repaintGrounds keeps open windows on the theme colour: the native window,
@@ -710,7 +711,7 @@ func (s *EditorService) openPanel(name, title string, width, height int, minimis
 	}
 	dark := s.darkTheme()
 	window := s.app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name: name, Title: title, Width: width, Height: height, URL: windowURL(name, s.theme()),
+		Name: name, Title: title, Width: width, Height: height, URL: windowURL(name, s.theme(), windowSystemTheme(s.app)),
 		BackgroundColour: ground(dark), Hidden: s.deferWindowShow(name, true),
 		DisableResize: true, Frameless: customChrome, MinimiseButtonState: minimise,
 		MaximiseButtonState: application.ButtonDisabled, FullscreenButtonState: application.ButtonDisabled,
@@ -818,7 +819,7 @@ func (s *EditorService) openWindows() {
 	// is already hidden, and the web view would stay white until it is shown.
 	deferShow := s.deferWindowShow(mainWindow, setupDone)
 	editor := s.app.Window.NewWithOptions(application.WebviewWindowOptions{Name: mainWindow, Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: 1100, MinHeight: 720,
-		URL: windowURL(mainWindow, s.theme()), BackgroundColour: ground(dark),
+		URL: windowURL(mainWindow, s.theme(), windowSystemTheme(s.app)), BackgroundColour: ground(dark),
 		Hidden: !setupDone || deferShow,
 		// The frontend draws the toolbar under the traffic lights, or with its
 		// own window controls elsewhere, and marks it draggable.

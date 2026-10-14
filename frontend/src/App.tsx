@@ -1947,6 +1947,14 @@ export default function App() {
   useLayoutEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+  useEffect(() => {
+    // Navigation can finish before React, settings, and the theme are ready.
+    // Go reveals this window only after this commit has been painted.
+    if (isMac && settings)
+      void Events.Emit("window-ready", dark).catch(() => {
+        /* The native recovery timeout still permits a failed page to open. */
+      });
+  }, [settings, dark]);
   return (
     <ConfigProvider
       locale={ANTD_LOCALES[locale]}
