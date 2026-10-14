@@ -3,7 +3,20 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as dictionary$0 from "./internal/dictionary/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as project$0 from "./internal/project/models.js";
+
+/**
+ * DictionaryView is what the dictionary window and inspector show.
+ */
+export interface DictionaryView {
+    "entries": dictionary$0.Entry[] | null;
+    "readOnly": boolean;
+    "error"?: string;
+    "path"?: string;
+}
 
 /**
  * ProviderView is an analysis provider as Settings shows it. It never

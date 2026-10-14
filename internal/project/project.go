@@ -212,11 +212,17 @@ func (p *Project) AddAnalysis(result analysis.Result) {
 		}
 	}
 	for _, suggestion := range result.Suggestions {
+		if suggestion.Source == "" {
+			suggestion.Source = analysis.SourceAudio
+		}
+		src := analysis.SuggestionSource(suggestion)
 		filtered := []analysis.Suggestion{}
 		for _, s := range next.Suggestions {
-			if s.CueID != suggestion.CueID {
-				filtered = append(filtered, s)
+			// Replace only a pending suggestion for the same cue and source.
+			if s.CueID == suggestion.CueID && analysis.SuggestionSource(s) == src {
+				continue
 			}
+			filtered = append(filtered, s)
 		}
 		next.Suggestions = append(filtered, suggestion)
 	}
@@ -242,8 +248,12 @@ func (p *Project) Decide(id, decision string) error {
 							return i18n.Errorf("subtitle changed since analysis; analyze again or edit manually")
 						}
 						c.Text = s.Proposed
-						c.SpeakerIDs = s.SpeakerIDs
-						c.Review = s.Review
+						// Dictionary suggestions only correct wording; speakers and
+						// the review flag stay as the user left them.
+						if analysis.SuggestionSource(s) != analysis.SourceDictionary {
+							c.SpeakerIDs = s.SpeakerIDs
+							c.Review = s.Review
+						}
 						if _, err := subtitle.Render([]subtitle.Cue{c}); err != nil {
 							return err
 						}

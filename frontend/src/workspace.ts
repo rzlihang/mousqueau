@@ -9,7 +9,7 @@ type CueLike = {
 type SuggestionLike = { cueId: string; status: string; review: boolean };
 
 export type CueStatus = "review" | "pending" | null;
-export type CueFilter = "all" | "todo" | "unknown";
+export type CueFilter = "all" | "todo" | "unknown" | "dictionary";
 
 // A cue needs review when it is flagged or a pending suggestion asks for it;
 // any other pending suggestion only awaits a decision.
@@ -29,14 +29,27 @@ export function filterCues<T extends CueLike>(
   suggestions: SuggestionLike[],
   query: string,
   filter: CueFilter,
+  dictionaryCueIds?: ReadonlySet<string>,
 ): T[] {
   const q = query.trim().toLowerCase();
   return cues.filter((c) => {
     if (q && !c.text.toLowerCase().includes(q)) return false;
     if (filter === "todo") return cueStatus(c, suggestions) !== null;
     if (filter === "unknown") return !c.speakerIds?.length;
+    if (filter === "dictionary") return !!dictionaryCueIds?.has(c.id);
     return true;
   });
+}
+
+/** Cue IDs that still have a misspelling hit (for the dictionary filter). */
+export function dictionaryIssueIds(
+  groups: { cueId: string; matches: { kind: string }[] | null }[] | null,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const g of groups ?? []) {
+    if (g.matches?.some((m) => m.kind === "misspelled")) ids.add(g.cueId);
+  }
+  return ids;
 }
 
 // Whole-second time for analysis ranges and ruler labels.

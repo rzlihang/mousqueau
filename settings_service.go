@@ -27,9 +27,10 @@ var version = "0.1.0"
 const appID = "com.rzlihang.mousqueau"
 
 const (
-	mainWindow     = "main"
-	settingsWindow = "settings"
-	welcomeWindow  = "welcome"
+	mainWindow       = "main"
+	settingsWindow   = "settings"
+	welcomeWindow    = "welcome"
+	dictionaryWindow = "dictionary"
 )
 
 // Elsewhere than macOS the windows have no native frame; the frontend draws
@@ -240,6 +241,7 @@ func (s *EditorService) loadSettings() {
 	for _, p := range s.settings.Providers {
 		s.storedKeys[p.ID], _ = s.keyStore().Get(ctx, keychain.Account(p.ID))
 	}
+	s.loadDictionary()
 	if !s.settings.OpenLastProject || !s.settings.SetupDone || s.settings.LastProject == "" {
 		return
 	}
@@ -623,12 +625,20 @@ func (s *EditorService) OpenSettings() {
 	s.openPanel(settingsWindow, i18n.T(panelTitles[settingsWindow]), 760, 540, application.ButtonEnabled)
 }
 
+func (s *EditorService) OpenDictionary() {
+	s.openPanel(dictionaryWindow, i18n.T(panelTitles[dictionaryWindow]), 880, 600, application.ButtonEnabled)
+}
+
 // OpenWelcome runs the initial setup again from the settings window.
 func (s *EditorService) OpenWelcome() {
 	s.openPanel(welcomeWindow, i18n.T(panelTitles[welcomeWindow]), 760, 520, application.ButtonDisabled)
 }
 
-var panelTitles = map[string]string{settingsWindow: i18n.N("Mousqueau Settings"), welcomeWindow: i18n.N("Welcome to Mousqueau")}
+var panelTitles = map[string]string{
+	settingsWindow:   i18n.N("Mousqueau Settings"),
+	welcomeWindow:    i18n.N("Welcome to Mousqueau"),
+	dictionaryWindow: i18n.N("Mousqueau Dictionary"),
+}
 
 // relabel brings the native text the frontend does not draw into the
 // current language.
@@ -708,7 +718,7 @@ func (s *EditorService) openWindows() {
 		s.mu.Lock()
 		s.closing = true
 		s.mu.Unlock()
-		for _, name := range []string{settingsWindow, welcomeWindow} {
+		for _, name := range []string{settingsWindow, welcomeWindow, dictionaryWindow} {
 			if window := s.window(name); window != nil {
 				window.Close()
 			}

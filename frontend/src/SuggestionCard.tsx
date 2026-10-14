@@ -65,6 +65,11 @@ export default function SuggestionCard({
     <article className={`suggestion ${s.status}`}>
       <div className="section-heading">
         <strong>{t.suggestion.cue(cueIdentifier ?? "")}</strong>
+        <Tag>
+          {s.source === "dictionary"
+            ? t.dictionary.sourceDictionary
+            : t.dictionary.sourceAudio}
+        </Tag>
         <Tag color={s.review ? "orange" : "blue"}>
           {s.status !== "pending"
             ? s.status === "accepted"
@@ -107,7 +112,11 @@ export default function SuggestionCard({
         </div>
       )}
       <p className="muted">
-        {s.review ? t.suggestion.reviewHint : t.suggestion.plainHint}
+        {s.source === "dictionary"
+          ? t.suggestion.dictionaryHint
+          : s.review
+            ? t.suggestion.reviewHint
+            : t.suggestion.plainHint}
       </p>
       <Space wrap>
         <Button

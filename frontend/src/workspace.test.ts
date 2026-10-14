@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   codePointOffset,
   cueStatus,
+  dictionaryIssueIds,
   filterCues,
   formatSeconds,
   majorStep,
@@ -55,6 +56,17 @@ describe("workspace helpers", () => {
         "todo",
       ).map((c) => c.id),
     ).toEqual(["a", "c"]);
+    const dictIds = dictionaryIssueIds([
+      {
+        cueId: "a",
+        matches: [{ kind: "misspelled" }, { kind: "canonical" }],
+      },
+      { cueId: "b", matches: [{ kind: "variant" }] },
+    ]);
+    expect([...dictIds]).toEqual(["a"]);
+    expect(
+      filterCues(cues, [], "", "dictionary", dictIds).map((c) => c.id),
+    ).toEqual(["a"]);
   });
   it("formats whole seconds and maps zoom to readable ruler steps", () => {
     expect(formatSeconds(3661.9)).toBe("01:01:01");

@@ -10,6 +10,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as analysis$0 from "./internal/analysis/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as dictionary$0 from "./internal/dictionary/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as media$0 from "./internal/media/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -32,8 +35,19 @@ export function Analyze(start: number, end: number, uploadAuthorized: boolean): 
     return $Call.ByID(3797034396, start, end, uploadAuthorized);
 }
 
+export function ApplyDictionaryImport(replaceConflicts: string[] | null): $CancellablePromise<$models.DictionaryView> {
+    return $Call.ByID(3895522317, replaceConflicts);
+}
+
 export function Cancel(): $CancellablePromise<void> {
     return $Call.ByID(3786708210);
+}
+
+/**
+ * CheckDictionary adds undoable dictionary suggestions for the open project.
+ */
+export function CheckDictionary(): $CancellablePromise<$models.Snapshot> {
+    return $Call.ByID(3941874788);
 }
 
 /**
@@ -51,6 +65,10 @@ export function DecideSuggestion(id: string, decision: string): $CancellableProm
     return $Call.ByID(288395852, id, decision);
 }
 
+export function DeleteDictionaryEntry(id: string): $CancellablePromise<$models.DictionaryView> {
+    return $Call.ByID(2294366933, id);
+}
+
 export function DiscoverYouTube(raw: string): $CancellablePromise<media$0.YouTubeInfo> {
     return $Call.ByID(3289588596, raw);
 }
@@ -63,6 +81,10 @@ export function EditCue(cue: subtitle$0.Cue): $CancellablePromise<$models.Snapsh
     return $Call.ByID(1255356391, cue);
 }
 
+export function ExportDictionary(): $CancellablePromise<string> {
+    return $Call.ByID(2463575730);
+}
+
 export function ExportSRT(): $CancellablePromise<string> {
     return $Call.ByID(3550621713);
 }
@@ -73,6 +95,17 @@ export function ExportSRT(): $CancellablePromise<string> {
  */
 export function FinishSetup(action: string): $CancellablePromise<void> {
     return $Call.ByID(1910089976, action);
+}
+
+/**
+ * FixCueFromDictionary builds and accepts a dictionary suggestion for one cue.
+ */
+export function FixCueFromDictionary(cueID: string): $CancellablePromise<$models.Snapshot> {
+    return $Call.ByID(3764069982, cueID);
+}
+
+export function GetDictionary(): $CancellablePromise<$models.DictionaryView> {
+    return $Call.ByID(3017365224);
 }
 
 export function GetSettings(): $CancellablePromise<$models.SettingsView> {
@@ -103,11 +136,23 @@ export function LoadDemo(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(2920927275);
 }
 
+export function MatchProjectCues(): $CancellablePromise<dictionary$0.CueMatches[] | null> {
+    return $Call.ByID(2534076466);
+}
+
+export function MatchText(text: string): $CancellablePromise<dictionary$0.Match[] | null> {
+    return $Call.ByID(739050378, text);
+}
+
 /**
  * MergeCues joins a cue with the one after it.
  */
 export function MergeCues(id: string): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(3108585604, id);
+}
+
+export function OpenDictionary(): $CancellablePromise<void> {
+    return $Call.ByID(763181444);
 }
 
 export function OpenProject(): $CancellablePromise<$models.Snapshot> {
@@ -130,6 +175,10 @@ export function OpenSettings(): $CancellablePromise<void> {
  */
 export function OpenWelcome(): $CancellablePromise<void> {
     return $Call.ByID(3653634452);
+}
+
+export function PreviewDictionaryImport(): $CancellablePromise<dictionary$0.ImportPreview> {
+    return $Call.ByID(439531149);
 }
 
 export function Redo(): $CancellablePromise<$models.Snapshot> {
@@ -158,6 +207,10 @@ export function SaveProject(): $CancellablePromise<string> {
  */
 export function SaveProviderKey(id: string, parts: string[] | null): $CancellablePromise<$models.SettingsView> {
     return $Call.ByID(3988951803, id, parts);
+}
+
+export function SearchDictionary(query: string, category: string): $CancellablePromise<dictionary$0.Entry[] | null> {
+    return $Call.ByID(1536259496, query, category);
 }
 
 export function SetAutoUpdate(enabled: boolean): $CancellablePromise<$models.SettingsView> {
@@ -235,6 +288,10 @@ export function TakePendingAction(): $CancellablePromise<string> {
 
 export function Undo(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(941058598);
+}
+
+export function UpsertDictionaryEntry(entry: dictionary$0.Entry): $CancellablePromise<$models.DictionaryView> {
+    return $Call.ByID(1636769061, entry);
 }
 
 /**

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"mousqueau/internal/analysis"
+	"mousqueau/internal/dictionary"
 	"mousqueau/internal/i18n"
 	"mousqueau/internal/media"
 	"mousqueau/internal/project"
@@ -65,6 +66,12 @@ type EditorService struct {
 	updateCancel   context.CancelFunc
 	pendingAction  string
 	closing        bool
+
+	dictionary       dictionary.Dictionary
+	dictionaryPath   string // empty in tests: nothing is written
+	dictionaryRO     bool
+	dictionaryErr    string
+	importPreview    *dictionary.ImportPreview
 }
 
 func (s *EditorService) ready() error {

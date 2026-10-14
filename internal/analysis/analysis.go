@@ -10,6 +10,11 @@ import (
 	"strings"
 )
 
+const (
+	SourceAudio      = "audio"
+	SourceDictionary = "dictionary"
+)
+
 type Segment struct {
 	ID      string  `json:"id"`
 	Speaker string  `json:"speaker"`
@@ -31,6 +36,15 @@ type Suggestion struct {
 	Review     bool     `json:"review"`
 	Reason     string   `json:"reason"`
 	Status     string   `json:"status"`
+	Source     string   `json:"source,omitempty"` // audio | dictionary; empty means audio
+}
+
+// SuggestionSource returns the effective source for a suggestion.
+func SuggestionSource(s Suggestion) string {
+	if s.Source == SourceDictionary {
+		return SourceDictionary
+	}
+	return SourceAudio
 }
 type Result struct {
 	Segments    []Segment    `json:"segments"`
@@ -114,7 +128,10 @@ func Align(cues []subtitle.Cue, segments []Segment, rangeStart, rangeEnd float64
 		if review {
 			reason = "Multiple speakers, overlap, or a segment crosses a cue/range boundary. Review text and timing manually."
 		}
-		result.Suggestions = append(result.Suggestions, Suggestion{ID: "suggestion-" + c.ID, CueID: c.ID, Original: c.Text, Proposed: proposed, SpeakerIDs: ids, Review: review, Reason: reason, Status: "pending"})
+		result.Suggestions = append(result.Suggestions, Suggestion{
+			ID: "suggestion-audio-" + c.ID, CueID: c.ID, Original: c.Text, Proposed: proposed,
+			SpeakerIDs: ids, Review: review, Reason: reason, Status: "pending", Source: SourceAudio,
+		})
 	}
 	return result
 }

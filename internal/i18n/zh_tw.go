@@ -130,6 +130,24 @@ var zhTW = map[string]string{
 	"audio exceeds 24 MB; select a shorter range": "音訊超過 24 MB；請選擇較短的範圍",
 	"no speech segments returned for this range":  "此範圍沒有傳回語音片段",
 
+	// Dictionary
+	"Mousqueau Dictionary":                            "Mousqueau 詞典",
+	"User dictionary":                                 "使用者詞典",
+	"dictionary file is damaged and cannot be overwritten": "詞典檔案已損毀，無法覆寫",
+	"unsupported dictionary version %d":               "不支援的詞典版本 %d",
+	"dictionary is read-only because the file could not be loaded safely": "詞典為唯讀：檔案未能安全載入",
+	"dictionary entry %d: missing ID":                 "詞典詞條 %d：缺少 ID",
+	"duplicate dictionary entry ID %q":                "詞典詞條 ID %q 重複",
+	"dictionary entry %q: invalid category":           "詞典詞條 %q：類別無效",
+	"dictionary entry %q: canonical form is required": "詞典詞條 %q：需要標準寫法",
+	"misspellings must be at least %d characters":     "錯誤寫法至少需要 %d 個字",
+	"only nickname entries may link to a person":      "只有稱呼類詞條可以關聯人物",
+	"nickname %q links to an unknown person":          "稱呼 %q 關聯了未知人物",
+	"spelling %q conflicts between dictionary entries": "寫法 %q 與其他詞條衝突",
+	"dictionary entry not found":                      "找不到該詞典詞條",
+	"invalid dictionary JSON: %w":                     "詞典 JSON 無效：%w",
+	"preview a dictionary import first":               "請先預覽詞典匯入",
+
 	// Keychain and updates
 	"enter an API key":    "請輸入 API 金鑰",
 	"API key is too long": "API 金鑰過長",
