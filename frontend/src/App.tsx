@@ -86,6 +86,7 @@ import {
 } from "./useSettings";
 import WindowControls from "./WindowControls";
 import WelcomeWindow from "./WelcomeWindow";
+import { showSampleImport } from "./sampleImport";
 import type { Entry, Match } from "../bindings/mousqueau/internal/dictionary/models";
 import "./style.css";
 
@@ -124,7 +125,13 @@ function loadLayout(): Layout {
   }
 }
 
-function EditorApp({ dark }: { dark: boolean }) {
+function EditorApp({
+  dark,
+  showSample,
+}: {
+  dark: boolean;
+  showSample: boolean;
+}) {
   const { message, modal } = AntApp.useApp();
   const t = useT();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -690,12 +697,16 @@ function EditorApp({ dark }: { dark: boolean }) {
                       disabled: busy,
                       onClick: () => setYoutubeOpen(true),
                     },
-                    {
-                      key: "demo",
-                      label: t.common.loadDemo,
-                      disabled: busy,
-                      onClick: () => replaceProject(Editor.LoadDemo),
-                    },
+                    ...(showSample
+                      ? [
+                          {
+                            key: "demo",
+                            label: t.common.loadDemo,
+                            disabled: busy,
+                            onClick: () => replaceProject(Editor.LoadDemo),
+                          },
+                        ]
+                      : []),
                   ],
                 },
                 { type: "divider" },
@@ -843,14 +854,16 @@ function EditorApp({ dark }: { dark: boolean }) {
           >
             {t.editor.importYoutube}
           </Button>
-          <Button
-            size="small"
-            type="text"
-            disabled={busy}
-            onClick={() => replaceProject(Editor.LoadDemo)}
-          >
-            {t.common.loadDemo}
-          </Button>
+          {showSample && (
+            <Button
+              size="small"
+              type="text"
+              disabled={busy}
+              onClick={() => replaceProject(Editor.LoadDemo)}
+            >
+              {t.common.loadDemo}
+            </Button>
+          )}
         </div>
         <div className="spacer" />
         <div className="toolbar-group">
@@ -952,7 +965,11 @@ function EditorApp({ dark }: { dark: boolean }) {
             onSelect={selectCue}
           >
             {!cues.length && (
-              <Empty description={t.common.emptyProject}>
+              <Empty
+                description={
+                  showSample ? t.common.emptyProject : t.common.startImport
+                }
+              >
                 <Space>
                   <Button
                     disabled={busy}
@@ -960,12 +977,14 @@ function EditorApp({ dark }: { dark: boolean }) {
                   >
                     {t.common.importSrt}
                   </Button>
-                  <Button
-                    disabled={busy}
-                    onClick={() => replaceProject(Editor.LoadDemo)}
-                  >
-                    {t.common.loadDemo}
-                  </Button>
+                  {showSample && (
+                    <Button
+                      disabled={busy}
+                      onClick={() => replaceProject(Editor.LoadDemo)}
+                    >
+                      {t.common.loadDemo}
+                    </Button>
+                  )}
                 </Space>
               </Empty>
             )}
@@ -1376,7 +1395,11 @@ function EditorApp({ dark }: { dark: boolean }) {
                   )}
                 </div>
               ) : (
-                <Empty description={t.common.emptyProject} />
+                <Empty
+                  description={
+                    showSample ? t.common.emptyProject : t.common.startImport
+                  }
+                />
               ))}
 
             {tab === "speakers" && (
@@ -1463,7 +1486,13 @@ function EditorApp({ dark }: { dark: boolean }) {
               <div className="stack">
                 <span className="muted">{t.inspector.suggestionsHint}</span>
                 {!suggestions.length && (
-                  <Empty description={t.inspector.noSuggestions} />
+                  <Empty
+                    description={
+                      showSample
+                        ? t.inspector.noSuggestions
+                        : t.inspector.analyzeForSuggestions
+                    }
+                  />
                 )}
                 {suggestions.map((s) => (
                   <SuggestionCard
@@ -1989,7 +2018,10 @@ export default function App() {
             ) : windowKind === "dictionary" ? (
               <DictionaryWindow />
             ) : (
-              <EditorApp dark={dark} />
+              <EditorApp
+                dark={dark}
+                showSample={showSampleImport(settings?.developer)}
+              />
             )}
           </div>
         </AntApp>

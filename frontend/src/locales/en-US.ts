@@ -25,6 +25,7 @@ export const enUS: Messages = {
     pendingReview: "Needs review",
     pendingDecision: "Pending",
     emptyProject: "Import SRT or load the demo to start editing",
+    startImport: "Import SRT to start editing",
     seconds: (n) => `${n} s`,
     cues: (n) => plural(n, "cue", "cues"),
   },
@@ -185,6 +186,7 @@ export const enUS: Messages = {
     suggestionsHint:
       "Suggestions never change subtitles on their own. Each acceptance takes a click and can be undone.",
     noSuggestions: "Analyze audio or load the demo to see suggestions",
+    analyzeForSuggestions: "Analyze audio to see suggestions",
     dictionaryHint:
       "Dictionary checks run locally and never upload. Accepting only changes text and can be undone.",
     dictionaryHits: "Hits in this cue",

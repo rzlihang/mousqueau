@@ -23,6 +23,7 @@ export const zhTW: Messages = {
     pendingReview: "需人工複核",
     pendingDecision: "待確認",
     emptyProject: "匯入 SRT 或載入範例以開始編輯",
+    startImport: "匯入 SRT 以開始編輯",
     seconds: (n) => `${n} 秒`,
     cues: (n) => `${n} 句`,
   },
@@ -174,6 +175,7 @@ export const zhTW: Messages = {
     saveSpeaker: "儲存說話者",
     suggestionsHint: "建議不會自動修改字幕。每次接受都需要點按，並可還原。",
     noSuggestions: "分析音訊或載入範例後即可查看建議",
+    analyzeForSuggestions: "分析音訊後即可查看建議",
     dictionaryHint:
       "詞典檢查在本機執行，不上傳內容。接受建議只改文字，可還原。",
     dictionaryHits: "目前字幕命中",
