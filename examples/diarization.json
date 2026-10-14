@@ -1,12 +1,15 @@
 {
   "segments": [
-    {"id":"s1","speaker":"A","start":0.5,"end":3.5,"text":"這一集的字幕我又對了一整晚。"},
-    {"id":"s2","speaker":"A","start":3.5,"end":7,"text":"時間軸要一句一句拖，說話人還要手動標。"},
-    {"id":"s3","speaker":"B","start":7,"end":10.5,"text":"你試過 Mousqueau 嗎？它會先保留原本的字幕。"},
-    {"id":"s4","speaker":"B","start":10.5,"end":14,"text":"修正只是建議，你確認了才會改。"},
-    {"id":"s5","speaker":"A","start":14,"end":15.2,"text":"臥槽。"},
-    {"id":"s6","speaker":"C","start":14.8,"end":16,"text":"真的假的？"},
-    {"id":"s7","speaker":"D","start":16,"end":18.5,"text":"（兩人看完 Mousqueau 的示範，當場愣住。）"},
-    {"id":"s8","speaker":"A","start":18.5,"end":22,"text":"這麼好的東西你咋不早點告訴我？"}
+    {"id":"s1","speaker":"A","start":0.5,"end":3.0,"text":"各位，今天給大家看個好東西。"},
+    {"id":"s2","speaker":"B","start":3.0,"end":4.2,"text":"又來了。"},
+    {"id":"s3","speaker":"A","start":4.2,"end":6.0,"text":"字幕編輯器。"},
+    {"id":"s4","speaker":"B","start":6.0,"end":9.0,"text":"市面上不是有很多這種東西了嗎？"},
+    {"id":"s5","speaker":"A","start":9.0,"end":13.0,"text":"你別急啊。三個人一塊兒吵，它都分得出誰是誰——"},
+    {"id":"s6","speaker":"C","start":12.0,"end":13.5,"text":"吹，接著吹。"},
+    {"id":"s7","speaker":"B","start":13.5,"end":15.5,"text":"那它要是聽錯了呢？"},
+    {"id":"s8","speaker":"A","start":15.5,"end":19.5,"text":"聽錯了它不改，在旁邊小聲問你：要不要改？"},
+    {"id":"s9","speaker":"B","start":19.5,"end":21.0,"text":"還挺有禮貌。"},
+    {"id":"s10","speaker":"A","start":21.0,"end":24.5,"text":"臥槽，我看了以後啊，就鎮住了。"},
+    {"id":"s11","speaker":"A","start":24.5,"end":27.5,"text":"這麼好的東西你咋不早點告訴我？"}
   ]
 }

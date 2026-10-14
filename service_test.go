@@ -68,7 +68,7 @@ func TestDemoHasReviewableSuggestions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(snapshot.Project.Original) != 7 || len(snapshot.Project.State.Suggestions) != 7 {
+	if len(snapshot.Project.Original) != 10 || len(snapshot.Project.State.Suggestions) != 10 {
 		t.Fatalf("demo fixture: %d cues, %d suggestions", len(snapshot.Project.Original), len(snapshot.Project.State.Suggestions))
 	}
 	if snapshot.Project.State.Cues[0].Text != snapshot.Project.Original[0].Text {
