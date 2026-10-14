@@ -8,6 +8,20 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mousqueau</title>
+    <!-- Paint the theme's ground before the bundle loads, so a window never
+         flashes white. Keep these in step with --bg in src/style.css. -->
+    <style>
+      html { background: #f2f4f7; }
+      @media (prefers-color-scheme: dark) { html { background: #0f0f0f; } }
+      html[data-theme="light"] { background: #f2f4f7; }
+      html[data-theme="dark"] { background: #0f0f0f; }
+    </style>
+    <script>
+      // Go passes a theme chosen in Settings; "system" uses the query above.
+      var theme = new URLSearchParams(location.search).get("theme");
+      if (theme === "dark" || theme === "light")
+        document.documentElement.dataset.theme = theme;
+    </script>
   </head>
   <body>
     <div id="root"></div>
