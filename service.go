@@ -67,11 +67,16 @@ type EditorService struct {
 	pendingAction  string
 	closing        bool
 
-	dictionary       dictionary.Dictionary
-	dictionaryPath   string // empty in tests: nothing is written
-	dictionaryRO     bool
-	dictionaryErr    string
-	importPreview    *dictionary.ImportPreview
+	// Darwin keeps a new window hidden until its web view is painted; the
+	// map says which of those windows should then be shown. Unused elsewhere.
+	groundHook       bool
+	showWhenGrounded map[string]bool
+
+	dictionary     dictionary.Dictionary
+	dictionaryPath string // empty in tests: nothing is written
+	dictionaryRO   bool
+	dictionaryErr  string
+	importPreview  *dictionary.ImportPreview
 }
 
 func (s *EditorService) ready() error {

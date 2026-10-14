@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -404,6 +405,28 @@ func TestUpdateCheckSetupActionAndLastProject(t *testing.T) {
 	s.SetOpenLastProject(false)
 	if next := reopen(); next.GetSnapshot().Project != nil {
 		t.Fatal("last project reopened although disabled")
+	}
+}
+
+func TestGroundMatchesStartupColours(t *testing.T) {
+	dark := ground(true)
+	light := ground(false)
+	if dark.Red != 0x0f || dark.Green != 0x0f || dark.Blue != 0x0f || dark.Alpha != 255 {
+		t.Fatalf("dark ground %+v", dark)
+	}
+	if light.Red != 0xf2 || light.Green != 0xf4 || light.Blue != 0xf7 || light.Alpha != 255 {
+		t.Fatalf("light ground %+v", light)
+	}
+	for _, path := range []string{"frontend/index.html", "frontend/src/style.css"} {
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, needle := range []string{"#0f0f0f", "#f2f4f7", "color-scheme"} {
+			if !bytes.Contains(body, []byte(needle)) {
+				t.Fatalf("%s missing %s", path, needle)
+			}
+		}
 	}
 }
 
