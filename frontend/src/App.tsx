@@ -36,6 +36,7 @@ import {
   IconPlayerSkipBack,
   IconPlayerSkipForward,
 } from "@tabler/icons-react";
+import { decorative } from "./icons";
 import { Events, Window } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { Snapshot, Status } from "../bindings/mousqueau/models";
@@ -802,7 +803,7 @@ function EditorApp({ dark }: { dark: boolean }) {
             disabled={!canUndo}
             onClick={() => void update(Editor.Undo)}
           >
-            <IconArrowBackUp size={16} />
+            <IconArrowBackUp size={16} {...decorative} />
           </Button>
           <Button
             type="text"
@@ -816,7 +817,7 @@ function EditorApp({ dark }: { dark: boolean }) {
             disabled={!canRedo}
             onClick={() => void update(Editor.Redo)}
           >
-            <IconArrowForwardUp size={16} />
+            <IconArrowForwardUp size={16} {...decorative} />
           </Button>
         </div>
         <div className="toolbar-divider" />
@@ -1074,7 +1075,7 @@ function EditorApp({ dark }: { dark: boolean }) {
               <Tooltip title={t.viewer.previous}>
                 <Button
                   aria-label={t.viewer.previous}
-                  icon={<IconPlayerSkipBack size={18} />}
+                  icon={<IconPlayerSkipBack size={18} {...decorative} />}
                   disabled={busy || !cues.length}
                   onClick={() => stepCue(-1)}
                 />
@@ -1084,9 +1085,9 @@ function EditorApp({ dark }: { dark: boolean }) {
                   aria-label={playing ? t.viewer.pause : t.viewer.play}
                   icon={
                     playing ? (
-                      <IconPlayerPause size={18} />
+                      <IconPlayerPause size={18} {...decorative} />
                     ) : (
-                      <IconPlayerPlay size={18} />
+                      <IconPlayerPlay size={18} {...decorative} />
                     )
                   }
                   disabled={!mediaUrl}
@@ -1096,7 +1097,7 @@ function EditorApp({ dark }: { dark: boolean }) {
               <Tooltip title={t.viewer.next}>
                 <Button
                   aria-label={t.viewer.next}
-                  icon={<IconPlayerSkipForward size={18} />}
+                  icon={<IconPlayerSkipForward size={18} {...decorative} />}
                   disabled={busy || !cues.length}
                   onClick={() => stepCue(1)}
                 />

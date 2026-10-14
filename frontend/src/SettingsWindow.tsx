@@ -25,6 +25,7 @@ import {
   IconSettings,
   IconTool,
 } from "@tabler/icons-react";
+import { decorative } from "./icons";
 import {
   FONT_PRESETS,
   SECTIONS,
@@ -495,7 +496,7 @@ export default function SettingsWindow({
                 jump(id);
               }}
             >
-              <SectionIcon size={16} />
+              <SectionIcon size={16} {...decorative} />
               {t.settings.sections[id]}
             </a>
           );
