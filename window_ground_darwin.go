@@ -9,30 +9,31 @@ package main
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
 
-// Wails' SetBackgroundColour only paints the NSWindow. WKWebView stays an
-// opaque white until the page composites, and that white is what the user
-// sees for the first few frames. underPageBackgroundColor is the public
-// macOS 12 colour behind the page; WebKit's backgroundColor key is what the
-// view itself draws before that composite. Wails calls the key only from
-// private_mac_apis, and never from SetBackgroundColour.
+// setBackgroundColour only paints the NSWindow. webviewSetBackgroundColour
+// exists and is never called from there, so the WKWebView stays white in
+// front of the themed window. This is that function's public body
+// (mac_public_api_darwin.go): this binary is not built with
+// private_mac_apis, and MacBackdropTransparent would clear the window.
+static void paintWebViewColour(WKWebView *view, NSColor *colour) {
+	if (view == nil) {
+		return;
+	}
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 120000
+	if (@available(macOS 12.0, *)) {
+		view.underPageBackgroundColor = colour;
+		return;
+	}
+#endif
+	view.wantsLayer = YES;
+	view.layer.backgroundColor = colour.CGColor;
+}
+
 static void paintSubviewGround(NSView *view, NSColor *colour) {
 	if (view == nil) {
 		return;
 	}
 	if ([view isKindOfClass:[WKWebView class]]) {
-		WKWebView *web = (WKWebView *)view;
-		if (@available(macOS 12.0, *)) {
-			web.underPageBackgroundColor = colour;
-		}
-		web.wantsLayer = YES;
-		if (web.layer != nil) {
-			web.layer.backgroundColor = colour.CGColor;
-		}
-		@try {
-			[web setValue:colour forKey:@"backgroundColor"];
-		} @catch (NSException *exception) {
-			(void)exception;
-		}
+		paintWebViewColour((WKWebView *)view, colour);
 	}
 	for (NSView *sub in view.subviews) {
 		paintSubviewGround(sub, colour);
@@ -51,14 +52,16 @@ static void setWebViewGround(void *nsWindow, int r, int g, int b, int dark) {
 	}
 	@autoreleasepool {
 		NSWindow *window = (NSWindow *)nsWindow;
-		NSColor *colour = [NSColor colorWithSRGBRed:r / 255.0
-		                                       green:g / 255.0
-		                                        blue:b / 255.0
-		                                       alpha:1.0];
+		NSColor *colour = [NSColor colorWithRed:r / 255.0
+		                                    green:g / 255.0
+		                                     blue:b / 255.0
+		                                    alpha:1.0];
 		if (@available(macOS 10.14, *)) {
 			NSAppearanceName name = dark ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua;
 			window.appearance = [NSAppearance appearanceNamed:name];
 		}
+		// Opaque window, themed colour. Not windowSetTransparent.
+		[window setOpaque:YES];
 		window.backgroundColor = colour;
 		paintSubviewGround(window.contentView, colour);
 	}
@@ -115,6 +118,23 @@ func revealDarwinGround(s *EditorService, window application.Window, show bool) 
 			}
 		})
 	}
+	// Paint as soon as the web view exists, not only when navigation finishes.
+	// setBackgroundColour has already run by then and did not colour the view.
+	go func() {
+		deadline := time.Now().Add(2 * time.Second)
+		for time.Now().Before(deadline) {
+			ready := false
+			application.InvokeSync(func() {
+				web, ok := window.(*application.WebviewWindow)
+				ready = ok && web != nil && web.NativeWindow() != nil
+			})
+			if ready {
+				paintWebViewGround(window, s.groundColour())
+				return
+			}
+			time.Sleep(2 * time.Millisecond)
+		}
+	}()
 	window.OnWindowEvent(events.Mac.WebViewDidFinishNavigation, func(*application.WindowEvent) { reveal() })
 	if show {
 		// Navigation can fail. Still paint and show rather than leave a window hidden.

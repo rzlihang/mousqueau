@@ -135,6 +135,8 @@ func (s *EditorService) groundColour() application.RGBA {
 
 // macWindow is the hidden-inset title bar, and on macOS the appearance that
 // matches the theme so the web view is not born in the other mode.
+// Backdrop stays MacBackdropNormal: the app is not built with
+// private_mac_apis, and MacBackdropTransparent would clear this colour.
 func macWindow(dark bool) application.MacWindow {
 	mac := application.MacWindow{TitleBar: application.MacTitleBarHiddenInset}
 	if runtime.GOOS == "darwin" {
