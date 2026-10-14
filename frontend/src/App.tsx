@@ -1899,9 +1899,13 @@ export default function App() {
   );
   const subtitleFont = settings ? settings.subtitleFont : cachedFont;
   const t = messagesFor(locale);
-  // The last theme is cached so a window opens in it before Go has answered.
+  // Before Go has answered, a window opens in the theme Go put in its URL,
+  // else the last theme cached here.
   const [cached] = useState(() =>
-    themeChoice(localStorage.getItem("mousqueau-theme")),
+    themeChoice(
+      new URLSearchParams(window.location.search).get("theme") ??
+        localStorage.getItem("mousqueau-theme"),
+    ),
   );
   const dark = resolveDark(
     settings ? themeChoice(settings.theme) : cached,

@@ -38,9 +38,10 @@ const (
 // the traffic lights on the left.
 var customChrome = runtime.GOOS != "darwin"
 
-// windowURL tells the frontend which window it is and whether to draw the
-// window controls.
-func windowURL(name string) string {
+// windowURL tells the frontend which window it is, whether to draw the
+// window controls, and a theme chosen in Settings to paint before its
+// settings arrive. With "system" the page's own media query is exact.
+func windowURL(name, theme string) string {
 	query := url.Values{}
 	if name != mainWindow {
 		query.Set("window", name)
@@ -48,10 +49,53 @@ func windowURL(name string) string {
 	if customChrome {
 		query.Set("chrome", "custom")
 	}
+	if theme == "dark" || theme == "light" {
+		query.Set("theme", theme)
+	}
 	if len(query) == 0 {
 		return "/"
 	}
 	return "/?" + query.Encode()
+}
+
+// ground is a window's native background, the --bg of style.css, so a new
+// window is never white before its page has painted.
+func ground(dark bool) application.RGBA {
+	if dark {
+		return application.NewRGB(0x0f, 0x0f, 0x0f)
+	}
+	return application.NewRGB(0xf2, 0xf4, 0xf7)
+}
+
+func (s *EditorService) theme() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.settings.Theme
+}
+
+// darkTheme resolves the theme setting, following the system for "system".
+func (s *EditorService) darkTheme() bool {
+	switch s.theme() {
+	case "dark":
+		return true
+	case "light":
+		return false
+	}
+	return s.app != nil && s.app.Env.IsDarkMode()
+}
+
+// repaintGrounds keeps open windows' native background in the theme, which
+// shows while a window resizes or reloads.
+func (s *EditorService) repaintGrounds() {
+	if s.app == nil {
+		return
+	}
+	colour := ground(s.darkTheme())
+	for _, name := range []string{mainWindow, settingsWindow, welcomeWindow, dictionaryWindow} {
+		if window := s.window(name); window != nil {
+			window.SetBackgroundColour(colour)
+		}
+	}
 }
 
 type ToolStatus struct {
@@ -305,13 +349,17 @@ func (s *EditorService) GetSettings() SettingsView {
 	return s.settingsView()
 }
 func (s *EditorService) SetTheme(theme string) (SettingsView, error) {
-	return s.change(func(next *settings.Settings) error {
+	view, err := s.change(func(next *settings.Settings) error {
 		if !settings.ValidTheme(theme) {
 			return i18n.Errorf("unknown theme")
 		}
 		next.Theme = theme
 		return nil
 	})
+	if err == nil {
+		s.repaintGrounds()
+	}
+	return view, err
 }
 
 // SetLanguage switches every window, the menu and Go's messages at once.
@@ -610,7 +658,7 @@ func (s *EditorService) openPanel(name, title string, width, height int, minimis
 		return
 	}
 	window := s.app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name: name, Title: title, Width: width, Height: height, URL: windowURL(name),
+		Name: name, Title: title, Width: width, Height: height, URL: windowURL(name, s.theme()), BackgroundColour: ground(s.darkTheme()),
 		DisableResize: true, Frameless: customChrome, MinimiseButtonState: minimise,
 		MaximiseButtonState: application.ButtonDisabled, FullscreenButtonState: application.ButtonDisabled,
 		Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset},
@@ -709,7 +757,8 @@ func (s *EditorService) openWindows() {
 	s.mu.Lock()
 	setupDone := s.settings.SetupDone
 	s.mu.Unlock()
-	editor := s.app.Window.NewWithOptions(application.WebviewWindowOptions{Name: mainWindow, Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: 1100, MinHeight: 720, URL: windowURL(mainWindow), Hidden: !setupDone,
+	editor := s.app.Window.NewWithOptions(application.WebviewWindowOptions{Name: mainWindow, Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: 1100, MinHeight: 720,
+		URL: windowURL(mainWindow, s.theme()), BackgroundColour: ground(s.darkTheme()), Hidden: !setupDone,
 		// The frontend draws the toolbar under the traffic lights, or with its
 		// own window controls elsewhere, and marks it draggable.
 		Frameless: customChrome, Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset}})
@@ -731,6 +780,7 @@ func (s *EditorService) openWindows() {
 		s.app.Menu.SetApplicationMenu(s.menu())
 	}
 	s.app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { go s.autoCheck() })
+	s.app.Event.OnApplicationEvent(events.Common.ThemeChanged, func(*application.ApplicationEvent) { s.repaintGrounds() })
 }
 
 // menu is the default macOS menu, without Help, plus the conventional
