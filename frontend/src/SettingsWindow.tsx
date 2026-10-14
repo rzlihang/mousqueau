@@ -19,7 +19,12 @@ import type {
   ToolStatus,
 } from "../bindings/mousqueau/models";
 import { LANGUAGE_NAMES, errorText, matchLocale, useT } from "./i18n";
-import { ICON_PATHS, PathIcon } from "./icons";
+import {
+  IconApi,
+  IconRefresh,
+  IconSettings,
+  IconTool,
+} from "@tabler/icons-react";
 import {
   FONT_PRESETS,
   SECTIONS,
@@ -381,6 +386,13 @@ function FontRow({ font, apply }: { font: string; apply: Apply }) {
   );
 }
 
+const SECTION_ICONS: Record<SectionId, typeof IconSettings> = {
+  general: IconSettings,
+  tools: IconTool,
+  providers: IconApi,
+  updates: IconRefresh,
+};
+
 export default function SettingsWindow({
   settings,
   onChange,
@@ -471,6 +483,7 @@ export default function SettingsWindow({
         />
         {SECTIONS.map((id) => {
           const on = id === active && sections[id];
+          const SectionIcon = SECTION_ICONS[id];
           return (
             <a
               key={id}
@@ -482,7 +495,7 @@ export default function SettingsWindow({
                 jump(id);
               }}
             >
-              <PathIcon d={ICON_PATHS[id]} />
+              <SectionIcon size={16} />
               {t.settings.sections[id]}
             </a>
           );

@@ -12,7 +12,7 @@ import {
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { SettingsView, ToolStatus } from "../bindings/mousqueau/models";
 import { LANGUAGE_NAMES, errorText, matchLocale, useT } from "./i18n";
-import { ICON_PATHS, PathIcon } from "./icons";
+import { IconCircleCheckFilled } from "@tabler/icons-react";
 import {
   languageChoice,
   languageOptions,
@@ -224,7 +224,7 @@ export default function WelcomeWindow({
               <div className="welcome-facts">
                 {t.welcome.facts.map((fact) => (
                   <div key={fact}>
-                    <PathIcon d={ICON_PATHS.check} />
+                    <IconCircleCheckFilled size={16} />
                     <span>{fact}</span>
                   </div>
                 ))}

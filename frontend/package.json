@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tabler/icons-react": "^3.49.0",
     "@wailsio/runtime": "3.0.0-beta.28",
     "antd": "^6.6.5",
     "diff": "^8.0.2",
