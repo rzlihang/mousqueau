@@ -50,19 +50,19 @@ textarea {
   color: var(--ink);
 }
 [data-theme="dark"] {
-  --bg: #10141c;
-  --panel: #191f2b;
-  --head: #151a24;
-  --ink: #eef2f8;
-  --muted: #a0adc1;
-  --line: #303949;
-  --select: #203855;
-  --block: #222a39;
+  --bg: #0f0f0f;
+  --panel: #1a1a1a;
+  --head: #141414;
+  --ink: #f0f0f0;
+  --muted: #a6a6a6;
+  --line: #333333;
+  --select: #1f2f45;
+  --block: #242424;
   --wave: #3b5680;
   --wave-sel: #6f9de0;
   --edge: rgb(255 255 255 / 16%);
-  --scroll-thumb: #48566b;
-  --scroll-thumb-hover: #687a94;
+  --scroll-thumb: #4d4d4d;
+  --scroll-thumb-hover: #707070;
 }
 /* Apply to the document, including Ant Design portals and all three windows.
    Keep browser scrolling, keyboard navigation and thumb dragging intact. */
@@ -400,7 +400,7 @@ h3 {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: #080c12;
+  background: #0a0a0a;
   border-right: 1px solid var(--line);
 }
 .viewer-frame {
@@ -415,7 +415,7 @@ h3 {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #080c12;
+  background: #0a0a0a;
 }
 .viewer-empty,
 .viewer-note {
