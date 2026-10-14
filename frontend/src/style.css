@@ -1009,6 +1009,10 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   border-radius: 8px;
   background: var(--panel);
 }
+.set-row > .ant-alert {
+  flex: 1;
+  font-size: 12px;
+}
 .set-card.dashed {
   border-style: dashed;
   background: transparent;

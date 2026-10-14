@@ -26,7 +26,13 @@ type Status struct {
 	Phase         string `json:"phase"`
 	FFmpeg        bool   `json:"ffmpeg"`
 	YTDLP         bool   `json:"ytdlp"`
-	APIConfigured bool   `json:"apiConfigured"`
+	APIConfigured bool   `json:"apiConfigured"` // the provider in use can analyze
+	Provider      string `json:"provider"`      // its name; "" when none is added
+	// ProviderCaution marks a provider under mainland China's jurisdiction
+	// (region "china") or a custom endpoint, so the upload confirmation can
+	// advise care.
+	ProviderCaution bool   `json:"providerCaution"`
+	ProviderRegion  string `json:"providerRegion"`
 }
 type Snapshot struct {
 	Project   *project.Project `json:"project"`
@@ -46,14 +52,15 @@ type EditorService struct {
 	mediaRevision  int
 	cancel         context.CancelFunc
 	phase          string // English; translated when read
+	phaseArgs      []any
 	waveformCancel context.CancelFunc
 
 	settings       settings.Settings
-	settingsPath   string          // empty in tests: nothing is written
-	languages      []string        // the system's preferred languages
-	keys           credentialStore // nil: the system keychain
-	keyMu          sync.Mutex      // serializes keychain changes
-	storedKey      string          // from the keychain; stays in Go
+	settingsPath   string            // empty in tests: nothing is written
+	languages      []string          // the system's preferred languages
+	keys           credentialStore   // nil: the system keychain
+	keyMu          sync.Mutex        // serializes keychain changes
+	storedKeys     map[string]string // by provider, from the keychain; stays in Go
 	update         update.Release
 	updateEndpoint string
 	updateCancel   context.CancelFunc
@@ -97,7 +104,11 @@ func (s *EditorService) GetSnapshot() Snapshot { s.mu.Lock(); defer s.mu.Unlock(
 func (s *EditorService) GetStatus() Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return Status{Busy: s.cancel != nil, Phase: i18n.T(s.phase), FFmpeg: media.Dependency("ffmpeg"), YTDLP: media.Dependency("yt-dlp"), APIConfigured: s.apiKeyLocked() != ""}
+	status := Status{Busy: s.cancel != nil, Phase: i18n.T(s.phase, s.phaseArgs...), FFmpeg: media.Dependency("ffmpeg"), YTDLP: media.Dependency("yt-dlp")}
+	if active, ok := s.activeLocked(); ok {
+		status.APIConfigured, status.Provider, status.ProviderCaution, status.ProviderRegion = active.ready, active.name, active.info.Caution(), active.info.Region
+	}
+	return status
 }
 func (s *EditorService) ImportVideo() (Snapshot, error) {
 	path, err := s.app.Dialog.OpenFile().SetTitle(i18n.T("Import local video or audio")).AddFilter(i18n.T("Media"), "*.mp4;*.mov;*.m4v;*.webm;*.mkv;*.m4a;*.mp3;*.wav").PromptForSingleSelection()
@@ -308,7 +319,7 @@ func (s *EditorService) begin(phase string) (context.Context, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	s.cancel = cancel
-	s.phase = phase
+	s.phase, s.phaseArgs = phase, nil
 	return ctx, nil
 }
 func (s *EditorService) finish() {
@@ -318,14 +329,14 @@ func (s *EditorService) finish() {
 		s.cancel()
 	}
 	s.cancel = nil
-	s.phase = ""
+	s.phase, s.phaseArgs = "", nil
 }
 func (s *EditorService) Cancel() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.cancel != nil {
 		s.cancel()
-		s.phase = i18n.N("Cancelling…")
+		s.phase, s.phaseArgs = i18n.N("Cancelling…"), nil
 	}
 }
 
@@ -365,7 +376,11 @@ func (s *EditorService) ServiceShutdown() error {
 	}
 	return nil
 }
-func (s *EditorService) phaseUpdate(phase string) { s.mu.Lock(); defer s.mu.Unlock(); s.phase = phase }
+func (s *EditorService) phaseUpdate(phase string, args ...any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.phase, s.phaseArgs = phase, args
+}
 func friendly(err error) error {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return i18n.Errorf("processing cancelled or timed out; subtitles were not changed")
@@ -379,9 +394,18 @@ func (s *EditorService) Analyze(start, end float64, uploadAuthorized bool) (Snap
 	if err := media.ValidateRange(start, end); err != nil {
 		return Snapshot{}, err
 	}
-	key := s.apiKey()
-	if key == "" {
-		return Snapshot{}, i18n.Errorf("add an OpenAI API key in Settings or set OPENAI_API_KEY; local editing does not require one")
+	s.mu.Lock()
+	active, ok := s.activeLocked()
+	s.mu.Unlock()
+	if !ok {
+		return Snapshot{}, i18n.Errorf("add an analysis provider in Settings; local editing does not require one")
+	}
+	if !active.ready {
+		return Snapshot{}, i18n.Errorf("set up %s in Settings; local editing does not require it", active.name)
+	}
+	provider, err := analysis.New(active.info.ID, active.config, active.secret, nil)
+	if err != nil {
+		return Snapshot{}, err
 	}
 	ctx, err := s.begin(i18n.N("Extracting audio with FFmpeg…"))
 	if err != nil {
@@ -404,8 +428,7 @@ func (s *EditorService) Analyze(start, end float64, uploadAuthorized bool) (Snap
 		return Snapshot{}, friendly(err)
 	}
 	defer cleanup()
-	s.phaseUpdate(i18n.N("Uploading selected audio to OpenAI and identifying speakers…"))
-	var provider analysis.Provider = analysis.OpenAI{Key: key}
+	s.phaseUpdate(i18n.N("Uploading selected audio to %s and identifying speakers…"), active.name)
 	segments, err := provider.Transcribe(ctx, audio)
 	if err != nil {
 		return Snapshot{}, friendly(err)

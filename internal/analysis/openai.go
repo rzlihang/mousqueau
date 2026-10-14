@@ -3,15 +3,11 @@ package analysis
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"io"
 	"mime/multipart"
 	"mousqueau/internal/i18n"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 const MaxAudioBytes int64 = 24_000_000 // conservative margin below the 25 MB API limit
@@ -19,31 +15,45 @@ const MaxAudioBytes int64 = 24_000_000 // conservative margin below the 25 MB AP
 type Provider interface {
 	Transcribe(context.Context, string) ([]Segment, error)
 }
+
+// OpenAI also serves OpenAI-compatible services: Endpoint is then the
+// service's transcription URL and Name what errors call it.
 type OpenAI struct {
 	Key      string
 	Endpoint string
+	Model    string
+	Name     string
 	Client   *http.Client
 }
 
 func (p OpenAI) Transcribe(ctx context.Context, path string) ([]Segment, error) {
-	if strings.TrimSpace(p.Key) == "" {
-		return nil, i18n.Errorf("set OPENAI_API_KEY in the desktop application's environment to analyze audio")
+	name := p.Name
+	if name == "" {
+		name = "OpenAI"
 	}
-	file, err := os.Open(path)
+	if strings.TrimSpace(p.Key) == "" && p.Endpoint == "" {
+		return nil, i18n.Errorf("%s needs credentials; add them in Settings", name)
+	}
+	audio, err := readAudio(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	stat, err := file.Stat()
-	if err != nil {
-		return nil, err
+	model := p.Model
+	if model == "" {
+		model = "gpt-4o-transcribe-diarize"
 	}
-	if stat.Size() > MaxAudioBytes {
-		return nil, i18n.Errorf("audio exceeds 24 MB; select a shorter range")
+	// Only the diarizing models label speakers; others return timed segments
+	// whose speaker stays unknown.
+	fields := map[string]string{"model": model, "response_format": "verbose_json", "language": "zh"}
+	if strings.Contains(model, "diarize") {
+		fields["response_format"] = "diarized_json"
+		fields["chunking_strategy"] = "auto"
+	} else {
+		fields["timestamp_granularities[]"] = "segment"
 	}
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	for key, value := range map[string]string{"model": "gpt-4o-transcribe-diarize", "response_format": "diarized_json", "chunking_strategy": "auto", "language": "zh"} {
+	for key, value := range fields {
 		if err := writer.WriteField(key, value); err != nil {
 			return nil, err
 		}
@@ -52,7 +62,7 @@ func (p OpenAI) Transcribe(ctx context.Context, path string) ([]Segment, error) 
 	if err != nil {
 		return nil, err
 	}
-	if _, err = io.Copy(part, file); err != nil {
+	if _, err = part.Write(audio); err != nil {
 		return nil, err
 	}
 	if err = writer.Close(); err != nil {
@@ -66,39 +76,25 @@ func (p OpenAI) Transcribe(ctx context.Context, path string) ([]Segment, error) 
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+p.Key)
+	if p.Key != "" {
+		req.Header.Set("Authorization", "Bearer "+p.Key)
+	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	client := p.Client
-	if client == nil {
-		client = &http.Client{Timeout: 8 * time.Minute}
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		return nil, i18n.Errorf("cannot reach OpenAI audio API; check your connection")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// Do not echo provider bodies which may include sensitive request details.
-		switch resp.StatusCode {
-		case 401, 403:
-			return nil, i18n.Errorf("OpenAI rejected credentials or model access (HTTP %d)", resp.StatusCode)
-		case 429:
-			return nil, i18n.Errorf("OpenAI rate or quota limit reached; retry later")
-		default:
-			return nil, i18n.Errorf("OpenAI transcription failed (HTTP %d)", resp.StatusCode)
-		}
-	}
+	// verbose_json numbers its segments, so their IDs are not kept.
 	var data struct {
-		Segments []Segment `json:"segments"`
+		Segments []struct {
+			Speaker string  `json:"speaker"`
+			Start   float64 `json:"start"`
+			End     float64 `json:"end"`
+			Text    string  `json:"text"`
+		} `json:"segments"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 8_000_000)).Decode(&data); err != nil {
-		return nil, i18n.Errorf("invalid diarized_json response: %w", err)
+	if err := fetchJSON(ctx, p.Client, req, name, &data); err != nil {
+		return nil, err
 	}
-	if len(data.Segments) == 0 {
-		return nil, i18n.Errorf("no speech segments returned for this range")
+	segments := make([]Segment, 0, len(data.Segments))
+	for _, s := range data.Segments {
+		segments = append(segments, Segment{Speaker: s.Speaker, Start: s.Start, End: s.End, Text: tidy(s.Text)})
 	}
-	return data.Segments, nil
+	return noSegments(segments)
 }

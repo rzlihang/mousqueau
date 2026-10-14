@@ -55,7 +55,12 @@ import {
   messagesFor,
   useT,
 } from "./i18n";
-import { fontStack, resolveDark, themeChoice } from "./preferences";
+import {
+  fontStack,
+  providerCaution,
+  resolveDark,
+  themeChoice,
+} from "./preferences";
 import SettingsWindow from "./SettingsWindow";
 import DictionaryWindow from "./DictionaryWindow";
 import CueRows from "./CueRows";
@@ -462,10 +467,23 @@ function EditorApp({ dark }: { dark: boolean }) {
       void message.error(t.editor.rangeBeyondMedia);
       return;
     }
+    const caution =
+      status &&
+      providerCaution(
+        { caution: status.providerCaution, region: status.providerRegion },
+        t,
+      );
     modal.confirm({
-      title: t.editor.uploadTitle,
-      content: t.editor.uploadContent(
-        `${formatTime(rangeStart)} — ${formatTime(rangeEnd)}`,
+      title: t.editor.uploadTitle(status?.provider ?? ""),
+      content: (
+        <div className="stack">
+          <span>
+            {t.editor.uploadContent(
+              `${formatTime(rangeStart)} — ${formatTime(rangeEnd)}`,
+            )}
+          </span>
+          {caution && <Alert type="warning" showIcon title={caution} />}
+        </div>
       ),
       okText: t.editor.uploadOk,
       cancelText: t.common.cancel,
@@ -1447,7 +1465,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                 </Tag>
               </div>
               <div>
-                <span>OpenAI</span>
+                <span>{status?.provider || t.status.provider}</span>
                 <Tag color={status?.apiConfigured ? "green" : "default"}>
                   {status?.apiConfigured
                     ? t.common.configured

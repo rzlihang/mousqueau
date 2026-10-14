@@ -3,6 +3,7 @@ package settings
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -12,15 +13,16 @@ import (
 func TestDefaultsRoundTripAndDamagedFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nested", "settings.json")
 	loaded, err := Load(path)
-	if err != nil || loaded != Default() {
+	if err != nil || !reflect.DeepEqual(loaded, Default()) {
 		t.Fatalf("missing file: %+v %v", loaded, err)
 	}
-	want := Settings{Theme: "dark", Language: "zh-TW", SubtitleFont: "PingFang TC", LastProject: "/tmp/p.json", SetupDone: true, FFmpegPath: "/opt/ffmpeg", Beta: true, LastUpdateCheck: time.Date(2026, 10, 8, 9, 0, 0, 0, time.UTC)}
+	want := Settings{Theme: "dark", Language: "zh-TW", SubtitleFont: "PingFang TC", LastProject: "/tmp/p.json", SetupDone: true, FFmpegPath: "/opt/ffmpeg", Beta: true, LastUpdateCheck: time.Date(2026, 10, 8, 9, 0, 0, 0, time.UTC),
+		Provider: "tencent", Providers: []ProviderConfig{{ID: "openai"}, {ID: "tencent", Model: "16k_zh_video"}, {ID: "custom", Model: "whisper-1", Endpoint: "http://localhost:8000/v1"}}}
 	if err := want.Save(path); err != nil {
 		t.Fatal(err)
 	}
 	loaded, err = Load(path)
-	if err != nil || loaded != want {
+	if err != nil || !reflect.DeepEqual(loaded, want) {
 		t.Fatalf("round trip: %+v %v", loaded, err)
 	}
 	// Windows has no permission bits; %AppData% is private to the user.
@@ -35,13 +37,27 @@ func TestDefaultsRoundTripAndDamagedFile(t *testing.T) {
 
 	os.WriteFile(path, []byte(`{"theme":"neon","language":"fr-FR","subtitleFont":"x\"}","autoUpdate":false}`), 0600)
 	loaded, err = Load(path)
-	if err != nil || loaded.Theme != "system" || loaded.Language != "system" || loaded.SubtitleFont != "" || loaded.AutoUpdate || !loaded.OpenLastProject {
+	if err != nil || loaded.Theme != "system" || loaded.Language != "system" || loaded.SubtitleFont != "" || loaded.AutoUpdate || !loaded.OpenLastProject || loaded.Provider != "openai" || len(loaded.Providers) != 1 {
 		t.Fatalf("partial file: %+v %v", loaded, err)
 	}
 	os.WriteFile(path, []byte(`{not json`), 0600)
 	loaded, err = Load(path)
-	if err == nil || loaded != Default() {
+	if err == nil || !reflect.DeepEqual(loaded, Default()) {
 		t.Fatalf("damaged file: %+v %v", loaded, err)
+	}
+}
+
+func TestProvidersAreNormalized(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	os.WriteFile(path, []byte(`{"provider":"gone","providers":[{"id":"nope"},{"id":"deepgram","model":"bad model"},{"id":"deepgram"},{"id":"custom","endpoint":"http://example.com"}]}`), 0600)
+	loaded, err := Load(path)
+	want := []ProviderConfig{{ID: "deepgram"}, {ID: "custom"}}
+	if err != nil || loaded.Provider != "deepgram" || !reflect.DeepEqual(loaded.Providers, want) {
+		t.Fatalf("%+v %v", loaded, err)
+	}
+	os.WriteFile(path, []byte(`{"provider":"openai","providers":[]}`), 0600)
+	if loaded, _ = Load(path); loaded.Provider != "" || len(loaded.Providers) != 0 {
+		t.Fatalf("removing every provider did not stick: %+v", loaded)
 	}
 }
 

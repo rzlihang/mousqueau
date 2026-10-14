@@ -22,6 +22,15 @@ import * as subtitle$0 from "./internal/subtitle/models.js";
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
+/**
+ * AddProvider makes a provider available for analysis, picking up a
+ * credential the keychain still holds for it. The first provider added
+ * becomes the one in use.
+ */
+export function AddProvider(id: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(2964453690, id);
+}
+
 export function Analyze(start: number, end: number, uploadAuthorized: boolean): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(3797034396, start, end, uploadAuthorized);
 }
@@ -176,20 +185,28 @@ export function Redo(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(2511831216);
 }
 
-export function RemoveAPIKey(): $CancellablePromise<$models.SettingsView> {
-    return $Call.ByID(3290982575);
+/**
+ * RemoveProvider removes a provider together with its stored credential.
+ */
+export function RemoveProvider(id: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(2753184797, id);
 }
 
-/**
- * SaveAPIKey stores the key in the system credential store. It is kept in Go
- * from here on; no method returns it to the frontend.
- */
-export function SaveAPIKey(key: string): $CancellablePromise<$models.SettingsView> {
-    return $Call.ByID(2270827278, key);
+export function RemoveProviderKey(id: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(2665307956, id);
 }
 
 export function SaveProject(): $CancellablePromise<string> {
     return $Call.ByID(2582404462);
+}
+
+/**
+ * SaveProviderKey stores a provider's credential, one value per part, in the
+ * system credential store, adding the provider if needed. It is kept in Go
+ * from here on; no method returns it to the frontend.
+ */
+export function SaveProviderKey(id: string, parts: string[] | null): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(3988951803, id, parts);
 }
 
 export function SearchDictionary(query: string, category: string): $CancellablePromise<dictionary$0.Entry[] | null> {
@@ -214,6 +231,21 @@ export function SetLanguage(choice: string): $CancellablePromise<$models.Setting
 
 export function SetOpenLastProject(enabled: boolean): $CancellablePromise<$models.SettingsView> {
     return $Call.ByID(2730099861, enabled);
+}
+
+/**
+ * SetProvider chooses which added provider analyses use.
+ */
+export function SetProvider(id: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(3414036757, id);
+}
+
+/**
+ * SetProviderOptions sets an added provider's model, empty for its default,
+ * and the service URL of a custom provider.
+ */
+export function SetProviderOptions(id: string, model: string, endpoint: string): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(3575931349, id, model, endpoint);
 }
 
 export function SetSpeaker(speaker: analysis$0.Speaker): $CancellablePromise<$models.Snapshot> {
