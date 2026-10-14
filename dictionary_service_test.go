@@ -4,6 +4,7 @@ import (
 	"mousqueau/internal/dictionary"
 	"mousqueau/internal/project"
 	"mousqueau/internal/subtitle"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -43,6 +44,22 @@ func TestDictionaryCheckAndFixAreUndoable(t *testing.T) {
 	}
 	if snap.Project.State.Cues[0].Text != "佩克拉来了" {
 		t.Fatal("undo failed")
+	}
+}
+
+func TestFailedDictionarySaveLeavesMemoryUnchanged(t *testing.T) {
+	dir := t.TempDir()
+	blocker := filepath.Join(dir, "not-a-directory")
+	if err := os.WriteFile(blocker, []byte("x"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	s := &EditorService{dictionary: dictionary.Empty(), dictionaryPath: filepath.Join(blocker, "dictionary.json")}
+	_, err := s.UpsertDictionaryEntry(dictionary.Entry{Canonical: "米可", Category: dictionary.CategoryPerson})
+	if err == nil {
+		t.Fatal("save into a file should fail")
+	}
+	if len(s.dictionary.Entries) != 0 {
+		t.Fatalf("failed save changed the live dictionary: %+v", s.dictionary.Entries)
 	}
 }
 

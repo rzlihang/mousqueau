@@ -42,6 +42,7 @@ type Draft = {
   personId?: string;
   note: string;
   disabled: boolean;
+  caseSensitive: boolean;
 };
 
 const emptyDraft = (): Draft => ({
@@ -52,6 +53,7 @@ const emptyDraft = (): Draft => ({
   original: [],
   note: "",
   disabled: false,
+  caseSensitive: false,
 });
 
 export default function DictionaryWindow() {
@@ -111,6 +113,7 @@ export default function DictionaryWindow() {
         personId: draft.personId || undefined,
         note: draft.note,
         disabled: draft.disabled,
+        caseSensitive: draft.caseSensitive,
       });
       setView(next);
       setDraft(null);
@@ -135,6 +138,7 @@ export default function DictionaryWindow() {
       personId: e.personId,
       note: e.note ?? "",
       disabled: !!e.disabled,
+      caseSensitive: !!e.caseSensitive,
     });
   };
 

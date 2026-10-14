@@ -9,21 +9,21 @@ import (
 
 // ImportAction describes what will happen to one incoming entry.
 type ImportAction struct {
-	Action        string `json:"action"` // add | merge | conflict | skip
-	Incoming      Entry  `json:"incoming"`
-	ExistingID    string `json:"existingId,omitempty"`
-	Existing      *Entry `json:"existing,omitempty"`
-	Merged        *Entry `json:"merged,omitempty"`
+	Action         string `json:"action"` // add | merge | conflict | skip
+	Incoming       Entry  `json:"incoming"`
+	ExistingID     string `json:"existingId,omitempty"`
+	Existing       *Entry `json:"existing,omitempty"`
+	Merged         *Entry `json:"merged,omitempty"`
 	ConflictReason string `json:"conflictReason,omitempty"`
 }
 
 // ImportPreview summarizes a JSON import before it is applied.
 type ImportPreview struct {
-	Actions []ImportAction `json:"actions"`
-	Add     int            `json:"add"`
-	Merge   int            `json:"merge"`
-	Conflict int           `json:"conflict"`
-	Skip    int            `json:"skip"`
+	Actions  []ImportAction `json:"actions"`
+	Add      int            `json:"add"`
+	Merge    int            `json:"merge"`
+	Conflict int            `json:"conflict"`
+	Skip     int            `json:"skip"`
 }
 
 // ParseImport decodes a dictionary JSON document.
@@ -106,29 +106,61 @@ func PreviewImport(current, incoming Dictionary) ImportPreview {
 
 // ApplyImport applies non-conflict actions. Conflicts are skipped unless
 // replaceConflicts lists the existing entry IDs to overwrite with incoming.
+// Nickname PersonIDs that pointed at an incoming person are rewritten to the
+// ID that person keeps in the result.
 func ApplyImport(current Dictionary, preview ImportPreview, replaceConflicts []string) (Dictionary, error) {
 	replace := map[string]bool{}
 	for _, id := range replaceConflicts {
 		replace[id] = true
 	}
-	next := current
-	next.Entries = slices.Clone(current.Entries)
-	for _, a := range preview.Actions {
+	taken := map[string]bool{}
+	for _, e := range current.Entries {
+		taken[e.ID] = true
+	}
+	// Incoming ID → ID in the result. Built before entries are written so a
+	// nickname can precede the person it names.
+	idMap := map[string]string{}
+	finalID := map[int]string{}
+	for i, a := range preview.Actions {
 		switch a.Action {
 		case "add":
-			e := a.Incoming
-			if e.ID == "" || idTaken(next, e.ID) {
-				e.ID = NewID()
+			id := a.Incoming.ID
+			if id == "" || taken[id] {
+				id = NewID()
 			}
-			e = Normalize(e)
-			next.Entries = append(next.Entries, e)
+			taken[id] = true
+			finalID[i] = id
+			if a.Incoming.ID != "" {
+				idMap[a.Incoming.ID] = id
+			}
+		case "merge", "skip", "conflict":
+			if a.Incoming.ID != "" && a.ExistingID != "" {
+				idMap[a.Incoming.ID] = a.ExistingID
+			}
+			finalID[i] = a.ExistingID
+		}
+	}
+	remap := func(e Entry, id string) Entry {
+		e.ID = id
+		if mapped, ok := idMap[e.PersonID]; ok {
+			e.PersonID = mapped
+		}
+		return Normalize(e)
+	}
+	next := current
+	next.Entries = slices.Clone(current.Entries)
+	for i, a := range preview.Actions {
+		switch a.Action {
+		case "add":
+			next.Entries = append(next.Entries, remap(a.Incoming, finalID[i]))
 		case "merge":
 			if a.Merged == nil {
 				continue
 			}
-			for i, e := range next.Entries {
+			merged := remap(*a.Merged, a.ExistingID)
+			for j, e := range next.Entries {
 				if e.ID == a.ExistingID {
-					next.Entries[i] = Normalize(*a.Merged)
+					next.Entries[j] = merged
 					break
 				}
 			}
@@ -136,11 +168,10 @@ func ApplyImport(current Dictionary, preview ImportPreview, replaceConflicts []s
 			if a.ExistingID == "" || !replace[a.ExistingID] {
 				continue
 			}
-			for i, e := range next.Entries {
+			incoming := remap(a.Incoming, a.ExistingID)
+			for j, e := range next.Entries {
 				if e.ID == a.ExistingID {
-					in := Normalize(a.Incoming)
-					in.ID = e.ID
-					next.Entries[i] = in
+					next.Entries[j] = incoming
 					break
 				}
 			}
@@ -150,15 +181,6 @@ func ApplyImport(current Dictionary, preview ImportPreview, replaceConflicts []s
 		return current, err
 	}
 	return next, nil
-}
-
-func idTaken(d Dictionary, id string) bool {
-	for _, e := range d.Entries {
-		if e.ID == id {
-			return true
-		}
-	}
-	return false
 }
 
 func mergeEntries(existing, incoming Entry) Entry {

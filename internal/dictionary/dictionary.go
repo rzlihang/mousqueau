@@ -136,11 +136,8 @@ func Save(path string, d Dictionary, readOnly bool) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
-	if _, err := os.Stat(path); err == nil {
-		prev := filepath.Join(filepath.Dir(path), "dictionary.previous.json")
-		_ = os.Remove(prev)
-		_ = os.Rename(path, prev)
-	}
+	// Finish the replacement before touching the live file, so a crash or a
+	// failed write cannot leave dictionary.json missing.
 	tmp, err := os.CreateTemp(filepath.Dir(path), "dictionary-*.json")
 	if err != nil {
 		return err
@@ -152,6 +149,10 @@ func Save(path string, d Dictionary, readOnly bool) error {
 	}
 	if err := tmp.Close(); err != nil {
 		return err
+	}
+	if old, err := os.ReadFile(path); err == nil {
+		prev := filepath.Join(filepath.Dir(path), "dictionary.previous.json")
+		_ = os.WriteFile(prev, old, 0600)
 	}
 	return os.Rename(tmp.Name(), path)
 }

@@ -144,6 +144,33 @@ func TestImportPreviewAndApply(t *testing.T) {
 	}
 }
 
+func TestImportRemapsNicknameOntoExistingPerson(t *testing.T) {
+	current := Dictionary{Version: 1, Entries: []Entry{
+		{ID: "local-pekora", Canonical: "佩可拉", Category: CategoryPerson},
+	}}
+	incoming := Dictionary{Version: 1, Entries: []Entry{
+		{ID: "remote-pekora", Canonical: "佩可拉", Category: CategoryPerson, Misspellings: []string{"佩克拉"}},
+		{ID: "remote-nick", Canonical: "佩可酱", Category: CategoryNickname, PersonID: "remote-pekora"},
+	}}
+	next, err := ApplyImport(current, PreviewImport(current, incoming), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	person, ok := Get(next, "local-pekora")
+	if !ok || !contains(person.Misspellings, "佩克拉") {
+		t.Fatalf("person merge: %+v", person)
+	}
+	var nick Entry
+	for _, e := range next.Entries {
+		if e.Canonical == "佩可酱" {
+			nick = e
+		}
+	}
+	if nick.PersonID != "local-pekora" {
+		t.Fatalf("nickname still points at the imported id: %+v", nick)
+	}
+}
+
 func TestExportJSONRoundTrip(t *testing.T) {
 	data, err := ExportJSON(sample())
 	if err != nil {

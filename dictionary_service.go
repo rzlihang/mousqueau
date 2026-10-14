@@ -40,15 +40,16 @@ func (s *EditorService) dictionaryViewLocked() DictionaryView {
 	}
 }
 
-func (s *EditorService) persistDictionaryLocked() error {
-	if s.dictionaryPath == "" {
-		// Tests without a path keep the in-memory copy only.
-		return nil
+// commitDictionaryLocked writes next first and only then replaces the live
+// dictionary, so a failed save leaves matching and later saves unchanged.
+func (s *EditorService) commitDictionaryLocked(next dictionary.Dictionary) error {
+	if s.dictionaryPath != "" {
+		if err := dictionary.Save(s.dictionaryPath, next, s.dictionaryRO); err != nil {
+			return err
+		}
+		s.dictionaryErr = ""
 	}
-	if err := dictionary.Save(s.dictionaryPath, s.dictionary, s.dictionaryRO); err != nil {
-		return err
-	}
-	s.dictionaryErr = ""
+	s.dictionary = next
 	return nil
 }
 
@@ -78,8 +79,7 @@ func (s *EditorService) UpsertDictionaryEntry(entry dictionary.Entry) (Dictionar
 		s.mu.Unlock()
 		return view, err
 	}
-	s.dictionary = next
-	err = s.persistDictionaryLocked()
+	err = s.commitDictionaryLocked(next)
 	view := s.dictionaryViewLocked()
 	s.mu.Unlock()
 	if err != nil {
@@ -97,8 +97,7 @@ func (s *EditorService) DeleteDictionaryEntry(id string) (DictionaryView, error)
 		s.mu.Unlock()
 		return view, err
 	}
-	s.dictionary = next
-	err = s.persistDictionaryLocked()
+	err = s.commitDictionaryLocked(next)
 	view := s.dictionaryViewLocked()
 	s.mu.Unlock()
 	if err != nil {
@@ -198,14 +197,14 @@ func (s *EditorService) ApplyDictionaryImport(replaceConflicts []string) (Dictio
 		s.mu.Unlock()
 		return view, err
 	}
-	s.dictionary = next
-	s.importPreview = nil
-	err = s.persistDictionaryLocked()
-	view := s.dictionaryViewLocked()
-	s.mu.Unlock()
-	if err != nil {
+	if err = s.commitDictionaryLocked(next); err != nil {
+		view := s.dictionaryViewLocked()
+		s.mu.Unlock()
 		return view, err
 	}
+	s.importPreview = nil
+	view := s.dictionaryViewLocked()
+	s.mu.Unlock()
 	s.notifyDictionary()
 	return view, nil
 }
