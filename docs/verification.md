@@ -150,6 +150,14 @@ Verified in Linux cloud: `go test ./internal/...` (dictionary load/save/read-onl
 
 Not verified on a real Mac: dictionary management window (`?window=dictionary`), inspector dictionary tab, cue-list highlighting, JSON import/export native dialogs, adding a selection to the dictionary, and “check all cues” producing undoable suggestions in the live app.
 
+## Viewer text editing, resizable panes and dictionary entry points (2026-10-14)
+
+Following a Windows trial: the dictionary window is now in the Windows/Linux three-line menu and the macOS application menu; the inspector's dictionary tab is folded into the edit tab; the viewer's subtitle overlay is the only cue text field (hover outline, click to pause and edit; the edit tab no longer has a text box); the three columns and the timeline height can be resized by dragging dividers; and the "import media to show the waveform" note no longer jitters while the timeline scrolls.
+
+Verified in WSL (Ubuntu, Go 1.25.3, pnpm 12.10.1, Wails v3.0.0-beta.28): `go test ./internal/...`; the root package tests compiled with `GOOS=windows CGO_ENABLED=0` and run on the Windows host through WSL interop; frontend typecheck and all 21 frontend tests; `wails3 build GOOS=windows ARCH=amd64 CGO_ENABLED=0`. No browser was available in WSL, so none of the new UI was exercised in a browser.
+
+Not verified: everything visual or interactive above on Windows, Linux or macOS, including the hover outline, focusing the overlay after selecting a different cue, splitting at the overlay cursor, adding an overlay selection to the dictionary, divider dragging limits, persisted sizes, and the macOS Dictionary… menu item.
+
 ## Windows and Linux acceptance checklist (still outstanding)
 
 1. Windows 11: first launch shows only the welcome window, with a native shadow and rounded corners; its close button (red on hover) shows the editor. The editor's minimise, maximise/restore and close buttons work; double-clicking the toolbar's empty space maximises; edges resize; Snap layouts appear when dragging to a screen edge.
@@ -160,6 +168,7 @@ Not verified on a real Mac: dictionary management window (`?window=dictionary`),
 6. Both: import/export through native dialogs, unsaved edits on close, theme following the system appearance, and `wails3 package` output (NSIS/MSIX on Windows, AppImage/deb on Linux).
 7. Both: times in the cue list, inspector, clock and ruler render in Cascadia Mono or Consolas (Windows) with digits that keep their width. Split a cue at the cursor with the playhead inside and outside it, merge with the previous and next cue, undo and redo each, and export an SRT with sequential numbering. Drag the timeline scrollbar's ends to zoom, Ctrl + wheel over the tracks without the page zooming, and scroll a full-length episode's cue list.
 8. Each provider with a real key: a 60-second Mandarin range returns speakers and timestamps; a wrong key, an exhausted quota and cancelling during upload and during polling each show a clear error; the Tencent and Alibaba Cloud warnings appear when adding them and in the upload confirmation.
+9. Viewer editing and layout: hover the viewer subtitle (outline), click it (playback pauses, edit tab opens, caret in the overlay), type, apply, undo; click a subtitle of a different cue with unapplied edits (confirmation). Split at the overlay cursor; select overlay text and add it to the dictionary. Drag each divider to its limits, double-click to reset, relaunch to confirm sizes persist; shrink the timeline until its tracks scroll. Open the dictionary from the three-line menu. Scroll the timeline with no media and confirm the waveform note stays still.
 
 ## Mac acceptance checklist (still outstanding)
 

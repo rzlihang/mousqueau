@@ -361,9 +361,7 @@ export default function Timeline(props: Props) {
                 style={{ left: scrollLeft, width: viewW, height: AUDIO }}
               />
               {!waveform && (
-                <span className="track-note" style={{ left: scrollLeft + 12 }}>
-                  {props.waveformNote}
-                </span>
+                <span className="track-note">{props.waveformNote}</span>
               )}
             </div>
             <div className="track-cues">

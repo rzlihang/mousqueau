@@ -741,6 +741,7 @@ func (s *EditorService) menu() *application.Menu {
 	app.AddRole(application.About)
 	app.AddSeparator()
 	app.Add(i18n.T("Settings…")).SetAccelerator("CmdOrCtrl+,").OnClick(func(*application.Context) { s.OpenSettings() })
+	app.Add(i18n.T("Dictionary…")).OnClick(func(*application.Context) { s.OpenDictionary() })
 	app.AddSeparator()
 	app.AddRole(application.ServicesMenu)
 	app.AddSeparator()

@@ -800,9 +800,13 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   top: 0;
   display: block;
 }
+/* Sticky, so the browser keeps it in view while scrolling without waiting
+   for a re-render. */
 .track-note {
-  position: absolute;
-  top: 8px;
+  position: sticky;
+  left: 12px;
+  display: inline-block;
+  margin: 8px 12px 0;
   font-size: 12px;
   color: var(--muted);
 }
@@ -1385,4 +1389,91 @@ textarea.subtitle-text,
 .font-preview {
   font-size: 15px;
   color: var(--ink, inherit);
+}
+.subtitle-overlay .subtitle-edit {
+  pointer-events: auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 2px 10px;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: center;
+  text-shadow: inherit;
+  white-space: pre-wrap;
+  background: transparent;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  cursor: text;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.subtitle-overlay textarea.subtitle-edit {
+  width: 100%;
+  resize: none;
+}
+.subtitle-overlay .subtitle-edit:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.subtitle-overlay .subtitle-edit:focus {
+  outline: none;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--accent);
+}
+.subtitle-overlay .subtitle-edit::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+.subtitle-overlay .subtitle-edit:disabled {
+  cursor: default;
+}
+
+/* Draggable dividers between the panes */
+.viewer,
+.inspector {
+  position: relative;
+}
+.splitter {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+  transition: background-color 0.15s;
+}
+.splitter-x {
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 6px;
+  cursor: col-resize;
+}
+.splitter-y {
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+}
+.splitter:hover,
+.splitter:focus-visible,
+.splitter.dragging {
+  outline: none;
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.timeline-dock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.timeline-dock > .timeline {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.timeline-dock .timeline-body {
+  overflow-y: auto;
+}
+.timeline-dock .timeline-toolbar,
+.timeline-dock .zoom-scrollbar {
+  flex: none;
 }
