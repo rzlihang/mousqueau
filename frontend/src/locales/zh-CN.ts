@@ -1,6 +1,8 @@
 // Simplified Chinese, mainland usage. Its shape defines Messages.
 export const zhCN = {
   common: {
+    resizeWidth: "拖动调整宽度，双击还原",
+    resizeHeight: "拖动调整高度，双击还原",
     cancel: "取消",
     back: "返回",
     choose: "选择…",
@@ -131,6 +133,8 @@ export const zhCN = {
     pause: "暂停",
     next: "下一句",
     speed: "播放速度",
+    clickToEdit: "单击编辑字幕",
+    textPlaceholder: "输入字幕文字",
   },
   inspector: {
     label: "检查器",
@@ -144,6 +148,7 @@ export const zhCN = {
     stats: (duration: string, rate: string) =>
       `时长 ${duration} 秒 · 字速 ${rate} 字／秒`,
     text: "文本",
+    textInViewer: "在预览画面中单击字幕即可编辑文字。",
     speaker: "说话人",
     unassigned: "Unknown · 未分配说话人",
     needsReview: "需要复核",
@@ -154,7 +159,7 @@ export const zhCN = {
     split: "拆分",
     splitHint:
       "在文本光标处拆分文字。播放头位于本句内时在播放头处切分时间，否则按文字比例切分。",
-    splitNeedsCursor: "请先在文本中把光标放在要拆分的位置",
+    splitNeedsCursor: "请先在预览画面的字幕中把光标放在要拆分的位置",
     mergePrevious: "合并上一句",
     mergeNext: "合并下一句",
     cueSuggestions: "本句校正建议",

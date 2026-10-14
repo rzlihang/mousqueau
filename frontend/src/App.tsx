@@ -66,6 +66,7 @@ import DictionaryWindow from "./DictionaryWindow";
 import CueRows from "./CueRows";
 import { HighlightedText } from "./dictionaryHighlight";
 import SuggestionCard, { SpeakerTag } from "./SuggestionCard";
+import Splitter from "./Splitter";
 import Timeline from "./Timeline";
 import {
   customChrome,
@@ -93,7 +94,7 @@ const EMPTY_DRAFT: Draft = {
   speakerIds: [],
   review: false,
 };
-type Tab = "edit" | "speakers" | "suggestions" | "dictionary";
+type Tab = "edit" | "speakers" | "suggestions";
 type Wave =
   | { url: string; peaks: number[]; rate: number }
   | { url: string; error: string }
@@ -130,6 +131,19 @@ function RedoIcon() {
   );
 }
 
+// Pane sizes the user dragged, in pixels; unset sizes follow the stylesheet.
+type Layout = { left?: number; right?: number; timeline?: number };
+const LAYOUT_KEY = "mousqueau-layout";
+const VIEWER_MIN = 320;
+function loadLayout(): Layout {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "{}");
+    return value && typeof value === "object" ? (value as Layout) : {};
+  } catch {
+    return {};
+  }
+}
+
 function EditorApp({ dark }: { dark: boolean }) {
   const { message, modal } = AntApp.useApp();
   const t = useT();
@@ -155,6 +169,12 @@ function EditorApp({ dark }: { dark: boolean }) {
   const [speakerName, setSpeakerName] = useState("");
   const [youtubeOpen, setYoutubeOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [overlayEditing, setOverlayEditing] = useState(false);
+  const [layout, setLayout] = useState<Layout>(loadLayout);
+  const upperRef = useRef<HTMLDivElement>(null);
+  const cueGridRef = useRef<HTMLElement>(null);
+  const inspectorRef = useRef<HTMLElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
   const [youtubeURL, setYoutubeURL] = useState("");
   const [info, setInfo] = useState<YouTubeInfo | null>(null);
   const [track, setTrack] = useState<number>();
@@ -173,6 +193,7 @@ function EditorApp({ dark }: { dark: boolean }) {
   const [addDictCategory, setAddDictCategory] = useState("term");
   const video = useRef<HTMLVideoElement>(null);
   const textArea = useRef<ComponentRef<typeof Input.TextArea>>(null);
+  const focusOverlay = useRef(false);
   const p = snapshot?.project;
   const cues = p?.state.cues ?? [];
   const speakers = p?.state.speakers ?? [];
@@ -182,6 +203,8 @@ function EditorApp({ dark }: { dark: boolean }) {
   const previousCue = cueIndex > 0 ? cues[cueIndex - 1] : undefined;
   const nextCue = cueIndex < 0 ? undefined : cues[cueIndex + 1];
   const active = activeCue(cues, playhead);
+  // The viewer keeps showing the cue being edited even if the playhead leaves it.
+  const overlayCue = overlayEditing || draftDirty ? cue : active;
   const busy = working || !!status?.busy;
   const mediaUrl = snapshot?.mediaUrl ?? "";
   const pendingCount = suggestions.filter((s) => s.status === "pending").length;
@@ -275,6 +298,19 @@ function EditorApp({ dark }: { dark: boolean }) {
     } else setDraft(EMPTY_DRAFT);
     setDraftDirty(false);
   }, [cue]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
+    } catch {
+      /* pane sizes are only a convenience */
+    }
+  }, [layout]);
+  useEffect(() => {
+    if (focusOverlay.current && cue) {
+      focusOverlay.current = false;
+      textArea.current?.focus();
+    }
+  }, [cue?.id]);
   useEffect(() => {
     if (!cue && cues.length) setSelected(cues[0].id);
   }, [cue, cues]);
@@ -445,6 +481,35 @@ function EditorApp({ dark }: { dark: boolean }) {
   // Merging with the previous cue keeps the previous cue's ID, so select it.
   async function mergeCues(first: Cue) {
     if (await update(() => Editor.MergeCues(first.id))) setSelected(first.id);
+  }
+  const widthOf = (el: HTMLElement | null) =>
+    el?.getBoundingClientRect().width ?? 0;
+  function resizeColumn(side: "left" | "right", size: number) {
+    const other = side === "left" ? inspectorRef.current : cueGridRef.current;
+    const max = widthOf(upperRef.current) - widthOf(other) - VIEWER_MIN;
+    const min = side === "left" ? 240 : 260;
+    setLayout((l) => ({
+      ...l,
+      [side]: Math.round(Math.max(min, Math.min(size, max))),
+    }));
+  }
+  // The timeline can shrink, with its tracks scrolling, but never grow past
+  // its content.
+  function resizeTimeline(size: number) {
+    const section = dockRef.current?.querySelector<HTMLElement>(".timeline");
+    let natural = 0;
+    for (const child of Array.from(section?.children ?? []) as HTMLElement[])
+      natural += child.classList.contains("timeline-body")
+        ? child.scrollHeight
+        : child.offsetHeight;
+    const max = Math.min(natural || Infinity, window.innerHeight - 340);
+    setLayout((l) => ({
+      ...l,
+      timeline: Math.round(Math.max(80, Math.min(size, max))),
+    }));
+  }
+  function resetLayout(key: keyof Layout) {
+    setLayout((l) => ({ ...l, [key]: undefined }));
   }
   function changeDraft(patch: Partial<Draft>) {
     setDraft((d) => ({ ...d, ...patch }));
@@ -676,6 +741,11 @@ function EditorApp({ dark }: { dark: boolean }) {
                       label: t.editor.withShortcut(t.settings.title, settingsShortcut),
                       onClick: () => void run(Editor.OpenSettings),
                     },
+                    {
+                      key: "dictionary",
+                      label: t.inspector.dictionaryOpen,
+                      onClick: () => void run(Editor.OpenDictionary),
+                    },
                   ],
                 },
                 ...(customChrome
@@ -833,8 +903,24 @@ function EditorApp({ dark }: { dark: boolean }) {
         {customChrome && <WindowControls maximise />}
       </header>
 
-      <div className="upper">
-        <section className="cue-grid" aria-label={t.cueList.label}>
+      <div
+        className="upper"
+        ref={upperRef}
+        style={{
+          gridTemplateColumns: [
+            layout.left
+              ? `minmax(240px, ${layout.left}px)`
+              : "minmax(400px, 1.2fr)",
+            `minmax(${VIEWER_MIN}px, 1fr)`,
+            layout.right ? `minmax(260px, ${layout.right}px)` : "340px",
+          ].join(" "),
+        }}
+      >
+        <section
+          className="cue-grid"
+          ref={cueGridRef}
+          aria-label={t.cueList.label}
+        >
           <div className="pane-toolbar">
             <h2>{t.cueList.title}</h2>
             <span className="muted">
@@ -910,6 +996,14 @@ function EditorApp({ dark }: { dark: boolean }) {
         </section>
 
         <section className="viewer" aria-label={t.viewer.label}>
+          <Splitter
+            axis="x"
+            sign={1}
+            label={t.common.resizeWidth}
+            start={() => widthOf(cueGridRef.current)}
+            onResize={(size) => resizeColumn("left", size)}
+            onReset={() => resetLayout("left")}
+          />
           <div className="viewer-frame">
             {mediaUrl ? (
               <>
@@ -951,7 +1045,44 @@ function EditorApp({ dark }: { dark: boolean }) {
                 </Button>
               </div>
             )}
-            {active && <div className="subtitle-overlay">{active.text}</div>}
+            {overlayCue && (
+              <div className="subtitle-overlay">
+                {overlayCue.id === cue?.id ? (
+                  <Input.TextArea
+                    ref={textArea}
+                    className="subtitle-text subtitle-edit"
+                    variant="borderless"
+                    disabled={busy}
+                    autoSize
+                    aria-label={t.inspector.text}
+                    title={t.viewer.clickToEdit}
+                    placeholder={t.viewer.textPlaceholder}
+                    value={draft.text}
+                    onFocus={() => {
+                      video.current?.pause();
+                      setTab("edit");
+                      setOverlayEditing(true);
+                    }}
+                    onBlur={() => setOverlayEditing(false)}
+                    onChange={(e) => changeDraft({ text: e.target.value })}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="subtitle-edit"
+                    title={t.viewer.clickToEdit}
+                    disabled={busy}
+                    onClick={() => {
+                      focusOverlay.current = true;
+                      setTab("edit");
+                      selectCue(overlayCue);
+                    }}
+                  >
+                    {overlayCue.text}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <div className="transport">
             <div className="clock">
@@ -996,7 +1127,19 @@ function EditorApp({ dark }: { dark: boolean }) {
           </div>
         </section>
 
-        <aside className="inspector" aria-label={t.inspector.label}>
+        <aside
+          className="inspector"
+          ref={inspectorRef}
+          aria-label={t.inspector.label}
+        >
+          <Splitter
+            axis="x"
+            sign={-1}
+            label={t.common.resizeWidth}
+            start={() => widthOf(inspectorRef.current)}
+            onResize={(size) => resizeColumn("right", size)}
+            onReset={() => resetLayout("right")}
+          />
           <div className="inspector-tabs">
             <Segmented
               block
@@ -1010,7 +1153,6 @@ function EditorApp({ dark }: { dark: boolean }) {
                   label: `${t.inspector.suggestions}${pendingCount ? ` ${pendingCount}` : ""}`,
                   value: "suggestions",
                 },
-                { label: t.inspector.dictionary, value: "dictionary" },
               ]}
             />
           </div>
@@ -1054,17 +1196,7 @@ function EditorApp({ dark }: { dark: boolean }) {
                       ).toFixed(1),
                     )}
                   </span>
-                  <label className="field">
-                    {t.inspector.text}
-                    <Input.TextArea
-                      ref={textArea}
-                      className="subtitle-text"
-                      disabled={busy}
-                      autoSize={{ minRows: 2, maxRows: 5 }}
-                      value={draft.text}
-                      onChange={(e) => changeDraft({ text: e.target.value })}
-                    />
-                  </label>
+                  <span className="muted">{t.inspector.textInViewer}</span>
                   {!!draftMatches.length && (
                     <p className="dict-preview muted small">
                       <HighlightedText
@@ -1142,6 +1274,94 @@ function EditorApp({ dark }: { dark: boolean }) {
                       {t.inspector.mergeNext}
                     </Button>
                   </div>
+                  <div className="rule" />
+                  <h3>{t.inspector.dictionary}</h3>
+                  <span className="muted">{t.inspector.dictionaryHint}</span>
+                  <strong>{t.inspector.dictionaryHits}</strong>
+                  {!draftMatches.length && (
+                    <span className="muted">{t.inspector.dictionaryNone}</span>
+                  )}
+                  {draftMatches.map((m, i) => (
+                    <div key={`${m.entryId}-${i}`} className="dict-hit-row">
+                      <Tag
+                        color={m.kind === "misspelled" ? "error" : "default"}
+                      >
+                        {m.kind === "misspelled"
+                          ? t.dictionary.kindMisspelled
+                          : t.dictionary.kindKnown}
+                      </Tag>
+                      <span>
+                        {m.kind === "misspelled"
+                          ? `${m.text} → ${m.canonical}`
+                          : m.text}
+                      </span>
+                      {m.kind === "misspelled" && cue && (
+                        <Button
+                          size="small"
+                          disabled={busy || draftDirty}
+                          onClick={() =>
+                            void update(() =>
+                              Editor.FixCueFromDictionary(cue.id),
+                            ).then(() => void refreshDictionaryMatches())
+                          }
+                        >
+                          {t.inspector.dictionaryFix}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Space wrap>
+                    <Button
+                      size="small"
+                      disabled={busy || !p}
+                      onClick={() => {
+                        const el =
+                          textArea.current?.resizableTextArea?.textArea;
+                        const start = el?.selectionStart ?? 0;
+                        const end = el?.selectionEnd ?? 0;
+                        const raw =
+                          el && end > start
+                            ? draft.text.slice(start, end).trim()
+                            : "";
+                        setAddDictText(raw);
+                        setAddDictMode(raw ? "misspelling" : "canonical");
+                        setAddDictTarget(undefined);
+                        setAddDictOpen(true);
+                        if (!raw)
+                          void message.info(t.inspector.dictionaryNeedSelection);
+                      }}
+                    >
+                      {t.inspector.dictionaryAddSelection}
+                    </Button>
+                    <Button
+                      size="small"
+                      type="primary"
+                      disabled={busy || !p}
+                      onClick={() =>
+                        void update(async () => {
+                          const snap = await Editor.CheckDictionary();
+                          const count = (
+                            snap.project?.state.suggestions ?? []
+                          ).filter(
+                            (s) =>
+                              s.source === "dictionary" &&
+                              s.status === "pending",
+                          ).length;
+                          void message.success(t.dictionary.checked(count));
+                          void refreshDictionaryMatches();
+                          return snap;
+                        })
+                      }
+                    >
+                      {t.inspector.dictionaryCheck}
+                    </Button>
+                    <Button
+                      size="small"
+                      onClick={() => void Editor.OpenDictionary()}
+                    >
+                      {t.inspector.dictionaryOpen}
+                    </Button>
+                  </Space>
                   <div className="rule" />
                   <h3>{t.inspector.cueSuggestions}</h3>
                   {cueSuggestions.length ? (
@@ -1269,187 +1489,110 @@ function EditorApp({ dark }: { dark: boolean }) {
                 ))}
               </div>
             )}
-
-            {tab === "dictionary" && (
-              <div className="stack">
-                <span className="muted">{t.inspector.dictionaryHint}</span>
-                <strong>{t.inspector.dictionaryHits}</strong>
-                {!draftMatches.length && (
-                  <span className="muted">{t.inspector.dictionaryNone}</span>
-                )}
-                {draftMatches.map((m, i) => (
-                  <div key={`${m.entryId}-${i}`} className="dict-hit-row">
-                    <Tag
-                      color={m.kind === "misspelled" ? "error" : "default"}
-                    >
-                      {m.kind === "misspelled"
-                        ? t.dictionary.kindMisspelled
-                        : t.dictionary.kindKnown}
-                    </Tag>
-                    <span>
-                      {m.kind === "misspelled"
-                        ? `${m.text} → ${m.canonical}`
-                        : m.text}
-                    </span>
-                    {m.kind === "misspelled" && cue && (
-                      <Button
-                        size="small"
-                        disabled={busy || draftDirty}
-                        onClick={() =>
-                          void update(() =>
-                            Editor.FixCueFromDictionary(cue.id),
-                          ).then(() => void refreshDictionaryMatches())
-                        }
-                      >
-                        {t.inspector.dictionaryFix}
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <Space wrap>
-                  <Button
-                    size="small"
-                    disabled={busy || !p}
-                    onClick={() => {
-                      const el =
-                        textArea.current?.resizableTextArea?.textArea;
-                      const start = el?.selectionStart ?? 0;
-                      const end = el?.selectionEnd ?? 0;
-                      const raw =
-                        el && end > start
-                          ? draft.text.slice(start, end).trim()
-                          : "";
-                      setAddDictText(raw);
-                      setAddDictMode(raw ? "misspelling" : "canonical");
-                      setAddDictTarget(undefined);
-                      setAddDictOpen(true);
-                      if (!raw)
-                        void message.info(t.inspector.dictionaryNeedSelection);
-                    }}
-                  >
-                    {t.inspector.dictionaryAddSelection}
-                  </Button>
-                  <Button
-                    size="small"
-                    type="primary"
-                    disabled={busy || !p}
-                    onClick={() =>
-                      void update(async () => {
-                        const snap = await Editor.CheckDictionary();
-                        const count = (
-                          snap.project?.state.suggestions ?? []
-                        ).filter(
-                          (s) =>
-                            s.source === "dictionary" &&
-                            s.status === "pending",
-                        ).length;
-                        void message.success(t.dictionary.checked(count));
-                        void refreshDictionaryMatches();
-                        return snap;
-                      })
-                    }
-                  >
-                    {t.inspector.dictionaryCheck}
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => void Editor.OpenDictionary()}
-                  >
-                    {t.inspector.dictionaryOpen}
-                  </Button>
-                </Space>
-              </div>
-            )}
           </div>
         </aside>
       </div>
 
-      <Timeline
-        duration={duration}
-        cues={cues}
-        speakers={speakers}
-        suggestions={suggestions}
-        selectedId={selected}
-        activeId={active?.id ?? ""}
-        playhead={playhead}
-        playing={playing}
-        range={[rangeStart, rangeEnd]}
-        waveform={wave && "peaks" in wave ? wave : null}
-        waveformNote={waveformNote}
-        dark={dark}
-        busy={busy}
-        onSeek={seek}
-        onSelectCue={selectCue}
-        onRangeChange={setRange}
-        actions={
-          <>
-            <span className={rangeValid ? "" : "range-invalid"}>
-              {t.range.label}{" "}
-              <span className="mono">
-                {formatSeconds(rangeStart)} — {formatSeconds(rangeEnd)}
-              </span>{" "}
-              · {t.common.seconds(rangeSeconds)}
-            </span>
-            <span className="muted">{t.range.perRun}</span>
-            <Popover
-              trigger="click"
-              title={t.range.label}
-              content={
-                <div className="range-form">
-                  <label>
-                    {t.range.start}
-                    <InputNumber
+      <div
+        className="timeline-dock"
+        ref={dockRef}
+        style={layout.timeline ? { height: layout.timeline } : undefined}
+      >
+        <Splitter
+          axis="y"
+          sign={-1}
+          label={t.common.resizeHeight}
+          start={() => dockRef.current?.getBoundingClientRect().height ?? 0}
+          onResize={resizeTimeline}
+          onReset={() => resetLayout("timeline")}
+        />
+        <Timeline
+          duration={duration}
+          cues={cues}
+          speakers={speakers}
+          suggestions={suggestions}
+          selectedId={selected}
+          activeId={active?.id ?? ""}
+          playhead={playhead}
+          playing={playing}
+          range={[rangeStart, rangeEnd]}
+          waveform={wave && "peaks" in wave ? wave : null}
+          waveformNote={waveformNote}
+          dark={dark}
+          busy={busy}
+          onSeek={seek}
+          onSelectCue={selectCue}
+          onRangeChange={setRange}
+          actions={
+            <>
+              <span className={rangeValid ? "" : "range-invalid"}>
+                {t.range.label}{" "}
+                <span className="mono">
+                  {formatSeconds(rangeStart)} — {formatSeconds(rangeEnd)}
+                </span>{" "}
+                · {t.common.seconds(rangeSeconds)}
+              </span>
+              <span className="muted">{t.range.perRun}</span>
+              <Popover
+                trigger="click"
+                title={t.range.label}
+                content={
+                  <div className="range-form">
+                    <label>
+                      {t.range.start}
+                      <InputNumber
+                        size="small"
+                        min={0}
+                        value={rangeStart}
+                        disabled={busy}
+                        onChange={(v) => setRangeStart(v ?? 0)}
+                      />
+                    </label>
+                    <label>
+                      {t.range.end}
+                      <InputNumber
+                        size="small"
+                        min={0}
+                        value={rangeEnd}
+                        disabled={busy}
+                        onChange={(v) => setRangeEnd(v ?? 60)}
+                      />
+                    </label>
+                    <Button
                       size="small"
-                      min={0}
-                      value={rangeStart}
                       disabled={busy}
-                      onChange={(v) => setRangeStart(v ?? 0)}
-                    />
-                  </label>
-                  <label>
-                    {t.range.end}
-                    <InputNumber
-                      size="small"
-                      min={0}
-                      value={rangeEnd}
-                      disabled={busy}
-                      onChange={(v) => setRangeEnd(v ?? 60)}
-                    />
-                  </label>
-                  <Button
-                    size="small"
-                    disabled={busy}
-                    onClick={() =>
-                      setRange(Math.floor(playhead), Math.floor(playhead) + 60)
-                    }
-                  >
-                    {t.range.fromPlayhead}
-                  </Button>
-                  <p className="muted">{t.range.hint}</p>
-                </div>
-              }
-            >
-              <Button size="small" disabled={busy}>
-                {t.range.adjust}
+                      onClick={() =>
+                        setRange(Math.floor(playhead), Math.floor(playhead) + 60)
+                      }
+                    >
+                      {t.range.fromPlayhead}
+                    </Button>
+                    <p className="muted">{t.range.hint}</p>
+                  </div>
+                }
+              >
+                <Button size="small" disabled={busy}>
+                  {t.range.adjust}
+                </Button>
+              </Popover>
+              <Button
+                size="small"
+                type="primary"
+                disabled={
+                  busy ||
+                  !p ||
+                  !mediaUrl ||
+                  !status?.apiConfigured ||
+                  !status?.ffmpeg
+                }
+                onClick={analyze}
+              >
+                {t.range.analyze}
               </Button>
-            </Popover>
-            <Button
-              size="small"
-              type="primary"
-              disabled={
-                busy ||
-                !p ||
-                !mediaUrl ||
-                !status?.apiConfigured ||
-                !status?.ffmpeg
-              }
-              onClick={analyze}
-            >
-              {t.range.analyze}
-            </Button>
-          </>
-        }
-      />
+            </>
+          }
+        />
+      </div>
 
       <footer className="statusbar">
         <Popover

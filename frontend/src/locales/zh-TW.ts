@@ -3,6 +3,8 @@ import type { Messages } from "./zh-CN";
 // Traditional Chinese, Taiwan usage.
 export const zhTW: Messages = {
   common: {
+    resizeWidth: "拖曳調整寬度，按兩下還原",
+    resizeHeight: "拖曳調整高度，按兩下還原",
     cancel: "取消",
     back: "返回",
     choose: "選擇⋯",
@@ -133,6 +135,8 @@ export const zhTW: Messages = {
     pause: "暫停",
     next: "下一句",
     speed: "播放速度",
+    clickToEdit: "按一下以編輯字幕",
+    textPlaceholder: "輸入字幕文字",
   },
   inspector: {
     label: "檢閱器",
@@ -145,6 +149,7 @@ export const zhTW: Messages = {
     end: "結束",
     stats: (duration, rate) => `長度 ${duration} 秒 · 字速 ${rate} 字／秒`,
     text: "文字",
+    textInViewer: "在預覽畫面中按一下字幕即可編輯文字。",
     speaker: "說話者",
     unassigned: "Unknown · 未指派說話者",
     needsReview: "需要複核",
@@ -155,7 +160,7 @@ export const zhTW: Messages = {
     split: "分割",
     splitHint:
       "在文字游標處分割文字。播放頭位於本句內時在播放頭處切分時間，否則依文字比例切分。",
-    splitNeedsCursor: "請先在文字中將游標放在要分割的位置",
+    splitNeedsCursor: "請先在預覽畫面的字幕中將游標放在要分割的位置",
     mergePrevious: "合併上一句",
     mergeNext: "合併下一句",
     cueSuggestions: "本句校正建議",

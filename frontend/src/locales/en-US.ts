@@ -5,6 +5,8 @@ const plural = (n: number, one: string, other: string) =>
 
 export const enUS: Messages = {
   common: {
+    resizeWidth: "Drag to resize; double-click to reset",
+    resizeHeight: "Drag to resize; double-click to reset",
     cancel: "Cancel",
     back: "Back",
     choose: "Choose…",
@@ -141,6 +143,8 @@ export const enUS: Messages = {
     pause: "Pause",
     next: "Next",
     speed: "Playback speed",
+    clickToEdit: "Click to edit the subtitle",
+    textPlaceholder: "Type subtitle text",
   },
   inspector: {
     label: "Inspector",
@@ -153,6 +157,7 @@ export const enUS: Messages = {
     end: "End",
     stats: (duration, rate) => `Length ${duration} s · ${rate} characters/s`,
     text: "Text",
+    textInViewer: "Click the subtitle in the viewer to edit its text.",
     speaker: "Speakers",
     unassigned: "Unknown · no speaker assigned",
     needsReview: "Needs review",
@@ -163,7 +168,7 @@ export const enUS: Messages = {
     split: "Split",
     splitHint:
       "Splits at the text cursor. The time splits at the playhead when it is inside this cue, otherwise in proportion to the text.",
-    splitNeedsCursor: "Place the text cursor where the subtitle should split",
+    splitNeedsCursor: "Place the text cursor in the viewer subtitle where it should split",
     mergePrevious: "Merge Previous",
     mergeNext: "Merge Next",
     cueSuggestions: "Suggestions for this cue",
