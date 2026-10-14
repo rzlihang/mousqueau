@@ -1,9 +1,12 @@
 {
   "segments": [
-    {"id":"s1","speaker":"A","start":0.5,"end":3.5,"text":"我們今天要討論新的字幕編輯器。"},
-    {"id":"s2","speaker":"B","start":3.5,"end":7,"text":"可以先保留原本的字幕，再讓使用者確認修正。"},
-    {"id":"s3","speaker":"A","start":7,"end":8,"text":"對。"},
-    {"id":"s4","speaker":"C","start":7.8,"end":11,"text":"那說話人的標記呢？"},
-    {"id":"s5","speaker":"B","start":11,"end":15,"text":"如果同一句有兩個人，就應該標記需要檢查。"}
+    {"id":"s1","speaker":"A","start":0.5,"end":3.5,"text":"這一集的字幕我又對了一整晚。"},
+    {"id":"s2","speaker":"A","start":3.5,"end":7,"text":"時間軸要一句一句拖，說話人還要手動標。"},
+    {"id":"s3","speaker":"B","start":7,"end":10.5,"text":"你試過 Mousqueau 嗎？它會先保留原本的字幕。"},
+    {"id":"s4","speaker":"B","start":10.5,"end":14,"text":"修正只是建議，你確認了才會改。"},
+    {"id":"s5","speaker":"A","start":14,"end":15.2,"text":"臥槽。"},
+    {"id":"s6","speaker":"C","start":14.8,"end":16,"text":"真的假的？"},
+    {"id":"s7","speaker":"D","start":16,"end":18.5,"text":"（兩人看完 Mousqueau 的示範，當場愣住。）"},
+    {"id":"s8","speaker":"A","start":18.5,"end":22,"text":"這麼好的東西你咋不早點告訴我？"}
   ]
 }

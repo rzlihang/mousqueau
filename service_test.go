@@ -68,13 +68,13 @@ func TestDemoHasReviewableSuggestions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(snapshot.Project.Original) != 4 || len(snapshot.Project.State.Suggestions) != 4 {
-		t.Fatal("demo fixture missing cues or suggestions")
+	if len(snapshot.Project.Original) != 7 || len(snapshot.Project.State.Suggestions) != 7 {
+		t.Fatalf("demo fixture: %d cues, %d suggestions", len(snapshot.Project.Original), len(snapshot.Project.State.Suggestions))
 	}
 	if snapshot.Project.State.Cues[0].Text != snapshot.Project.Original[0].Text {
 		t.Fatal("demo changed text automatically")
 	}
-	if !snapshot.Project.State.Suggestions[2].Review || len(snapshot.Project.State.Suggestions[2].SpeakerIDs) != 2 {
+	if !snapshot.Project.State.Suggestions[4].Review || len(snapshot.Project.State.Suggestions[4].SpeakerIDs) != 2 {
 		t.Fatal("overlapping demo speakers not marked")
 	}
 }
