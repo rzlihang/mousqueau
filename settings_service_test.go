@@ -267,6 +267,22 @@ func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
 	}
 }
 
+func TestMenuLabelsNameTheAppOnlyWhereTheyHaveRoom(t *testing.T) {
+	defer i18n.SetCurrent(i18n.Current())
+	for _, l := range []i18n.Locale{i18n.English, i18n.Chinese, i18n.Traditional} {
+		i18n.SetCurrent(l)
+		for _, item := range roleLabels {
+			label := roleLabel(item.label)
+			if strings.Contains(label, "%!") {
+				t.Errorf("%s: %q formats as %q", l, item.label, label)
+			}
+			if strings.Contains(item.label, "%[1]s") && !strings.Contains(label, "Mousqueau") {
+				t.Errorf("%s: %q lost the app name: %q", l, item.label, label)
+			}
+		}
+	}
+}
+
 func TestSubtitleFont(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "settings.json")
 	s := &EditorService{settings: settings.Default(), settingsPath: path}

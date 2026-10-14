@@ -758,10 +758,20 @@ func (s *EditorService) menu() *application.Menu {
 	// Wails labels its standard items in English only.
 	for _, item := range roleLabels {
 		if found := menu.FindByRole(item.role); found != nil {
-			found.SetLabel(i18n.T(item.label, "Mousqueau"))
+			found.SetLabel(roleLabel(item.label))
 		}
 	}
 	return menu
+}
+
+// roleLabel translates a standard menu label, filling in the application
+// name only where the label has a place for it: passing the name to a label
+// without one would make fmt append %!(EXTRA string=Mousqueau).
+func roleLabel(label string) string {
+	if strings.Contains(label, "%[1]s") {
+		return i18n.T(label, "Mousqueau")
+	}
+	return i18n.T(label)
 }
 
 // roleLabels repeats the English labels Wails gives these items; %[1]s is
