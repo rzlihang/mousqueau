@@ -326,40 +326,184 @@ h3 {
   align-items: center;
   gap: 6px;
 }
-.dict-window .dict-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--line);
+/* User dictionary: categories, entry list and the entry edited in place. */
+.dictionary {
+  background: var(--bg);
 }
-.dict-window .dict-body {
+.dictionary .set-side {
+  width: 190px;
+  padding-bottom: 12px;
+}
+button.side-item {
+  appearance: none;
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+}
+.dict-side-label {
   flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 0 8px 16px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.dict-window {
+.dict-side-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.dict-local {
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.dictionary .set-head {
+  gap: 8px;
+  padding-left: 20px;
+}
+.dictionary .set-head h1 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dictionary .set-head .ant-btn {
+  --wails-draggable: no-drag;
+  flex: none;
+}
+.dict-list {
+  width: 260px;
+  flex: none;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
 }
-/* No sidebar here to sit under the inset title bar's traffic lights. */
-.dict-window.mac .set-head {
-  padding-left: 88px;
+.dictionary .dict-list .set-head {
+  gap: 6px;
+  padding: 0 10px 0 16px;
 }
-.dict-preview-list {
-  max-height: 280px;
-  overflow: auto;
-  padding-left: 1.2em;
-}
-.dict-preview-list li {
+.dict-rows {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+}
+.dict-row {
+  appearance: none;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+.dict-row.on {
+  background: var(--select);
+}
+.dict-row.off {
+  opacity: 0.6;
+}
+.dict-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.dict-row-head {
+  display: flex;
   align-items: center;
-  margin-bottom: 6px;
+  gap: 6px;
+}
+.dict-row-head strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dict-row-head span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.dict-row-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.dict-alert {
+  flex: none;
+  margin: 12px 20px 0;
+}
+.dict-detail {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 20px 20px;
+}
+.dict-detail .set-card {
+  flex: none;
+}
+.dict-canonical {
+  width: 220px;
+  flex: none;
+}
+.dict-select {
+  width: 160px;
+  flex: none;
+}
+.dict-foot {
+  height: 52px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.dict-none {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 0 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.dict-import .set-hint {
+  margin: 0 0 12px;
+}
+.dict-import-list {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.dict-import-list .set-label {
+  flex: 1;
+}
+.dict-import-list .ant-tag {
+  min-width: 40px;
+  margin: 0;
+  text-align: center;
 }
 .tag-row {
   display: flex;

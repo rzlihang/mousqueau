@@ -1,18 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   App as AntApp,
   Button,
-  Drawer,
-  Form,
+  Checkbox,
   Input,
   Modal,
-  Popconfirm,
   Select,
-  Space,
-  Table,
+  Switch,
   Tag,
 } from "antd";
+import {
+  IconBook,
+  IconDots,
+  IconFileExport,
+  IconFileImport,
+  IconList,
+  IconMessageCircle,
+  IconPlus,
+  IconTag,
+  IconUser,
+} from "@tabler/icons-react";
 import { Events } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type {
@@ -21,6 +29,7 @@ import type {
 } from "../bindings/mousqueau/internal/dictionary/models";
 import type { DictionaryView } from "../bindings/mousqueau/models";
 import { errorText, useT } from "./i18n";
+import { decorative } from "./icons";
 import { customChrome, isMac } from "./useSettings";
 import WindowControls from "./WindowControls";
 
@@ -31,6 +40,25 @@ const CATEGORIES = [
   "catchphrase",
   "other",
 ] as const;
+type Category = (typeof CATEGORIES)[number];
+
+const CATEGORY_ICONS = {
+  all: IconList,
+  person: IconUser,
+  nickname: IconTag,
+  term: IconBook,
+  catchphrase: IconMessageCircle,
+  other: IconDots,
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  add: "green",
+  merge: "blue",
+  conflict: "orange",
+  skip: "default",
+};
+
+const SEPARATORS = [",", "，", "|"];
 
 type Draft = {
   id?: string;
@@ -56,15 +84,42 @@ const emptyDraft = (): Draft => ({
   caseSensitive: false,
 });
 
+const toDraft = (e: Entry): Draft => ({
+  id: e.id,
+  canonical: e.canonical,
+  category: e.category,
+  variants: e.variants ?? [],
+  misspellings: e.misspellings ?? [],
+  original: e.original ?? [],
+  personId: e.personId || undefined,
+  note: e.note ?? "",
+  disabled: !!e.disabled,
+  caseSensitive: !!e.caseSensitive,
+});
+
+const sameDraft = (a: Draft, b: Draft) =>
+  JSON.stringify({ ...a, personId: a.personId || undefined }) ===
+  JSON.stringify({ ...b, personId: b.personId || undefined });
+
 export default function DictionaryWindow() {
-  const { message } = AntApp.useApp();
+  const { message, modal } = AntApp.useApp();
   const t = useT();
   const [view, setView] = useState<DictionaryView | null>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
+  // The entry shown on the right and its working copy. A new entry has a
+  // draft without an id.
+  const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [replace, setReplace] = useState<string[]>([]);
+
+  const entries = view?.entries ?? [];
+  const readOnly = !!view?.readOnly;
+  const stored = entries.find((e) => e.id === selected);
+  const dirty =
+    !!draft && (!draft.id || !stored || !sameDraft(draft, toDraft(stored)));
 
   const refresh = async () => {
     try {
@@ -78,13 +133,36 @@ export default function DictionaryWindow() {
     return Events.On("dictionary", () => void refresh());
   }, []);
 
+  // Follow changes made elsewhere (the editor adds entries too) unless the
+  // shown entry has unsaved edits. Pick the first entry when nothing is shown.
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  useEffect(() => {
+    if (!view) return;
+    const list = view.entries ?? [];
+    if (draft && !draft.id) return;
+    const current = list.find((e) => e.id === selected);
+    if (current) {
+      if (!dirtyRef.current) setDraft(toDraft(current));
+      return;
+    }
+    const first = list[0];
+    setSelected(first?.id ?? null);
+    setDraft(first ? toDraft(first) : null);
+  }, [view]);
+
   const people = useMemo(
-    () => (view?.entries ?? []).filter((e) => e.category === "person"),
+    () => entries.filter((e) => e.category === "person"),
     [view],
   );
+  const counts = useMemo(() => {
+    const n: Record<string, number> = { all: entries.length };
+    for (const e of entries) n[e.category] = (n[e.category] ?? 0) + 1;
+    return n;
+  }, [view]);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (view?.entries ?? []).filter((e) => {
+    return entries.filter((e) => {
       if (category !== "all" && e.category !== category) return false;
       if (!q) return true;
       const hay = [
@@ -100,9 +178,53 @@ export default function DictionaryWindow() {
     });
   }, [view, query, category]);
 
+  const categoryName = (c: string) =>
+    t.dictionary.categories[c as Category] ?? c;
+  const personName = (id: string) =>
+    people.find((p) => p.id === id)?.canonical ?? id;
+  const summary = (e: Entry) => {
+    if (e.misspellings?.length)
+      return t.dictionary.misspelledAs(e.misspellings.join("、"));
+    if (e.personId) return t.dictionary.refersToName(personName(e.personId));
+    if (e.variants?.length)
+      return t.dictionary.variantsAre(e.variants.join("、"));
+    return "—";
+  };
+
+  // Leaving an entry with unsaved edits asks first.
+  const leave = (go: () => void) => {
+    if (!dirty) {
+      go();
+      return;
+    }
+    modal.confirm({
+      title: t.dictionary.discardTitle,
+      okText: t.dictionary.discard,
+      okButtonProps: { danger: true },
+      cancelText: t.dictionary.cancel,
+      onOk: go,
+    });
+  };
+  const show = (e: Entry) =>
+    leave(() => {
+      setSelected(e.id);
+      setDraft(toDraft(e));
+      setConfirmDelete(false);
+    });
+  const addNew = () =>
+    leave(() => {
+      setSelected(null);
+      setDraft(emptyDraft());
+      setCategory("all");
+      setConfirmDelete(false);
+    });
+  const edit = (patch: Partial<Draft>) =>
+    setDraft((d) => (d ? { ...d, ...patch } : d));
+
   const save = async () => {
     if (!draft) return;
     try {
+      const before = new Set(entries.map((e) => e.id));
       const next = await Editor.UpsertDictionaryEntry({
         id: draft.id ?? "",
         canonical: draft.canonical,
@@ -115,296 +237,382 @@ export default function DictionaryWindow() {
         disabled: draft.disabled,
         caseSensitive: draft.caseSensitive,
       });
+      const saved =
+        (next.entries ?? []).find((e) => e.id === draft.id) ??
+        (next.entries ?? []).find((e) => !before.has(e.id));
+      setSelected(saved?.id ?? null);
+      setDraft(saved ? toDraft(saved) : null);
       setView(next);
-      setDraft(null);
       message.success(t.dictionary.saved);
     } catch (e) {
       message.error(errorText(e));
     }
   };
-
-  const openEdit = (e?: Entry) => {
-    if (!e) {
-      setDraft(emptyDraft());
-      return;
+  const remove = async () => {
+    if (!draft?.id) return;
+    try {
+      const next = await Editor.DeleteDictionaryEntry(draft.id);
+      setSelected(null);
+      setDraft(null);
+      setConfirmDelete(false);
+      setView(next);
+    } catch (e) {
+      message.error(errorText(e));
     }
-    setDraft({
-      id: e.id,
-      canonical: e.canonical,
-      category: e.category,
-      variants: e.variants ?? [],
-      misspellings: e.misspellings ?? [],
-      original: e.original ?? [],
-      personId: e.personId,
-      note: e.note ?? "",
-      disabled: !!e.disabled,
-      caseSensitive: !!e.caseSensitive,
-    });
   };
+  const closeImport = () => {
+    setPreview(null);
+    setReplace([]);
+  };
+
+  const isNew = !!draft && !draft.id;
+  const title = isNew
+    ? t.dictionary.add
+    : draft
+      ? draft.canonical.trim() || t.dictionary.untitled
+      : t.dictionary.title;
+  const status = readOnly
+    ? t.dictionary.readOnlyStatus
+    : dirty
+      ? t.dictionary.unsaved
+      : "";
 
   return (
     <div
-      className={`settings-window dict-window${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
+      className={`panel-window dictionary${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
     >
-      <header className="set-head titlebar" data-wails-drag>
-        <div className="set-title">
-          <strong>{t.dictionary.title}</strong>
-          <span className="muted small">
-            {t.dictionary.count(view?.entries?.length ?? 0)}
-          </span>
-        </div>
-        <div className="spacer" />
-        {customChrome && <WindowControls />}
-      </header>
-      <div className="dict-toolbar">
-        <Input.Search
+      <nav className="set-side" aria-label={t.dictionary.categoriesLabel}>
+        <div className="panel-drag" />
+        <Input
+          size="small"
           allowClear
           placeholder={t.dictionary.search}
+          aria-label={t.dictionary.search}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          style={{ maxWidth: 240 }}
         />
-        <Select
-          value={category}
-          onChange={setCategory}
-          style={{ width: 140 }}
-          options={[
-            { value: "all", label: t.dictionary.categoryAll },
-            ...CATEGORIES.map((c) => ({
-              value: c,
-              label: t.dictionary.categories[c],
-            })),
-          ]}
-        />
+        {(["all", ...CATEGORIES] as const).map((id) => {
+          const CategoryIcon = CATEGORY_ICONS[id];
+          const on = id === category;
+          return (
+            <button
+              key={id}
+              type="button"
+              className={`side-item${on ? " on" : ""}`}
+              aria-pressed={on}
+              onClick={() => setCategory(id)}
+            >
+              <CategoryIcon size={16} {...decorative} />
+              <span className="dict-side-label">
+                {id === "all" ? t.dictionary.categoryAll : categoryName(id)}
+              </span>
+              <span className="dict-side-count">{counts[id] ?? 0}</span>
+            </button>
+          );
+        })}
         <div className="spacer" />
-        <Button
-          disabled={!!view?.readOnly}
-          onClick={() => void Editor.PreviewDictionaryImport().then(setPreview).catch((e) => message.error(errorText(e)))}
-        >
-          {t.dictionary.importJson}
-        </Button>
-        <Button
-          onClick={() =>
-            void Editor.ExportDictionary()
-              .then((p) => {
-                if (p) void message.success(t.dictionary.exported(p));
-              })
-              .catch((e) => message.error(errorText(e)))
-          }
-        >
-          {t.dictionary.exportJson}
-        </Button>
-        <Button
-          type="primary"
-          disabled={!!view?.readOnly}
-          onClick={() => openEdit()}
-        >
-          {t.dictionary.add}
-        </Button>
-      </div>
-      {view?.readOnly && (
-        <Alert
-          type="error"
-          showIcon
-          style={{ margin: "0 16px 8px" }}
-          message={t.dictionary.readOnly}
-          description={view.error || undefined}
-        />
-      )}
-      <div className="dict-body">
-        <Table
-          size="small"
-          rowKey="id"
-          pagination={false}
-          dataSource={rows}
-          onRow={(record) => ({
-            onClick: () => openEdit(record),
-          })}
-          columns={[
-            {
-              title: t.dictionary.canonical,
-              dataIndex: "canonical",
-              render: (v: string, r: Entry) => (
-                <Space size={4}>
-                  <span>{v}</span>
-                  {r.disabled && <Tag>{t.dictionary.disabled}</Tag>}
-                </Space>
-              ),
-            },
-            {
-              title: t.dictionary.category,
-              dataIndex: "category",
-              width: 100,
-              render: (c: string) =>
-                t.dictionary.categories[
-                  c as keyof typeof t.dictionary.categories
-                ] ?? c,
-            },
-            {
-              title: t.dictionary.variants,
-              dataIndex: "variants",
-              render: (v: string[] | null) => (v ?? []).join("、") || "—",
-            },
-            {
-              title: t.dictionary.misspellings,
-              dataIndex: "misspellings",
-              render: (v: string[] | null) => (v ?? []).join("、") || "—",
-            },
-            {
-              title: t.dictionary.refersTo,
-              key: "person",
-              width: 120,
-              render: (_: unknown, r: Entry) => {
-                if (!r.personId) return "—";
-                return (
-                  people.find((p) => p.id === r.personId)?.canonical ??
-                  r.personId
-                );
-              },
-            },
-            {
-              title: t.dictionary.note,
-              dataIndex: "note",
-              ellipsis: true,
-              render: (v: string | undefined) => v || "—",
-            },
-          ]}
-        />
-      </div>
-      <Drawer
-        title={draft?.id ? t.dictionary.edit : t.dictionary.add}
-        open={!!draft}
-        onClose={() => setDraft(null)}
-        width={400}
-        destroyOnClose
-        extra={
-          <Space>
-            {draft?.id && (
-              <Popconfirm
-                title={t.dictionary.deleteConfirm}
-                disabled={!!view?.readOnly}
-                onConfirm={() =>
-                  void Editor.DeleteDictionaryEntry(draft.id!)
-                    .then((next) => {
-                      setView(next);
-                      setDraft(null);
-                    })
-                    .catch((e) => message.error(errorText(e)))
-                }
-              >
-                <Button danger disabled={!!view?.readOnly}>
-                  {t.dictionary.delete}
-                </Button>
-              </Popconfirm>
-            )}
-            <Button
-              type="primary"
-              disabled={!!view?.readOnly || !draft?.canonical.trim()}
-              onClick={() => void save()}
+        <p className="dict-local">{t.dictionary.localOnly}</p>
+      </nav>
+
+      <section className="dict-list" aria-label={t.dictionary.entriesLabel}>
+        <div className="set-head dict-head">
+          <h1>{t.dictionary.title}</h1>
+          <div className="spacer" />
+          <Button
+            type="text"
+            size="small"
+            icon={<IconFileImport size={16} {...decorative} />}
+            aria-label={t.dictionary.importJson}
+            title={t.dictionary.importJson}
+            disabled={readOnly}
+            onClick={() =>
+              void Editor.PreviewDictionaryImport()
+                .then(setPreview)
+                .catch((e) => message.error(errorText(e)))
+            }
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<IconFileExport size={16} {...decorative} />}
+            aria-label={t.dictionary.exportJson}
+            title={t.dictionary.exportJson}
+            onClick={() =>
+              void Editor.ExportDictionary()
+                .then((p) => {
+                  if (p) void message.success(t.dictionary.exported(p));
+                })
+                .catch((e) => message.error(errorText(e)))
+            }
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<IconPlus size={16} {...decorative} />}
+            aria-label={t.dictionary.add}
+            title={t.dictionary.add}
+            disabled={readOnly}
+            onClick={addNew}
+          />
+        </div>
+        <div className="dict-rows">
+          {rows.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              className={`dict-row${e.id === selected ? " on" : ""}${e.disabled ? " off" : ""}`}
+              aria-current={e.id === selected ? "true" : undefined}
+              onClick={() => show(e)}
             >
-              {t.dictionary.save}
-            </Button>
-          </Space>
-        }
-      >
-        {draft && (
-          <Form layout="vertical" size="small">
-            <Form.Item label={t.dictionary.canonical} required>
-              <Input
-                value={draft.canonical}
-                onChange={(e) =>
-                  setDraft({ ...draft, canonical: e.target.value })
-                }
-              />
-            </Form.Item>
-            <Form.Item label={t.dictionary.category}>
-              <Select
-                value={draft.category}
-                onChange={(category) => setDraft({ ...draft, category })}
-                options={CATEGORIES.map((c) => ({
-                  value: c,
-                  label: t.dictionary.categories[c],
-                }))}
-              />
-            </Form.Item>
-            <Form.Item label={t.dictionary.variants} extra={t.dictionary.variantsHint}>
-              <Select
-                mode="tags"
-                value={draft.variants}
-                onChange={(variants) => setDraft({ ...draft, variants })}
-                tokenSeparators={[",", "，", "|"]}
-                open={false}
-              />
-            </Form.Item>
-            <Form.Item
-              label={t.dictionary.misspellings}
-              extra={t.dictionary.misspellingsHint}
-            >
-              <Select
-                mode="tags"
-                value={draft.misspellings}
-                onChange={(misspellings) =>
-                  setDraft({ ...draft, misspellings })
-                }
-                tokenSeparators={[",", "，", "|"]}
-                open={false}
-              />
-            </Form.Item>
-            <Form.Item label={t.dictionary.original}>
-              <Select
-                mode="tags"
-                value={draft.original}
-                onChange={(original) => setDraft({ ...draft, original })}
-                tokenSeparators={[",", "，", "|"]}
-                open={false}
-              />
-            </Form.Item>
-            {draft.category === "nickname" && (
-              <Form.Item label={t.dictionary.refersTo}>
-                <Select
-                  allowClear
-                  value={draft.personId || undefined}
-                  onChange={(personId) => setDraft({ ...draft, personId })}
-                  options={people.map((p) => ({
-                    value: p.id,
-                    label: p.canonical,
-                  }))}
-                />
-              </Form.Item>
-            )}
-            <Form.Item label={t.dictionary.note}>
-              <Input.TextArea
-                rows={2}
-                value={draft.note}
-                onChange={(e) => setDraft({ ...draft, note: e.target.value })}
-              />
-            </Form.Item>
-          </Form>
+              <span className="dict-row-head">
+                <strong>{e.canonical}</strong>
+                {e.disabled && <span>{t.dictionary.disabled}</span>}
+                <span>{categoryName(e.category)}</span>
+              </span>
+              <span className="dict-row-sub">{summary(e)}</span>
+            </button>
+          ))}
+          {view && rows.length === 0 && (
+            <div className="set-empty">{t.dictionary.noMatch}</div>
+          )}
+        </div>
+      </section>
+
+      <main className="set-main">
+        <div className="set-head dict-head">
+          <h1>{title}</h1>
+          <div className="spacer" />
+          {status && <span className="set-hint">{status}</span>}
+          {customChrome && <WindowControls />}
+        </div>
+        {readOnly && (
+          <Alert
+            className="dict-alert"
+            type="error"
+            showIcon
+            message={t.dictionary.readOnly}
+            description={view?.error || undefined}
+          />
         )}
-      </Drawer>
+        {draft ? (
+          <>
+            <div className="dict-detail">
+              <div className="set-card">
+                <label className="set-row">
+                  <span>{t.dictionary.canonical}</span>
+                  <Input
+                    size="small"
+                    className="dict-canonical"
+                    value={draft.canonical}
+                    disabled={readOnly}
+                    placeholder={t.dictionary.canonicalPlaceholder}
+                    onChange={(e) => edit({ canonical: e.target.value })}
+                  />
+                </label>
+                <div className="set-row">
+                  <span>{t.dictionary.category}</span>
+                  <Select
+                    size="small"
+                    className="dict-select"
+                    aria-label={t.dictionary.category}
+                    disabled={readOnly}
+                    value={draft.category}
+                    onChange={(category) => edit({ category })}
+                    options={CATEGORIES.map((c) => ({
+                      value: c,
+                      label: categoryName(c),
+                    }))}
+                  />
+                </div>
+                {draft.category === "nickname" && (
+                  <div className="set-row">
+                    <div className="set-label">
+                      <span>{t.dictionary.refersTo}</span>
+                      <span className="set-hint">
+                        {t.dictionary.refersToHint}
+                      </span>
+                    </div>
+                    <Select
+                      size="small"
+                      allowClear
+                      className="dict-select"
+                      aria-label={t.dictionary.refersTo}
+                      placeholder={t.dictionary.pickPerson}
+                      disabled={readOnly}
+                      value={draft.personId || undefined}
+                      onChange={(personId) => edit({ personId })}
+                      options={people.map((p) => ({
+                        value: p.id,
+                        label: p.canonical,
+                      }))}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="set-card">
+                <div className="set-row set-field">
+                  <span className="ink">{t.dictionary.misspellings}</span>
+                  <Select
+                    mode="tags"
+                    size="small"
+                    open={false}
+                    aria-label={t.dictionary.misspellings}
+                    placeholder={t.dictionary.tagsPlaceholder}
+                    disabled={readOnly}
+                    tokenSeparators={SEPARATORS}
+                    value={draft.misspellings}
+                    onChange={(misspellings) => edit({ misspellings })}
+                  />
+                  <span className="set-hint">
+                    {t.dictionary.misspellingsHint}
+                  </span>
+                </div>
+                <div className="set-row set-field">
+                  <span className="ink">{t.dictionary.variants}</span>
+                  <Select
+                    mode="tags"
+                    size="small"
+                    open={false}
+                    aria-label={t.dictionary.variants}
+                    placeholder={t.dictionary.tagsPlaceholder}
+                    disabled={readOnly}
+                    tokenSeparators={SEPARATORS}
+                    value={draft.variants}
+                    onChange={(variants) => edit({ variants })}
+                  />
+                  <span className="set-hint">{t.dictionary.variantsHint}</span>
+                </div>
+                <div className="set-row set-field">
+                  <span className="ink">{t.dictionary.original}</span>
+                  <Select
+                    mode="tags"
+                    size="small"
+                    open={false}
+                    aria-label={t.dictionary.original}
+                    placeholder={t.dictionary.originalPlaceholder}
+                    disabled={readOnly}
+                    tokenSeparators={SEPARATORS}
+                    value={draft.original}
+                    onChange={(original) => edit({ original })}
+                  />
+                </div>
+              </div>
+
+              <div className="set-card">
+                <div className="set-row">
+                  <div className="set-label">
+                    <span>{t.dictionary.caseSensitive}</span>
+                    <span className="set-hint">
+                      {t.dictionary.caseSensitiveHint}
+                    </span>
+                  </div>
+                  <Switch
+                    size="small"
+                    aria-label={t.dictionary.caseSensitive}
+                    disabled={readOnly}
+                    checked={draft.caseSensitive}
+                    onChange={(caseSensitive) => edit({ caseSensitive })}
+                  />
+                </div>
+                <div className="set-row">
+                  <div className="set-label">
+                    <span>{t.dictionary.disable}</span>
+                    <span className="set-hint">{t.dictionary.disableHint}</span>
+                  </div>
+                  <Switch
+                    size="small"
+                    aria-label={t.dictionary.disable}
+                    disabled={readOnly}
+                    checked={draft.disabled}
+                    onChange={(disabled) => edit({ disabled })}
+                  />
+                </div>
+                <label className="set-row set-field">
+                  <span className="ink">{t.dictionary.note}</span>
+                  <Input.TextArea
+                    rows={2}
+                    disabled={readOnly}
+                    value={draft.note}
+                    onChange={(e) => edit({ note: e.target.value })}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="dict-foot">
+              {draft.id &&
+                (confirmDelete ? (
+                  <>
+                    <span>{t.dictionary.deleteConfirm}</span>
+                    <Button size="small" onClick={() => setConfirmDelete(false)}>
+                      {t.dictionary.cancel}
+                    </Button>
+                    <Button
+                      size="small"
+                      type="primary"
+                      danger
+                      onClick={() => void remove()}
+                    >
+                      {t.dictionary.delete}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="small"
+                    type="text"
+                    danger
+                    disabled={readOnly}
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    {t.dictionary.deleteEntry}
+                  </Button>
+                ))}
+              <div className="spacer" />
+              <Button
+                size="small"
+                disabled={readOnly || !dirty || isNew}
+                onClick={() => stored && setDraft(toDraft(stored))}
+              >
+                {t.dictionary.revert}
+              </Button>
+              <Button
+                size="small"
+                type="primary"
+                disabled={readOnly || !dirty || !draft.canonical.trim()}
+                onClick={() => void save()}
+              >
+                {t.dictionary.save}
+              </Button>
+            </div>
+          </>
+        ) : (
+          view && <div className="dict-none">{t.dictionary.nothingSelected}</div>
+        )}
+      </main>
+
       <Modal
+        className="dict-import"
         title={t.dictionary.importPreview}
         open={!!preview}
-        onCancel={() => {
-          setPreview(null);
-          setReplace([]);
-        }}
+        width={460}
+        style={{ top: 52 }}
+        onCancel={closeImport}
+        cancelText={t.dictionary.cancel}
+        okText={t.dictionary.applyImport}
         onOk={() =>
           void Editor.ApplyDictionaryImport(replace)
             .then((next) => {
               setView(next);
-              setPreview(null);
-              setReplace([]);
+              closeImport();
               message.success(t.dictionary.imported);
             })
             .catch((e) => message.error(errorText(e)))
         }
-        okText={t.dictionary.applyImport}
-        width={640}
       >
         {preview && (
           <>
-            <p className="muted">
+            <p className="set-hint">
               {t.dictionary.previewSummary(
                 preview.add,
                 preview.merge,
@@ -412,10 +620,10 @@ export default function DictionaryWindow() {
                 preview.skip,
               )}
             </p>
-            <ul className="dict-preview-list">
+            <div className="set-card dict-import-list">
               {(preview.actions ?? []).map((a, i) => (
-                <li key={i}>
-                  <Tag>
+                <div className="set-row set-line" key={i}>
+                  <Tag color={ACTION_COLORS[a.action]}>
                     {a.action === "add"
                       ? t.dictionary.actionAdd
                       : a.action === "merge"
@@ -424,26 +632,30 @@ export default function DictionaryWindow() {
                           ? t.dictionary.actionConflict
                           : t.dictionary.actionSkip}
                   </Tag>
-                  {a.incoming.canonical}
+                  <div className="set-label">
+                    <strong>{a.incoming.canonical}</strong>
+                    <span className="set-hint">
+                      {a.conflictReason || categoryName(a.incoming.category)}
+                    </span>
+                  </div>
                   {a.action === "conflict" && a.existingId && (
-                    <Button
-                      size="small"
-                      type={
-                        replace.includes(a.existingId) ? "primary" : "default"
-                      }
-                      onClick={() => {
+                    <Checkbox
+                      checked={replace.includes(a.existingId)}
+                      onChange={() => {
                         const id = a.existingId!;
                         setReplace((r) =>
-                          r.includes(id) ? r.filter((x) => x !== id) : [...r, id],
+                          r.includes(id)
+                            ? r.filter((x) => x !== id)
+                            : [...r, id],
                         );
                       }}
                     >
                       {t.dictionary.replaceExisting}
-                    </Button>
+                    </Checkbox>
                   )}
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           </>
         )}
       </Modal>
