@@ -64,6 +64,7 @@ import {
   lineSpeakers,
   relines,
   renderLines,
+  survivingSpeakers,
 } from "./cueLines";
 import {
   bindKeymap,
@@ -390,6 +391,11 @@ function EditorApp({
   useEffect(() => {
     if (playing && active && !draftDirty) setSelected(active.id);
   }, [playing, active?.id, draftDirty]);
+  // A web view's video does not keep the display awake, so Go holds it
+  // while playing; failing to only means the screen saver may start.
+  useEffect(() => {
+    void Editor.KeepAwake(playing).catch(() => undefined);
+  }, [playing]);
 
   async function run<T>(action: () => Promise<T>): Promise<T | undefined> {
     setWorking(true);
@@ -624,7 +630,8 @@ function EditorApp({
       // ordinary cue again, spoken by everyone the lines had.
       if (patch.text !== undefined && d.lines && patch.lines === undefined) {
         next.lines = relines(patch.text, d.lines);
-        if (!next.lines) next.speakerIds = lineSpeakers(d.lines);
+        if (!next.lines)
+          next.speakerIds = survivingSpeakers(patch.text, d.lines);
       }
       return next;
     });
@@ -660,7 +667,9 @@ function EditorApp({
       void message.info(
         result.error === "acrossLines"
           ? t.inspector.assignAcrossLines
-          : t.inspector.assignNeedsSelection,
+          : result.error === "sameSpeaker"
+            ? t.inspector.assignSameSpeaker
+            : t.inspector.assignNeedsSelection,
       );
       return;
     }
@@ -1248,7 +1257,11 @@ function EditorApp({
                   onTimeUpdate={(e) =>
                     !playing && setPlayhead(e.currentTarget.currentTime)
                   }
-                  onError={() => void message.error(t.viewer.mediaError)}
+                  onError={() => {
+                    // A media error can stop playback without a pause event.
+                    setPlaying(false);
+                    void message.error(t.viewer.mediaError);
+                  }}
                 />
                 {!hasVideo && (
                   <span className="viewer-note">{t.viewer.audioOnly}</span>

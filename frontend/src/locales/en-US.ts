@@ -224,6 +224,7 @@ export const enUS: Messages = {
     assignNeedsSelection: "Select some words in the viewer subtitle first",
     assignAcrossLines: "Select words within one line",
     assignNeedsLine: "Put the text cursor in one of the lines first",
+    assignSameSpeaker: "These words are already that speaker's",
     splitLines: (n: number) => `Split into ${n} Subtitles`,
     splitLinesHint:
       "Each line becomes a subtitle of its own over the same time, since they were spoken at once.",

@@ -24,6 +24,7 @@ func main() {
 		Services: []application.Service{application.NewService(service)},
 		Assets:   application.AssetOptions{Handler: application.AssetFileServerFS(assets), Middleware: service.mediaMiddleware},
 		Mac:      application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
+		Windows:  application.WindowsOptions{WndProcInterceptor: wndProcInterceptor},
 	})
 	service.app = app
 	service.openWindows()

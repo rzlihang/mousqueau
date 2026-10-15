@@ -6,6 +6,7 @@ import {
   lineSpeakers,
   relines,
   renderLines,
+  survivingSpeakers,
 } from "./cueLines";
 
 const crosstalk = "这是没钱 要钱了呗 要没钱 要钱了呗";
@@ -119,5 +120,66 @@ describe("joining", () => {
         { text: "b", speakerIds: ["A"] },
       ]),
     ).toEqual(["B", "A"]);
+  });
+});
+
+describe("one line per speaker", () => {
+  it("adds words to the line the speaker already has", () => {
+    const lines = [
+      { text: "这是没钱 要没钱", speakerIds: ["C"] },
+      { text: "要钱了呗", speakerIds: ["A"] },
+    ];
+    const text = renderLines(lines);
+    const s = text.indexOf("要没钱");
+    expect(extract(text, lines, [], s, s + 3, "A")).toEqual({
+      lines: [
+        { text: "这是没钱", speakerIds: ["C"] },
+        { text: "要钱了呗 要没钱", speakerIds: ["A"] },
+      ],
+    });
+  });
+
+  it("leaves words that already are the speaker's", () => {
+    const lines = [
+      { text: "甲乙", speakerIds: ["A"] },
+      { text: "丙", speakerIds: [] },
+    ];
+    expect(extract(renderLines(lines), lines, [], 2, 3, "A")).toEqual({
+      error: "sameSpeaker",
+    });
+    expect(extract("甲乙", null, ["A"], 0, 1, "A")).toEqual({
+      error: "sameSpeaker",
+    });
+  });
+
+  it("gives unassigned words a line of their own", () => {
+    const lines = [
+      { text: "甲", speakerIds: [] },
+      { text: "乙丙", speakerIds: ["A"] },
+    ];
+    const got = extract(renderLines(lines), lines, [], 7, 8);
+    expect(got).toEqual({
+      lines: [
+        { text: "甲", speakerIds: [] },
+        { text: "乙", speakerIds: ["A"] },
+        { text: "丙", speakerIds: [] },
+      ],
+    });
+  });
+});
+
+describe("survivingSpeakers", () => {
+  const lines = [
+    { text: "这是没钱", speakerIds: ["C"] },
+    { text: "要钱了呗", speakerIds: ["A"] },
+  ];
+  it("drops a deleted row's speaker", () => {
+    expect(survivingSpeakers("- 这是没钱", lines)).toEqual(["C"]);
+  });
+  it("keeps both when rows were joined", () => {
+    expect(survivingSpeakers("- 这是没钱- 要钱了呗", lines)).toEqual(["C", "A"]);
+  });
+  it("is unassigned when the text was rewritten", () => {
+    expect(survivingSpeakers("全新的话", lines)).toEqual([]);
   });
 });

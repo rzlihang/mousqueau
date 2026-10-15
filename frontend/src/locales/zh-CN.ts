@@ -215,6 +215,7 @@ export const zhCN = {
     assignNeedsSelection: "请先在画面字幕里选中文字",
     assignAcrossLines: "请在同一行里选择文字",
     assignNeedsLine: "请先把文字光标放在其中一行里",
+    assignSameSpeaker: "这些文字已经属于这位说话人",
     splitLines: (n: number) => `按行拆成 ${n} 条字幕`,
     splitLinesHint: "每一行变成一条单独的字幕，时间相同，因为这些话是同时说的。",
     splitHint:

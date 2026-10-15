@@ -59,11 +59,31 @@ export function relines(
 
 export type Extracted =
   | { lines: CueLine[] }
-  | { error: "empty" | "acrossLines" };
+  | { error: "empty" | "acrossLines" | "sameSpeaker" };
 
-// Moves the selected text [start, end) of a cue's viewer text out to a new
-// last line for speaker (none: unassigned). The rest of its row stays with
-// that row's speakers.
+const only = (ids: string[], speaker: string) =>
+  ids.length === 1 && ids[0] === speaker;
+
+// Adds piece for speaker: to the line that speaker already has, so each
+// speaker keeps one line, or else as a new last line. Unassigned text may
+// be anyone's and always gets a line of its own.
+// spaced: the words came from text that separates them with spaces.
+function place(
+  lines: CueLine[],
+  piece: string,
+  speaker: string | undefined,
+  spaced: boolean,
+): CueLine[] {
+  const at = speaker ? lines.findIndex((l) => only(l.speakerIds, speaker)) : -1;
+  if (at < 0) return [...lines, { text: piece, speakerIds: speaker ? [speaker] : [] }];
+  return lines.map((l, i) =>
+    i === at ? { ...l, text: glue(l.text, piece, spaced) } : l,
+  );
+}
+
+// Moves the selected text [start, end) of a cue's viewer text to speaker's
+// line (none: a new unassigned line). The rest of its row stays with that
+// row's speakers. Text that already is only that speaker's stays put.
 export function extract(
   text: string,
   lines: CueLine[] | null,
@@ -72,18 +92,18 @@ export function extract(
   end: number,
   speaker?: string,
 ): Extracted {
-  const assigned = speaker ? [speaker] : [];
   if (!lines) {
     const piece = unwrap(text.slice(start, end));
     if (!piece) return { error: "empty" };
+    if (speaker && only(speakerIds, speaker)) return { error: "sameSpeaker" };
     const rest = unwrap(cut(text, start, end));
     return {
-      lines: rest
-        ? [
-            { text: rest, speakerIds: [...speakerIds] },
-            { text: piece, speakerIds: assigned },
-          ]
-        : [{ text: piece, speakerIds: assigned }],
+      lines: place(
+        rest ? [{ text: rest, speakerIds: [...speakerIds] }] : [],
+        piece,
+        speaker,
+        /[ \t]/.test(text.trim()),
+      ),
     };
   }
   const rows = text.split("\n");
@@ -98,29 +118,44 @@ export function extract(
       const e = end - rowStart - dash;
       const piece = e > s ? content.slice(s, e).trim() : "";
       if (!piece) return { error: "empty" };
+      if (speaker && only(lines[r]?.speakerIds ?? [], speaker))
+        return { error: "sameSpeaker" };
       const rest = cut(content, s, e);
       const next = lines.flatMap((l, i) =>
         i !== r ? [l] : rest ? [{ ...l, text: rest }] : [],
       );
-      next.push({ text: piece, speakerIds: assigned });
-      return { lines: next };
+      return { lines: place(next, piece, speaker, /[ \t]/.test(content.trim())) };
     }
     rowStart = rowEnd + 1;
   }
   return { error: "empty" };
 }
 
-// Joins line i onto the line before it, which keeps its speakers. Text that
-// already separates its words with spaces gets one at the join too.
+// Joins two lines' text. Text that already separates its words with spaces
+// gets one at the join too.
+function glue(a: string, b: string, spaced = false): string {
+  return spaced || /\s/.test(a + b)
+    ? `${a.trimEnd()} ${b.trimStart()}`
+    : joinText(a, b);
+}
+
+// Joins line i onto the line before it, which keeps its speakers.
 export function joinUp(lines: CueLine[], i: number): CueLine[] {
   if (i <= 0 || i >= lines.length) return lines;
-  const [a, b] = [lines[i - 1].text, lines[i].text];
   const next = lines.slice();
   next.splice(i - 1, 2, {
-    text: /\s/.test(a + b) ? `${a.trimEnd()} ${b.trimStart()}` : joinText(a, b),
+    text: glue(lines[i - 1].text, lines[i].text),
     speakerIds: lines[i - 1].speakerIds,
   });
   return next;
+}
+
+// The speakers left when the lines are edited down to one row of text:
+// those of every earlier line whose text is still there, so deleting a row
+// drops its speaker while joining two rows keeps both.
+export function survivingSpeakers(text: string, previous: CueLine[]): string[] {
+  const row = text.replace(DASH, "").trim();
+  return lineSpeakers(previous.filter((l) => l.text && row.includes(l.text)));
 }
 
 // The speakers of all lines, in order of first appearance.
