@@ -124,6 +124,15 @@ xvfb-run -a -s "-screen 0 1700x1050x24" dbus-run-session -- scripts/linux-gui-sm
 
 It opens the welcome window with a fresh configuration, closes it with the drawn close button, maximises and restores the editor with its button and by double-clicking the title bar, opens settings with Ctrl+,, closes it and quits by closing the editor, saving a screenshot of each state. It checks GTK/WebKitGTK behaviour only, not macOS or Windows.
 
+On macOS (Xcode command-line tools provide `swiftc`), build the frontend and then:
+
+```sh
+go build -tags production -o /tmp/mousqueau .
+scripts/macos-launch-smoke.sh /tmp/mousqueau /tmp/mousqueau-shots
+```
+
+It launches the app with a fresh configuration three times in light and three times in dark system appearance, and fails if it exits, logs a panic, or shows no window within 30 seconds. Each launch stays open past the ten-second window-reveal fallback before it is stopped. It switches the system appearance while running and restores it afterwards. The screenshots are for a person to look at: the script does not check colours, so a white first frame still needs checking by eye on a Mac.
+
 For headless Linux verification without GTK/WebKit, build the frontend first, then:
 
 ```sh
