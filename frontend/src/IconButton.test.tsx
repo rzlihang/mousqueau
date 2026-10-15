@@ -56,7 +56,7 @@ describe("IconButton", () => {
 
 describe("icon-only names", () => {
   it("stays a short label in every locale", () => {
-    for (const locale of ["zh-CN", "zh-TW", "en-US"] as const) {
+    for (const locale of ["zh-CN", "zh-TW", "ja-JP", "en-US"] as const) {
       const t = messagesFor(locale);
       const names = [
         t.menu.title,

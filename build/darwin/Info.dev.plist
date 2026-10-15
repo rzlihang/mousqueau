@@ -33,6 +33,7 @@
             <string>zh-Hans</string>
             <string>zh-Hant</string>
             <string>zh-Hant-HK</string>
+            <string>ja</string>
         </array>
         <key>NSAppTransportSecurity</key>
         <dict>

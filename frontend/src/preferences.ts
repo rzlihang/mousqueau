@@ -106,25 +106,26 @@ export type SectionId = (typeof SECTIONS)[number];
 // language, so a search works whichever language is shown.
 const KEYWORDS = {
   theme:
-    "主题 外观 深色 浅色 跟随系统 主題 外觀 淺色 跟隨系統 theme appearance dark light system",
+    "テーマ 外観 ダーク ライト システム 主题 外观 深色 浅色 跟随系统 主題 外觀 淺色 跟隨系統 theme appearance dark light system",
   language:
-    "语言 中文 简体 繁体 英文 英语 語言 簡體 繁體 英語 台灣 香港 台湾正体 香港繁体 language chinese traditional english system",
-  font: "字幕 字体 字體 字型 预览 預覽 subtitle font typeface",
+    "语言 中文 简体 繁体 英文 英语 語言 簡體 繁體 英語 台灣 香港 台湾正体 香港繁体 日本語 言語 language chinese traditional english japanese system",
+  font: "フォント 書体 字幕 字体 字體 字型 预览 預覽 subtitle font typeface",
   startup:
-    "启动 上次 项目 打开 啟動 專案 開啟 launch startup last project open",
-  setup: "初始设置 欢迎 重新运行 初始設定 歡迎 重新執行 setup welcome initial",
+    "起動 前回 プロジェクト 開く 启动 上次 项目 打开 啟動 專案 開啟 launch startup last project open",
+  setup:
+    "初期設定 ようこそ 初始设置 欢迎 重新运行 初始設定 歡迎 重新執行 setup welcome initial",
   ffmpeg:
-    "ffmpeg 外部工具 位置 路径 媒体 音频 路徑 媒體 音訊 external tools location path media audio",
+    "外部ツール 場所 パス メディア オーディオ ffmpeg 外部工具 位置 路径 媒体 音频 路徑 媒體 音訊 external tools location path media audio",
   ytdlp:
-    "yt-dlp ytdlp youtube 外部工具 位置 路径 下载 路徑 下載 external tools location path download",
+    "外部ツール 場所 パス ダウンロード yt-dlp ytdlp youtube 外部工具 位置 路径 下载 路徑 下載 external tools location path download",
   provDefault:
-    "供应商 分析 转录 说话人 默认 轉錄 說話者 預設 provider openai analysis transcription speaker default",
+    "プロバイダー 解析 文字起こし 話者 デフォルト 供应商 分析 转录 说话人 默认 轉錄 說話者 預設 provider openai analysis transcription speaker default",
   provList:
-    "供应商 密钥 钥匙串 凭据 密钥环 上传 模型 地址 金鑰 鑰匙圈 憑證 認證管理員 金鑰圈 上傳 網址 provider api key keychain keyring credential openai_api_key upload model endpoint url openai deepgram assemblyai elevenlabs alibaba dashscope 阿里云 百炼 阿里雲 百煉 tencent 腾讯 騰訊 custom 自定义 自訂",
+    "プロバイダー キー キーチェーン 認証情報 資格情報 キーリング アップロード モデル 供应商 密钥 钥匙串 凭据 密钥环 上传 模型 地址 金鑰 鑰匙圈 憑證 認證管理員 金鑰圈 上傳 網址 provider api key keychain keyring credential openai_api_key upload model endpoint url openai deepgram assemblyai elevenlabs alibaba dashscope 阿里云 百炼 阿里雲 百煉 tencent 腾讯 騰訊 custom 自定义 自訂",
   provAdd:
-    "供应商 添加 加入 provider add openai deepgram assemblyai elevenlabs alibaba dashscope 阿里云 百炼 阿里雲 百煉 tencent 腾讯 騰訊 custom 自定义 自訂",
+    "プロバイダー 追加 供应商 添加 加入 provider add openai deepgram assemblyai elevenlabs alibaba dashscope 阿里云 百炼 阿里雲 百煉 tencent 腾讯 騰訊 custom 自定义 自訂",
   updates:
-    "更新 检查更新 版本 自动 测试版 檢查更新 自動 測試版 beta update check version automatic github",
+    "アップデート バージョン ベータ 更新 检查更新 版本 自动 测试版 檢查更新 自動 測試版 beta update check version automatic github",
 };
 export type SettingRow = keyof typeof KEYWORDS;
 

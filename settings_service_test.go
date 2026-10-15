@@ -272,6 +272,20 @@ func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
 	if saved, _ := settings.Load(path); saved.Language != "zh-HK" {
 		t.Fatalf("Hong Kong not saved: %+v", saved)
 	}
+	s.languages = []string{"ja-JP", "en-US"}
+	if view, err = s.SetLanguage("system"); err != nil || view.Locale != "ja-JP" {
+		t.Fatalf("Japanese system: %+v %v", view, err)
+	}
+	if _, err := s.EditCue(subtitle.Cue{}); err == nil || err.Error() != "先に SRT 字幕を読み込んでください" {
+		t.Fatalf("error not in Japanese: %v", err)
+	}
+	view, err = s.SetLanguage("ja-JP")
+	if err != nil || view.Language != "ja-JP" || view.Locale != "ja-JP" {
+		t.Fatalf("Japanese: %+v %v", view, err)
+	}
+	if saved, _ := settings.Load(path); saved.Language != "ja-JP" {
+		t.Fatalf("Japanese not saved: %+v", saved)
+	}
 	view, err = s.SetLanguage("en-US")
 	if err != nil || view.Language != "en-US" || view.Locale != "en-US" {
 		t.Fatalf("English: %+v %v", view, err)
@@ -286,7 +300,7 @@ func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
 
 func TestMenuLabelsNameTheAppOnlyWhereTheyHaveRoom(t *testing.T) {
 	defer i18n.SetCurrent(i18n.Current())
-	for _, l := range []i18n.Locale{i18n.English, i18n.Chinese, i18n.Traditional, i18n.HongKong} {
+	for _, l := range []i18n.Locale{i18n.English, i18n.Chinese, i18n.Traditional, i18n.HongKong, i18n.Japanese} {
 		i18n.SetCurrent(l)
 		for _, item := range roleLabels {
 			label := roleLabel(item.label)

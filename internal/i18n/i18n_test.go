@@ -37,12 +37,17 @@ func TestResolve(t *testing.T) {
 		{"system", []string{"zh-SG"}, Chinese},
 		{"system", []string{"zh"}, Chinese},
 		{"system", []string{"zh_CN"}, Chinese},
-		{"system", []string{"ja-JP", "en-GB"}, English},
+		{"system", []string{"ja-JP", "en-GB"}, Japanese},
+		{"system", []string{"ja"}, Japanese},
+		{"system", []string{"ja_JP.UTF-8"}, Japanese},
+		{"system", []string{"fr-FR", "ja-JP"}, Japanese},
+		{"system", []string{"ko-KR", "en-GB"}, English},
 		{"system", []string{"fr-FR"}, English},
 		{"system", nil, English},
 		{"zh-CN", []string{"en-US"}, Chinese},
 		{"zh-TW", []string{"zh-Hans"}, Traditional},
 		{"zh-HK", []string{"zh-Hant-TW"}, HongKong},
+		{"ja-JP", []string{"zh-Hans"}, Japanese},
 		{"en-US", []string{"zh-Hans"}, English},
 		{"klingon", []string{"zh-Hans"}, Chinese},
 	} {
@@ -50,12 +55,12 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Resolve(%q, %v) = %s, want %s", c.choice, c.preferred, got, c.want)
 		}
 	}
-	for _, choice := range []string{"system", "zh-CN", "zh-TW", "zh-HK", "en-US"} {
+	for _, choice := range []string{"system", "zh-CN", "zh-TW", "zh-HK", "ja-JP", "en-US"} {
 		if !ValidChoice(choice) {
 			t.Errorf("%q rejected", choice)
 		}
 	}
-	if ValidChoice("zh-MO") || ValidChoice("") {
+	if ValidChoice("zh-MO") || ValidChoice("ja") || ValidChoice("") {
 		t.Error("unsupported choice accepted")
 	}
 }
@@ -122,6 +127,10 @@ func TestErrorsFollowTheCurrentLocale(t *testing.T) {
 	SetCurrent(HongKong)
 	if err.Error() != "專案 JSON 無效：找不到 SRT 字幕" {
 		t.Fatalf("Hong Kong: %q", err)
+	}
+	SetCurrent(Japanese)
+	if err.Error() != "プロジェクト JSON が無効です：SRT 字幕が見つかりません" {
+		t.Fatalf("Japanese: %q", err)
 	}
 }
 

@@ -6,12 +6,15 @@ import (
 	"testing"
 )
 
-func TestAppleLanguageKeepsTaiwanAndHongKongApart(t *testing.T) {
+func TestAppleLanguageTags(t *testing.T) {
 	if appleLanguage[i18n.Traditional] != "zh-Hant" {
 		t.Fatalf("Taiwan tag %q", appleLanguage[i18n.Traditional])
 	}
 	if appleLanguage[i18n.HongKong] != "zh-Hant-HK" {
 		t.Fatalf("Hong Kong tag %q", appleLanguage[i18n.HongKong])
+	}
+	if appleLanguage[i18n.Japanese] != "ja" {
+		t.Fatalf("Japanese tag %q", appleLanguage[i18n.Japanese])
 	}
 }
 

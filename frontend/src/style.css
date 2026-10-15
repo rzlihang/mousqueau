@@ -27,6 +27,16 @@ body {
     "Noto Sans TC",
     sans-serif;
 }
+/* Japanese glyph forms for kanji shared with Chinese. */
+:root:lang(ja) body {
+  font-family:
+    system-ui,
+    -apple-system,
+    "Hiragino Sans",
+    "Yu Gothic UI",
+    "Noto Sans JP",
+    sans-serif;
+}
 button,
 input,
 textarea {

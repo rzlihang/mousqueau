@@ -17,9 +17,10 @@ const (
 	Chinese     Locale = "zh-CN" // Simplified, mainland usage
 	Traditional Locale = "zh-TW" // Traditional, Taiwan usage
 	HongKong    Locale = "zh-HK" // Traditional, Hong Kong usage
+	Japanese    Locale = "ja-JP"
 )
 
-var locales = []Locale{English, Chinese, Traditional, HongKong}
+var locales = []Locale{English, Chinese, Traditional, HongKong, Japanese}
 
 // System is the language choice that follows the operating system.
 const System = "system"
@@ -53,7 +54,7 @@ func supported(choice string) bool {
 // Match maps a language tag such as "zh-Hans-CN", "zh_TW.UTF-8" or "en-GB"
 // to a supported locale. Simplified script wins, then a Hong Kong region,
 // then Traditional script or a Taiwan or Macau region. Any other Chinese
-// means Simplified.
+// means Simplified. Any Japanese tag means Japanese.
 func Match(tag string) (Locale, bool) {
 	tag = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(tag), "_", "-"))
 	switch {
@@ -77,6 +78,8 @@ func Match(tag string) (Locale, bool) {
 		return Chinese, true
 	case tag == "en" || strings.HasPrefix(tag, "en-"):
 		return English, true
+	case tag == "ja" || strings.HasPrefix(tag, "ja-"):
+		return Japanese, true
 	}
 	return "", false
 }
@@ -154,4 +157,4 @@ func lookup(l Locale, format string) (string, bool) {
 	return "", false
 }
 
-var catalogs = map[Locale]map[string]string{Chinese: zhCN, Traditional: zhTW, HongKong: zhHK}
+var catalogs = map[Locale]map[string]string{Chinese: zhCN, Traditional: zhTW, HongKong: zhHK, Japanese: jaJP}
