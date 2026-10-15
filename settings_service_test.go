@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -408,6 +409,28 @@ func TestUpdateCheckSetupActionAndLastProject(t *testing.T) {
 	}
 }
 
+func TestGroundMatchesStartupColours(t *testing.T) {
+	dark := ground(true)
+	light := ground(false)
+	if dark.Red != 0x0f || dark.Green != 0x0f || dark.Blue != 0x0f || dark.Alpha != 255 {
+		t.Fatalf("dark ground %+v", dark)
+	}
+	if light.Red != 0xf2 || light.Green != 0xf4 || light.Blue != 0xf7 || light.Alpha != 255 {
+		t.Fatalf("light ground %+v", light)
+	}
+	for _, path := range []string{"frontend/index.html", "frontend/src/colors.generated.css"} {
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, needle := range []string{"#0f0f0f", "#f2f4f7", "color-scheme"} {
+			if !bytes.Contains(body, []byte(needle)) {
+				t.Fatalf("%s missing %s", path, needle)
+			}
+		}
+	}
+}
+
 func TestSettingsReportTheDeveloperBuild(t *testing.T) {
 	s := &EditorService{settings: settings.Default()}
 	if s.GetSettings().Developer != buildinfo.Developer {
@@ -419,17 +442,20 @@ func TestWindowURLNamesTheWindowAndItsChrome(t *testing.T) {
 	saved := customChrome
 	defer func() { customChrome = saved }()
 	customChrome = false
-	if got := windowURL(mainWindow, "system"); got != "/?theme=system" {
+	if got := windowURL(mainWindow, "system", "dark"); got != "/?systemTheme=dark&theme=system" {
 		t.Fatalf("main window URL %q", got)
 	}
-	if got := windowURL(settingsWindow, "dark"); got != "/?theme=dark&window=settings" {
+	if got := windowURL(settingsWindow, "dark", "light"); got != "/?systemTheme=light&theme=dark&window=settings" {
 		t.Fatalf("settings window URL %q", got)
 	}
 	customChrome = true
-	if got := windowURL(mainWindow, "system"); got != "/?chrome=custom&theme=system" {
+	if got := windowURL(mainWindow, "system", "light"); got != "/?chrome=custom&systemTheme=light&theme=system" {
 		t.Fatalf("frameless main window URL %q", got)
 	}
-	if got := windowURL(welcomeWindow, "light"); got != "/?chrome=custom&theme=light&window=welcome" {
+	if got := windowURL(welcomeWindow, "light", "dark"); got != "/?chrome=custom&systemTheme=dark&theme=light&window=welcome" {
 		t.Fatalf("frameless welcome window URL %q", got)
+	}
+	if got := windowURL(mainWindow, "system", ""); got != "/?chrome=custom&theme=system" {
+		t.Fatalf("window without native system appearance URL %q", got)
 	}
 }

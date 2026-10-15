@@ -5,6 +5,7 @@ import {
   formatChecked,
   languageChoice,
   languageOptions,
+  initialSystemDark,
   matchSettings,
   providerCaution,
   resolveDark,
@@ -16,6 +17,12 @@ const zh = messagesFor("zh-CN");
 const en = messagesFor("en-US");
 
 describe("preferences", () => {
+  it("uses the native system appearance before the webview media query catches up", () => {
+    expect(initialSystemDark("?systemTheme=dark", false)).toBe(true);
+    expect(initialSystemDark("?systemTheme=light", true)).toBe(false);
+    expect(initialSystemDark("", true)).toBe(true);
+    expect(initialSystemDark("?systemTheme=invalid", false)).toBe(false);
+  });
   it("resolves the theme against the system appearance", () => {
     expect(resolveDark("system", true)).toBe(true);
     expect(resolveDark("system", false)).toBe(false);
