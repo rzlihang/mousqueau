@@ -3,5 +3,5 @@
 
 export type {
     Caption,
-    YouTubeInfo
+    WebInfo
 } from "./models.js";

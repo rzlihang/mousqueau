@@ -13,5 +13,6 @@ export type {
     Snapshot,
     Status,
     ToolStatus,
-    Waveform
+    Waveform,
+    WebImport
 } from "./models.js";

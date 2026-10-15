@@ -7,8 +7,10 @@ export interface Caption {
     "formats": string[] | null;
 }
 
-export interface YouTubeInfo {
+export interface WebInfo {
     "id": string;
     "title": string;
+    "site": string;
+    "duration": number;
     "captions": Caption[] | null;
 }

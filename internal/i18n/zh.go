@@ -2,7 +2,7 @@ package i18n
 
 // zhCN translates the English source strings into Simplified Chinese with
 // mainland usage. A test checks that every string in the source has an entry
-// here and in zhTW, with the same formatting verbs.
+// here and in zhTW, with the same formatting verbs. zh-HK falls back to zhTW.
 var zhCN = map[string]string{
 	// Application, windows and dialogs
 	"Correct existing subtitles and identify speakers": "校正现有字幕并识别说话人",
@@ -17,6 +17,7 @@ var zhCN = map[string]string{
 	"SubRip subtitles":            "SubRip 字幕",
 	"Mousqueau project":           "Mousqueau 项目",
 	"M4A audio":                   "M4A 音频",
+	"MP4 video":                   "MP4 视频",
 	"Choose the %s executable":    "选择 %s 可执行文件",
 
 	// Standard macOS menu items
@@ -54,11 +55,12 @@ var zhCN = map[string]string{
 	"Bring All to Front":    "前置全部窗口",
 
 	// Progress
-	"Cancelling…":                           "正在取消…",
-	"Extracting audio with FFmpeg…":         "正在用 FFmpeg 截取音频…",
-	"Discovering YouTube subtitles…":        "正在查找 YouTube 字幕…",
-	"Downloading selected subtitle track…":  "正在下载所选字幕轨…",
-	"Downloading authorized YouTube audio…": "正在下载已授权的 YouTube 音频…",
+	"Cancelling…":                          "正在取消…",
+	"Extracting audio with FFmpeg…":        "正在用 FFmpeg 截取音频…",
+	"Looking up the video…":                "正在查找视频…",
+	"Downloading selected subtitle track…": "正在下载所选字幕轨…",
+	"Downloading video… %d%%":              "正在下载视频… %d%%",
+	"Downloading audio… %d%%":              "正在下载音频… %d%%",
 
 	// Editor
 	"wait for processing to finish or cancel it":                    "请等待处理完成，或取消处理",
@@ -69,7 +71,8 @@ var zhCN = map[string]string{
 	"processing cancelled or timed out; subtitles were not changed": "处理已取消或超时；字幕未被修改",
 	"confirm audio upload before analysis":                          "分析前请确认上传音频",
 	"import media and SRT subtitles before analysis":                "分析前请先导入媒体与 SRT 字幕",
-	"confirm you are authorized to download this audio":             "请确认你有权下载此音频",
+	"confirm you are authorized to download this video":             "请确认你有权下载此视频",
+	"choose subtitles, audio or video to import":                    "请选择要导入的字幕、音频或视频",
 	"unknown action":        "未知的操作",
 	"unknown theme":         "未知的主题",
 	"unknown language":      "未知的语言",
@@ -104,7 +107,7 @@ var zhCN = map[string]string{
 	"invalid SRT identifier":                                "SRT 序号无效",
 	"cue %s: text must not be empty or contain blank lines": "字幕 %s：文本不能为空，也不能包含空行",
 
-	// Media and YouTube
+	// Media and web downloads
 	"select a 1–5 minute range with a nonnegative start":                                         "请选择 1–5 分钟的范围，且开始时间不能为负",
 	"FFmpeg was not found; install it or set its location in Settings":                           "找不到 FFmpeg；请安装，或在设置中指定其位置",
 	"select an existing local video or audio file":                                               "请选择一个现有的本地视频或音频文件",
@@ -112,20 +115,19 @@ var zhCN = map[string]string{
 	"extracted audio is empty or exceeds the 24 MB upload limit":                                 "截取的音频为空，或超过 24 MB 上传上限",
 	"destination already exists; choose a new filename to preserve original files":               "目标文件已存在；请使用新文件名，以免覆盖原始文件",
 	"FFmpeg could not decode audio for the waveform":                                             "FFmpeg 无法解码音频以生成波形",
-	"use an HTTPS URL for one YouTube video":                                                     "请使用单个 YouTube 视频的 HTTPS 链接",
+	"use an HTTPS link to one video page":                                                        "请使用指向单个视频页面的 HTTPS 链接",
 	"playlists and channels are not supported":                                                   "不支持播放列表与频道",
-	"only youtube.com and youtu.be video URLs are supported":                                     "仅支持 youtube.com 与 youtu.be 的视频链接",
-	"URL must identify a single YouTube video":                                                   "链接必须指向单个 YouTube 视频",
 	"yt-dlp was not found; install it or set its location in Settings. Local imports still work": "找不到 yt-dlp；请安装，或在设置中指定其位置。本地导入不受影响",
-	"yt-dlp could not discover subtitles; check URL, network, and yt-dlp version":                "yt-dlp 无法获取字幕；请检查链接、网络与 yt-dlp 版本",
+	"yt-dlp could not read this page; check the link, network and yt-dlp version":                "yt-dlp 无法读取此页面；请检查链接、网络与 yt-dlp 版本",
 	"invalid subtitle language":                                                                  "字幕语言无效",
 	"yt-dlp is missing":                                                                          "缺少 yt-dlp",
 	"FFmpeg is required for subtitle conversion":                                                 "转换字幕需要 FFmpeg",
 	"subtitle download failed; verify the selected track is still available":                     "字幕下载失败；请确认所选字幕轨仍可用",
 	"no unique SRT subtitle downloaded":                                                          "未能下载到唯一的 SRT 字幕",
-	"yt-dlp and FFmpeg are required for audio download":                                          "下载音频需要 yt-dlp 与 FFmpeg",
-	"choose an .m4a destination":                                                                 "请选择 .m4a 目标文件",
-	"audio download failed; check authorization, availability and yt-dlp version":                "音频下载失败；请检查授权、视频可用性与 yt-dlp 版本",
+	"yt-dlp and FFmpeg are required for downloads":                                               "下载需要 yt-dlp 与 FFmpeg",
+	"choose a %s destination":                                                                    "请选择 %s 目标文件",
+	"choose audio or video":                                                                      "请选择音频或视频",
+	"download failed; check authorization, availability and yt-dlp version":                      "下载失败；请检查授权、视频可用性与 yt-dlp 版本",
 
 	// Analysis
 	"invalid diarization segment %d":              "说话人分段 %d 无效",

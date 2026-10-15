@@ -1,26 +1,30 @@
 import { createContext, useContext } from "react";
 import { enUS } from "./locales/en-US";
 import { type Messages, zhCN } from "./locales/zh-CN";
+import { zhHK } from "./locales/zh-HK";
 import { zhTW } from "./locales/zh-TW";
 
 export type { Messages };
 
 // Go resolves the language (settings, then the system) and reports it with
 // the settings; these dictionaries cover the text the frontend draws.
-export const LOCALES = ["zh-CN", "zh-TW", "en-US"] as const;
+// zh-HK reuses the Taiwan dictionary except for keys in zhHKOverrides.
+export const LOCALES = ["zh-CN", "zh-TW", "zh-HK", "en-US"] as const;
 export type Locale = (typeof LOCALES)[number];
 export type LanguageChoice = "system" | Locale;
 
 const MESSAGES: Record<Locale, Messages> = {
   "zh-CN": zhCN,
   "zh-TW": zhTW,
+  "zh-HK": zhHK,
   "en-US": enUS,
 };
 
-// Language names are shown in their own language.
+// Menu labels for each locale. Taiwan and Hong Kong use these exact names.
 export const LANGUAGE_NAMES: Record<Locale, string> = {
   "zh-CN": "简体中文",
-  "zh-TW": "繁體中文（台灣）",
+  "zh-TW": "台湾正体",
+  "zh-HK": "香港繁体",
   "en-US": "English (US)",
 };
 
@@ -32,15 +36,15 @@ export function isLocale(value: unknown): value is Locale {
   return (LOCALES as readonly unknown[]).includes(value);
 }
 
-// Mirrors Go's i18n.Match: Traditional script, or a Taiwan, Hong Kong or
-// Macau region without a script, means Traditional Chinese.
+// Mirrors Go's i18n.Match: Simplified script wins, then a Hong Kong region,
+// then Traditional script or a Taiwan or Macau region.
 export function matchLocale(tag: string | null | undefined): Locale | null {
   const t = (tag ?? "").trim().toLowerCase().replace(/_/g, "-");
   if (t === "zh" || t.startsWith("zh-")) {
     const parts = t.split("-").slice(1);
-    if (parts.includes("hant")) return "zh-TW";
     if (parts.includes("hans")) return "zh-CN";
-    return parts.some((p) => p === "tw" || p === "hk" || p === "mo")
+    if (parts.includes("hk")) return "zh-HK";
+    return parts.some((p) => p === "tw" || p === "hant" || p === "mo")
       ? "zh-TW"
       : "zh-CN";
   }

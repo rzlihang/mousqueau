@@ -246,7 +246,7 @@ func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
 	if _, err := s.EditCue(subtitle.Cue{}); err == nil || err.Error() != "请先导入 SRT 字幕" {
 		t.Fatalf("error not in Chinese: %v", err)
 	}
-	if s.begin(i18n.N("Discovering YouTube subtitles…")); s.GetStatus().Phase != "正在查找 YouTube 字幕…" {
+	if s.begin(i18n.N("Looking up the video…")); s.GetStatus().Phase != "正在查找视频…" {
 		t.Fatalf("phase not in Chinese: %q", s.GetStatus().Phase)
 	}
 	s.finish()
@@ -256,6 +256,20 @@ func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
 	}
 	if _, err := s.EditCue(subtitle.Cue{}); err == nil || err.Error() != "請先匯入 SRT 字幕" {
 		t.Fatalf("error not in Traditional Chinese: %v", err)
+	}
+	s.languages = []string{"zh-Hant-HK"}
+	if view, err = s.SetLanguage("system"); err != nil || view.Locale != "zh-HK" {
+		t.Fatalf("Hong Kong system: %+v %v", view, err)
+	}
+	if _, err := s.EditCue(subtitle.Cue{}); err == nil || err.Error() != "請先匯入 SRT 字幕" {
+		t.Fatalf("Hong Kong error: %v", err)
+	}
+	view, err = s.SetLanguage("zh-HK")
+	if err != nil || view.Language != "zh-HK" || view.Locale != "zh-HK" {
+		t.Fatalf("Hong Kong: %+v %v", view, err)
+	}
+	if saved, _ := settings.Load(path); saved.Language != "zh-HK" {
+		t.Fatalf("Hong Kong not saved: %+v", saved)
 	}
 	view, err = s.SetLanguage("en-US")
 	if err != nil || view.Language != "en-US" || view.Locale != "en-US" {
@@ -271,7 +285,7 @@ func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
 
 func TestMenuLabelsNameTheAppOnlyWhereTheyHaveRoom(t *testing.T) {
 	defer i18n.SetCurrent(i18n.Current())
-	for _, l := range []i18n.Locale{i18n.English, i18n.Chinese, i18n.Traditional} {
+	for _, l := range []i18n.Locale{i18n.English, i18n.Chinese, i18n.Traditional, i18n.HongKong} {
 		i18n.SetCurrent(l)
 		for _, item := range roleLabels {
 			label := roleLabel(item.label)

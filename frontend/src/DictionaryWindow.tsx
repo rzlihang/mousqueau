@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  App as AntApp,
   Button,
   Checkbox,
   Input,
@@ -19,6 +18,7 @@ import {
   IconMessageCircle,
   IconPlus,
   IconTag,
+  IconTrash,
   IconUser,
 } from "@tabler/icons-react";
 import { Events } from "@wailsio/runtime";
@@ -29,7 +29,8 @@ import type {
 } from "../bindings/mousqueau/internal/dictionary/models";
 import type { DictionaryView } from "../bindings/mousqueau/models";
 import { errorText, useT } from "./i18n";
-import { decorative } from "./icons";
+import IconButton from "./IconButton";
+import { decorative, statusIcon, useAntApp } from "./icons";
 import { customChrome, isMac } from "./useSettings";
 import WindowControls from "./WindowControls";
 
@@ -102,7 +103,7 @@ const sameDraft = (a: Draft, b: Draft) =>
   JSON.stringify({ ...b, personId: b.personId || undefined });
 
 export default function DictionaryWindow() {
-  const { message, modal } = AntApp.useApp();
+  const { message, modal } = useAntApp();
   const t = useT();
   const [view, setView] = useState<DictionaryView | null>(null);
   const [query, setQuery] = useState("");
@@ -390,6 +391,7 @@ export default function DictionaryWindow() {
             className="dict-alert"
             type="error"
             showIcon
+            icon={statusIcon.error}
             message={t.dictionary.readOnly}
             description={view?.error || undefined}
           />
@@ -558,15 +560,15 @@ export default function DictionaryWindow() {
                     </Button>
                   </>
                 ) : (
-                  <Button
+                  <IconButton
                     size="small"
                     type="text"
                     danger
+                    label={t.dictionary.deleteEntry}
                     disabled={readOnly}
                     onClick={() => setConfirmDelete(true)}
-                  >
-                    {t.dictionary.deleteEntry}
-                  </Button>
+                    icon={<IconTrash size={16} {...decorative} />}
+                  />
                 ))}
               <div className="spacer" />
               <Button

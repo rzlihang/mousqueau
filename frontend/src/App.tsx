@@ -12,6 +12,7 @@ import {
 import {
   Alert,
   App as AntApp,
+  Badge,
   Button,
   Checkbox,
   ConfigProvider,
@@ -32,18 +33,29 @@ import {
 import {
   IconArrowBackUp,
   IconArrowForwardUp,
+  IconDeviceFloppy,
+  IconFileImport,
+  IconFolderOpen,
+  IconMenu2,
+  IconPencil,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerSkipBack,
   IconPlayerSkipForward,
 } from "@tabler/icons-react";
 import IconButton from "./IconButton";
-import { decorative } from "./icons";
+import ImportDialog, { type ImportTab } from "./ImportDialog";
+import {
+  antdIconConfig,
+  decorative,
+  numberControls,
+  statusIcon,
+  useAntApp,
+} from "./icons";
 import { Events, Window } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { Snapshot, Status } from "../bindings/mousqueau/models";
 import type { Cue } from "../bindings/mousqueau/internal/subtitle/models";
-import type { YouTubeInfo } from "../bindings/mousqueau/internal/media/models";
 import { activeCue, formatTime, parseTime } from "./editor";
 import {
   type CueFilter,
@@ -56,6 +68,7 @@ import {
 } from "./workspace";
 import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
+import zhHK from "antd/locale/zh_HK";
 import zhTW from "antd/locale/zh_TW";
 import {
   type Locale,
@@ -134,7 +147,7 @@ function EditorApp({
   dark: boolean;
   showSample: boolean;
 }) {
-  const { message, modal } = AntApp.useApp();
+  const { message, modal } = useAntApp();
   const t = useT();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
@@ -156,7 +169,7 @@ function EditorApp({
   const [filter, setFilter] = useState<CueFilter>("all");
   const [speakerId, setSpeakerId] = useState("A");
   const [speakerName, setSpeakerName] = useState("");
-  const [youtubeOpen, setYoutubeOpen] = useState(false);
+  const [importTab, setImportTab] = useState<ImportTab | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [overlayEditing, setOverlayEditing] = useState(false);
   const [layout, setLayout] = useState<Layout>(loadLayout);
@@ -164,10 +177,6 @@ function EditorApp({
   const cueGridRef = useRef<HTMLElement>(null);
   const inspectorRef = useRef<HTMLElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
-  const [youtubeURL, setYoutubeURL] = useState("");
-  const [info, setInfo] = useState<YouTubeInfo | null>(null);
-  const [track, setTrack] = useState<number>();
-  const [audioAuthorized, setAudioAuthorized] = useState(false);
   const [matchesByCue, setMatchesByCue] = useState<Record<string, Match[]>>(
     {},
   );
@@ -401,24 +410,38 @@ function EditorApp({
     });
     setDraftDirty(false);
   }
-  function replaceProject(action: () => Promise<Snapshot>) {
-    const perform = async () => {
-      const result = await update(action);
-      if (result) {
-        setSelected(result.project?.state.cues?.[0]?.id ?? "");
-        setDraftDirty(false);
-      }
-    };
-    if (p || draftDirty)
-      modal.confirm({
-        title: t.editor.replaceTitle,
-        content: t.editor.replaceContent,
-        okText: t.editor.replaceOk,
-        cancelText: t.common.back,
-        onOk: perform,
-      });
-    else void perform();
+  // Resolves with the new snapshot, or undefined when the user backs out
+  // of the confirmation or the import fails.
+  function replaceProject(
+    action: () => Promise<Snapshot>,
+  ): Promise<Snapshot | undefined> {
+    return new Promise((resolve) => {
+      const perform = async () => {
+        const result = await update(action);
+        if (result) {
+          setSelected(result.project?.state.cues?.[0]?.id ?? "");
+          setDraftDirty(false);
+        }
+        resolve(result);
+      };
+      if (p || draftDirty)
+        modal.confirm({
+          title: t.editor.replaceTitle,
+          content: t.editor.replaceContent,
+          okText: t.editor.replaceOk,
+          cancelText: t.common.back,
+          onOk: perform,
+          onCancel: () => resolve(undefined),
+        });
+      else void perform();
+    });
   }
+  // A cancelled file picker returns the snapshot unchanged; only a new
+  // project or new media closes the import dialog.
+  const replaced = (next: Snapshot | undefined) =>
+    !!next && next.project !== null && !sameProject(next.project, p);
+  const mediaChanged = (next: Snapshot | undefined) =>
+    !!next && next.mediaUrl !== snapshot?.mediaUrl;
   function seek(time: number) {
     if (video.current) video.current.currentTime = time;
     setPlayhead(time);
@@ -536,7 +559,12 @@ function EditorApp({
               `${formatTime(rangeStart)} — ${formatTime(rangeEnd)}`,
             )}
           </span>
-          {caution && <Alert type="warning" showIcon title={caution} />}
+          {caution && <Alert
+              type="warning"
+              showIcon
+              icon={statusIcon.warning}
+              title={caution}
+            />}
         </div>
       ),
       okText: t.editor.uploadOk,
@@ -694,10 +722,10 @@ function EditorApp({
                       onClick: () => replaceProject(Editor.ImportSRT),
                     },
                     {
-                      key: "youtube",
-                      label: t.editor.importYoutube,
+                      key: "web",
+                      label: t.editor.importWeb,
                       disabled: busy,
-                      onClick: () => setYoutubeOpen(true),
+                      onClick: () => setImportTab("web"),
                     },
                     ...(showSample
                       ? [
@@ -779,20 +807,8 @@ function EditorApp({
               title={t.menu.title}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M2 3.5h12M2 8h12M2 12.5h12" />
-              </svg>
-            </Button>
+              icon={<IconMenu2 size={16} {...decorative} />}
+            />
           </Dropdown>
         )}
         <div className="project-title">
@@ -835,27 +851,15 @@ function EditorApp({
         </div>
         <div className="toolbar-divider" />
         <div className="toolbar-group">
-          <Button
+          <IconButton
+            type="text"
             size="small"
-            disabled={busy || draftDirty}
-            onClick={() => void update(Editor.ImportVideo)}
-          >
-            {t.common.importMedia}
-          </Button>
-          <Button
-            size="small"
-            disabled={busy}
-            onClick={() => replaceProject(Editor.ImportSRT)}
-          >
-            {t.common.importSrt}
-          </Button>
-          <Button
-            size="small"
-            disabled={busy}
-            onClick={() => setYoutubeOpen(true)}
-          >
-            {t.editor.importYoutube}
-          </Button>
+            className="icon-button"
+            placement="bottom"
+            label={t.importer.title}
+            onClick={() => setImportTab("local")}
+            icon={<IconFileImport size={16} {...decorative} />}
+          />
           {showSample && (
             <Button
               size="small"
@@ -869,21 +873,34 @@ function EditorApp({
         </div>
         <div className="spacer" />
         <div className="toolbar-group">
-          <Button
+          <IconButton
+            type="text"
             size="small"
+            className="icon-button"
+            placement="bottom"
+            label={t.editor.openProject}
             disabled={busy}
             onClick={() => replaceProject(Editor.OpenProject)}
-          >
-            {t.editor.openProject}
-          </Button>
-          <Button
+            icon={<IconFolderOpen size={16} {...decorative} />}
+          />
+          <IconButton
+            type="text"
             size="small"
+            className="icon-button"
+            placement="bottom"
+            label={t.editor.saveProject}
             disabled={busy || !p}
             onClick={() => void save(false)}
-          >
-            {t.editor.saveProject}
-            {dirty || draftDirty ? " •" : ""}
-          </Button>
+            icon={
+              <Badge
+                dot={dirty || draftDirty}
+                color="var(--accent)"
+                offset={[-1, 2]}
+              >
+                <IconDeviceFloppy size={16} {...decorative} />
+              </Badge>
+            }
+          />
           <Tooltip title={t.editor.exportHint}>
             <Button
               size="small"
@@ -1412,17 +1429,17 @@ function EditorApp({
                         )}
                       </span>
                       <div className="spacer" />
-                      <Button
+                      <IconButton
                         size="small"
                         type="text"
+                        label={t.inspector.rename}
                         disabled={busy}
                         onClick={() => {
                           setSpeakerId(s.id);
                           setSpeakerName(s.name);
                         }}
-                      >
-                        {t.inspector.rename}
-                      </Button>
+                        icon={<IconPencil size={16} {...decorative} />}
+                      />
                     </div>
                   ))}
                   <div className="speaker-row">
@@ -1560,6 +1577,7 @@ function EditorApp({
                       {t.range.start}
                       <InputNumber
                         size="small"
+                        controls={numberControls}
                         min={0}
                         value={rangeStart}
                         disabled={busy}
@@ -1570,6 +1588,7 @@ function EditorApp({
                       {t.range.end}
                       <InputNumber
                         size="small"
+                        controls={numberControls}
                         min={0}
                         value={rangeEnd}
                         disabled={busy}
@@ -1690,105 +1709,25 @@ function EditorApp({
         )}
       </footer>
 
-      <Modal
-        title={t.youtube.title}
-        open={youtubeOpen}
-        onCancel={() => setYoutubeOpen(false)}
-        footer={null}
-        width={650}
-      >
-        <p>{t.youtube.intro}</p>
-        {!status?.ytdlp && (
-          <Alert type="warning" title={t.youtube.needsYtdlp} />
-        )}
-        <Space.Compact block>
-          <Input
-            value={youtubeURL}
-            disabled={busy}
-            placeholder="https://www.youtube.com/watch?v=…"
-            onChange={(e) => {
-              setYoutubeURL(e.target.value);
-              setInfo(null);
-              setTrack(undefined);
-              setAudioAuthorized(false);
-            }}
-          />
-          <Button
-            disabled={busy || !status?.ytdlp}
-            onClick={async () => {
-              const result = await run(() =>
-                Editor.DiscoverYouTube(youtubeURL),
-              );
-              if (result) {
-                setInfo(result);
-                setTrack((result.captions ?? []).length ? 0 : undefined);
-              }
-            }}
-          >
-            {t.youtube.discover}
-          </Button>
-        </Space.Compact>
-        {info && (
-          <div className="youtube-results">
-            <h3>{info.title}</h3>
-            {(info.captions ?? []).length ? (
-              <Select
-                style={{ width: "100%" }}
-                value={track}
-                disabled={busy}
-                options={(info.captions ?? []).map((c, i) => ({
-                  value: i,
-                  label: `${c.language} · ${c.automatic ? t.youtube.automatic : t.youtube.manual}`,
-                }))}
-                onChange={setTrack}
-              />
-            ) : (
-              <Empty description={t.youtube.noCaptions} />
-            )}
-            <Button
-              className="notice"
-              disabled={busy || track === undefined || !status?.ffmpeg}
-              onClick={() => {
-                const caption = info.captions![track!];
-                replaceProject(() =>
-                  Editor.ImportYouTubeCaption(
-                    youtubeURL,
-                    caption.language,
-                    caption.automatic,
-                  ),
-                );
-              }}
-            >
-              {t.youtube.importCaption}
-            </Button>
-          </div>
-        )}
-        <hr className="divider" />
-        <Checkbox
-          checked={audioAuthorized}
-          disabled={busy}
-          onChange={(e) => setAudioAuthorized(e.target.checked)}
-        >
-          {t.youtube.authorized}
-        </Checkbox>
-        <Button
-          className="notice"
-          block
-          disabled={
-            busy ||
-            draftDirty ||
-            !audioAuthorized ||
-            !status?.ytdlp ||
-            !status?.ffmpeg
-          }
-          onClick={() =>
-            void update(() => Editor.DownloadYouTubeAudio(youtubeURL, true))
-          }
-        >
-          {t.youtube.downloadAudio}
-        </Button>
-        <p className="muted">{t.youtube.noUpload}</p>
-      </Modal>
+      <ImportDialog
+        open={importTab !== null}
+        tab={importTab ?? "local"}
+        onTab={setImportTab}
+        onClose={() => setImportTab(null)}
+        busy={busy}
+        status={status}
+        draftDirty={draftDirty}
+        onImportMedia={async () => mediaChanged(await update(Editor.ImportVideo))}
+        onImportSrt={async () => replaced(await replaceProject(Editor.ImportSRT))}
+        onDiscover={(url) => run(() => Editor.DiscoverWeb(url))}
+        onImportWeb={async (url, req) => {
+          const action = () => Editor.ImportWeb(url, req);
+          const next = req.language
+            ? await replaceProject(action)
+            : await update(action);
+          return req.language ? replaced(next) : mediaChanged(next);
+        }}
+      />
 
       <Modal
         title={t.inspector.dictionaryAddSelection}
@@ -1897,7 +1836,25 @@ const RESIZE_EDGE = 8;
 // window managers draw none, so the page draws its own edge.
 const edged = customChrome && !isWindows;
 
-const ANTD_LOCALES = { "zh-CN": zhCN, "zh-TW": zhTW, "en-US": enUS };
+const ANTD_LOCALES = {
+  "zh-CN": zhCN,
+  "zh-TW": zhTW,
+  "zh-HK": zhHK,
+  "en-US": enUS,
+};
+
+// Snapshots arrive as fresh objects; compare what an import would change.
+function sameProject(
+  a: Snapshot["project"] | undefined,
+  b: Snapshot["project"] | undefined,
+) {
+  if (!a || !b) return a === b;
+  return (
+    a.subtitlePath === b.subtitlePath &&
+    (a.undo?.length ?? 0) === (b.undo?.length ?? 0) &&
+    JSON.stringify(a.state) === JSON.stringify(b.state)
+  );
+}
 
 export default function App() {
   const [settings, setSettings] = useSettings();
@@ -1973,6 +1930,9 @@ export default function App() {
   }, [settings, dark]);
   return (
     <ConfigProvider
+      {...antdIconConfig}
+      // Dialogs hold typed input and downloads; only × or Esc closes them.
+      modal={{ ...antdIconConfig.modal, mask: { closable: false } }}
       locale={ANTD_LOCALES[locale]}
       button={{ autoInsertSpace: false }}
       theme={{

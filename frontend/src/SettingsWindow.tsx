@@ -1,7 +1,6 @@
 import { type UIEvent, useEffect, useRef, useState } from "react";
 import {
   Alert,
-  App as AntApp,
   AutoComplete,
   Button,
   Input,
@@ -25,7 +24,7 @@ import {
   IconSettings,
   IconTool,
 } from "@tabler/icons-react";
-import { decorative } from "./icons";
+import { decorative, statusIcon, useAntApp } from "./icons";
 import {
   FONT_PRESETS,
   SECTIONS,
@@ -128,7 +127,7 @@ function ProviderCard({
   keychainAvailable: boolean;
   apply: Apply;
 }) {
-  const { message } = AntApp.useApp();
+  const { message } = useAntApp();
   const t = useT();
   const credentials = provider.credentials ?? [];
   const envVars = provider.envVars ?? [];
@@ -202,7 +201,12 @@ function ProviderCard({
       </div>
       {caution && (
         <div className="set-row">
-          <Alert type="warning" showIcon title={caution} />
+          <Alert
+            type="warning"
+            showIcon
+            icon={statusIcon.warning}
+            title={caution}
+          />
         </div>
       )}
       {provider.needsEndpoint && (
@@ -307,6 +311,7 @@ function ProviderCard({
         <span className="set-hint">{t.settings.removeHint}</span>
         <div className="set-line">
           <Popconfirm
+            icon={statusIcon.warning}
             title={t.settings.removeConfirm(keyStore(t))}
             okText={t.settings.remove}
             cancelText={t.common.cancel}
@@ -319,6 +324,7 @@ function ProviderCard({
             </Button>
           </Popconfirm>
           <Popconfirm
+            icon={statusIcon.warning}
             title={t.settings.removeProviderConfirm(provider.name)}
             okText={t.settings.remove}
             cancelText={t.common.cancel}
@@ -400,7 +406,7 @@ export default function SettingsWindow({
   dark,
   systemDark,
 }: Props) {
-  const { message, modal } = AntApp.useApp();
+  const { message, modal } = useAntApp();
   const t = useT();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<SectionId>("general");
@@ -426,8 +432,23 @@ export default function SettingsWindow({
       return false;
     }
   };
+  // While a sidebar click scrolls the page, the sections it passes over must
+  // not light up in turn; the lock lifts once the scrolling has settled.
+  const jumping = useRef<number>(undefined);
+  const settle = () => {
+    window.clearTimeout(jumping.current);
+    jumping.current = window.setTimeout(() => {
+      jumping.current = undefined;
+    }, 150);
+  };
+  const release = () => {
+    window.clearTimeout(jumping.current);
+    jumping.current = undefined;
+  };
+  useEffect(() => release, []);
   // Keep the sidebar in step with whichever section heading reached the top.
   const onScroll = (e: UIEvent<HTMLDivElement>) => {
+    if (jumping.current !== undefined) return settle();
     const box = e.currentTarget;
     let current: string | undefined;
     for (const sec of box.querySelectorAll<HTMLElement>("[data-sec]")) {
@@ -439,8 +460,10 @@ export default function SettingsWindow({
   const jump = (id: SectionId) => {
     const box = scroller.current;
     const target = box?.querySelector<HTMLElement>(`[data-sec="${id}"]`);
-    if (box && target)
+    if (box && target) {
+      settle();
       box.scrollTo({ top: target.offsetTop, behavior: "smooth" });
+    }
     setActive(id);
   };
   // Adding a provider under mainland Chinese law, or a custom endpoint,
@@ -508,7 +531,14 @@ export default function SettingsWindow({
           <h1>{t.settings.title}</h1>
           {customChrome && <WindowControls />}
         </div>
-        <div className="set-scroll" ref={scroller} onScroll={onScroll}>
+        <div
+          className="set-scroll"
+          ref={scroller}
+          onScroll={onScroll}
+          onWheel={release}
+          onTouchStart={release}
+          onKeyDown={release}
+        >
           {!any && <div className="set-empty">{t.settings.noMatch(query)}</div>}
 
           {sections.general && (

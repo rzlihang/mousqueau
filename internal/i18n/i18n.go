@@ -16,9 +16,10 @@ const (
 	English     Locale = "en-US"
 	Chinese     Locale = "zh-CN" // Simplified, mainland usage
 	Traditional Locale = "zh-TW" // Traditional, Taiwan usage
+	HongKong    Locale = "zh-HK" // Traditional, Hong Kong usage
 )
 
-var locales = []Locale{English, Chinese, Traditional}
+var locales = []Locale{English, Chinese, Traditional, HongKong}
 
 // System is the language choice that follows the operating system.
 const System = "system"
@@ -50,8 +51,8 @@ func supported(choice string) bool {
 }
 
 // Match maps a language tag such as "zh-Hans-CN", "zh_TW.UTF-8" or "en-GB"
-// to a supported locale. Traditional script, or a Taiwan, Hong Kong or Macau
-// region without a script, means Traditional Chinese; any other Chinese
+// to a supported locale. Simplified script wins, then a Hong Kong region,
+// then Traditional script or a Taiwan or Macau region. Any other Chinese
 // means Simplified.
 func Match(tag string) (Locale, bool) {
 	tag = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(tag), "_", "-"))
@@ -59,15 +60,17 @@ func Match(tag string) (Locale, bool) {
 	case tag == "zh" || strings.HasPrefix(tag, "zh-"):
 		parts := strings.Split(tag, "-")[1:]
 		for _, part := range parts {
-			switch part {
-			case "hant":
-				return Traditional, true
-			case "hans":
+			if part == "hans" {
 				return Chinese, true
 			}
 		}
 		for _, part := range parts {
-			if part == "tw" || part == "hk" || part == "mo" {
+			if part == "hk" {
+				return HongKong, true
+			}
+		}
+		for _, part := range parts {
+			if part == "tw" || part == "hant" || part == "mo" {
 				return Traditional, true
 			}
 		}
@@ -101,7 +104,7 @@ func T(format string, args ...any) string { return In(Current(), format, args...
 func N(s string) string { return s }
 
 func In(l Locale, format string, args ...any) string {
-	if translated, ok := catalogs[l][format]; ok {
+	if translated, ok := lookup(l, format); ok {
 		format = translated
 	}
 	if len(args) == 0 {
@@ -135,4 +138,20 @@ func (e *Error) Unwrap() []error {
 	return wrapped
 }
 
-var catalogs = map[Locale]map[string]string{Chinese: zhCN, Traditional: zhTW}
+// parent is the catalog a locale uses when it has no entry of its own.
+// Hong Kong falls back to Taiwan and overrides only the strings in zhHK.
+var parent = map[Locale]Locale{HongKong: Traditional}
+
+func lookup(l Locale, format string) (string, bool) {
+	if translated, ok := catalogs[l][format]; ok {
+		return translated, true
+	}
+	if base, ok := parent[l]; ok {
+		if translated, ok := catalogs[base][format]; ok {
+			return translated, true
+		}
+	}
+	return "", false
+}
+
+var catalogs = map[Locale]map[string]string{Chinese: zhCN, Traditional: zhTW, HongKong: zhHK}

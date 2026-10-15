@@ -108,7 +108,7 @@ const KEYWORDS = {
   theme:
     "主题 外观 深色 浅色 跟随系统 主題 外觀 淺色 跟隨系統 theme appearance dark light system",
   language:
-    "语言 中文 简体 繁体 英文 英语 語言 簡體 繁體 英語 台灣 language chinese traditional english system",
+    "语言 中文 简体 繁体 英文 英语 語言 簡體 繁體 英語 台灣 香港 台湾正体 香港繁体 language chinese traditional english system",
   font: "字幕 字体 字體 字型 预览 預覽 subtitle font typeface",
   startup:
     "启动 上次 项目 打开 啟動 專案 開啟 launch startup last project open",
