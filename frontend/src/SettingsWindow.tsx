@@ -1,7 +1,6 @@
 import { type UIEvent, useEffect, useRef, useState } from "react";
 import {
   Alert,
-  App as AntApp,
   AutoComplete,
   Button,
   Input,
@@ -25,7 +24,7 @@ import {
   IconSettings,
   IconTool,
 } from "@tabler/icons-react";
-import { decorative } from "./icons";
+import { decorative, statusIcon, useAntApp } from "./icons";
 import {
   FONT_PRESETS,
   SECTIONS,
@@ -128,7 +127,7 @@ function ProviderCard({
   keychainAvailable: boolean;
   apply: Apply;
 }) {
-  const { message } = AntApp.useApp();
+  const { message } = useAntApp();
   const t = useT();
   const credentials = provider.credentials ?? [];
   const envVars = provider.envVars ?? [];
@@ -202,7 +201,12 @@ function ProviderCard({
       </div>
       {caution && (
         <div className="set-row">
-          <Alert type="warning" showIcon title={caution} />
+          <Alert
+            type="warning"
+            showIcon
+            icon={statusIcon.warning}
+            title={caution}
+          />
         </div>
       )}
       {provider.needsEndpoint && (
@@ -307,6 +311,7 @@ function ProviderCard({
         <span className="set-hint">{t.settings.removeHint}</span>
         <div className="set-line">
           <Popconfirm
+            icon={statusIcon.warning}
             title={t.settings.removeConfirm(keyStore(t))}
             okText={t.settings.remove}
             cancelText={t.common.cancel}
@@ -319,6 +324,7 @@ function ProviderCard({
             </Button>
           </Popconfirm>
           <Popconfirm
+            icon={statusIcon.warning}
             title={t.settings.removeProviderConfirm(provider.name)}
             okText={t.settings.remove}
             cancelText={t.common.cancel}
@@ -400,7 +406,7 @@ export default function SettingsWindow({
   dark,
   systemDark,
 }: Props) {
-  const { message, modal } = AntApp.useApp();
+  const { message, modal } = useAntApp();
   const t = useT();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<SectionId>("general");

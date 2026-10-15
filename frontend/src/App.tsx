@@ -43,7 +43,13 @@ import {
   IconPlayerSkipForward,
 } from "@tabler/icons-react";
 import IconButton from "./IconButton";
-import { decorative } from "./icons";
+import {
+  antdIconConfig,
+  decorative,
+  numberControls,
+  statusIcon,
+  useAntApp,
+} from "./icons";
 import { Events, Window } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { Snapshot, Status } from "../bindings/mousqueau/models";
@@ -139,7 +145,7 @@ function EditorApp({
   dark: boolean;
   showSample: boolean;
 }) {
-  const { message, modal } = AntApp.useApp();
+  const { message, modal } = useAntApp();
   const t = useT();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
@@ -541,7 +547,12 @@ function EditorApp({
               `${formatTime(rangeStart)} — ${formatTime(rangeEnd)}`,
             )}
           </span>
-          {caution && <Alert type="warning" showIcon title={caution} />}
+          {caution && <Alert
+              type="warning"
+              showIcon
+              icon={statusIcon.warning}
+              title={caution}
+            />}
         </div>
       ),
       okText: t.editor.uploadOk,
@@ -1566,6 +1577,7 @@ function EditorApp({
                       {t.range.start}
                       <InputNumber
                         size="small"
+                        controls={numberControls}
                         min={0}
                         value={rangeStart}
                         disabled={busy}
@@ -1576,6 +1588,7 @@ function EditorApp({
                       {t.range.end}
                       <InputNumber
                         size="small"
+                        controls={numberControls}
                         min={0}
                         value={rangeEnd}
                         disabled={busy}
@@ -1979,6 +1992,7 @@ export default function App() {
   }, [settings, dark]);
   return (
     <ConfigProvider
+      {...antdIconConfig}
       locale={ANTD_LOCALES[locale]}
       button={{ autoInsertSpace: false }}
       theme={{

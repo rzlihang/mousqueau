@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  App as AntApp,
   Button,
   Input,
   Radio,
@@ -13,7 +12,7 @@ import * as Editor from "../bindings/mousqueau/editorservice";
 import type { SettingsView, ToolStatus } from "../bindings/mousqueau/models";
 import { LANGUAGE_NAMES, errorText, matchLocale, useT } from "./i18n";
 import { IconCircleCheckFilled } from "@tabler/icons-react";
-import { decorative } from "./icons";
+import { decorative, useAntApp } from "./icons";
 import {
   languageChoice,
   languageOptions,
@@ -117,7 +116,7 @@ export default function WelcomeWindow({
   onChange,
   systemDark,
 }: Props) {
-  const { message } = AntApp.useApp();
+  const { message } = useAntApp();
   const t = useT();
   const [step, setStep] = useState(0);
   const [working, setWorking] = useState(false);
