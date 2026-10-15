@@ -66,6 +66,15 @@ import {
   renderLines,
 } from "./cueLines";
 import {
+  bindKeymap,
+  type CommandId,
+  lastRun,
+  type Handlers,
+  shortcutOf,
+} from "./keymap";
+import ShortcutsDialog from "./ShortcutsDialog";
+import type { ZoomRequest } from "./Timeline";
+import {
   type CueFilter,
   codePointOffset,
   cueStatus,
@@ -149,7 +158,8 @@ type Wave =
   | { url: string; error: string }
   | null;
 const colors = ["#1677ff", "#52c41a", "#d46b08"];
-const settingsShortcut = isMac ? "⌘," : "Ctrl+,";
+const settingsShortcut = shortcutOf("settings");
+const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 // Pane sizes the user dragged, in pixels; unset sizes follow the stylesheet.
 type Layout = { left?: number; right?: number; timeline?: number };
@@ -196,6 +206,8 @@ function EditorApp({
   const [importTab, setImportTab] = useState<ImportTab | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [overlayEditing, setOverlayEditing] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [zoomRequest, setZoomRequest] = useState<ZoomRequest>();
   const [layout, setLayout] = useState<Layout>(loadLayout);
   const upperRef = useRef<HTMLDivElement>(null);
   const cueGridRef = useRef<HTMLElement>(null);
@@ -495,6 +507,67 @@ function EditorApp({
     if (v.paused) void v.play().catch((e) => message.error(errorText(e)));
     else v.pause();
   }
+  function nudge(seconds: number) {
+    if (!mediaUrl) return false;
+    const end = mediaDuration || duration;
+    seek(Math.min(end, Math.max(0, playhead + seconds)));
+  }
+  function setSpeed(value: number) {
+    setRate(value);
+    if (video.current) video.current.playbackRate = value;
+  }
+  function stepRate(delta: number) {
+    const next = RATES[RATES.indexOf(rate) + delta];
+    if (next === undefined) return false;
+    setSpeed(next);
+  }
+  // Puts the text cursor in the viewer subtitle of the selected cue.
+  function editText() {
+    const el = textArea.current?.resizableTextArea?.textArea;
+    if (el) {
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    } else if (cue) {
+      focusOverlay.current = true;
+      setTab("edit");
+      seek(cue.start);
+    }
+  }
+  // ⌃⌥n: with words selected in the viewer, moves them to a line for the
+  // nth speaker; otherwise sets the speaker of the line the cursor is in,
+  // or toggles the speaker on the cue. 0 means no speaker.
+  function assignSpeaker(n: number) {
+    if (!cue || busy) return false;
+    const speaker = n ? speakers[n - 1] : undefined;
+    if (n && !speaker) return false;
+    const el = textArea.current?.resizableTextArea?.textArea;
+    if (el && el.selectionEnd > el.selectionStart) {
+      assignSelection(speaker?.id);
+      return;
+    }
+    const ids = speaker ? [speaker.id] : [];
+    if (draft.lines) {
+      if (!el || document.activeElement !== el) {
+        void message.info(t.inspector.assignNeedsLine);
+        return;
+      }
+      const row = draft.text.slice(0, el.selectionStart).split("\n").length - 1;
+      const line = draft.lines[row];
+      if (!line) return false;
+      const same = !!speaker && line.speakerIds.length === 1 && line.speakerIds[0] === speaker.id;
+      changeLines(
+        draft.lines.map((l, i) => (i === row ? { ...l, speakerIds: same ? [] : ids } : l)),
+      );
+      return;
+    }
+    if (!speaker) changeDraft({ speakerIds: [] });
+    else
+      changeDraft({
+        speakerIds: draft.speakerIds.includes(speaker.id)
+          ? draft.speakerIds.filter((id) => id !== speaker.id)
+          : [...draft.speakerIds, speaker.id],
+      });
+  }
   // Splits at the text cursor; the time follows the playhead when it is
   // inside the cue, otherwise the share of text before the cursor.
   function splitCue() {
@@ -672,45 +745,71 @@ function EditorApp({
   }, [message, t]);
   const canUndo = !busy && !draftDirty && !!p?.undo?.length;
   const canRedo = !busy && !draftDirty && !!p?.redo?.length;
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      // On macOS the application menu owns this shortcut.
-      if (!isMac && e.ctrlKey && e.key === ",") {
-        e.preventDefault();
-        void Editor.OpenSettings();
-        return;
-      }
-      // Space plays and pauses unless it is typing into a field. Taking the
-      // key also stops it from pressing whichever button has focus.
-      if (
-        e.code === "Space" &&
-        !(e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) &&
-        !target.closest(
-          "input, textarea, select, [contenteditable], .ant-modal, .ant-select",
-        )
-      ) {
-        e.preventDefault();
-        if (!e.repeat) togglePlay();
-        return;
-      }
-      if (
-        !(e.metaKey || e.ctrlKey) ||
-        target.closest("input, textarea, [contenteditable], .ant-modal")
-      )
-        return;
-      const key = e.key.toLowerCase();
-      if (key === "z" && !e.shiftKey && canUndo) {
-        e.preventDefault();
-        void update(Editor.Undo);
-      } else if (((key === "z" && e.shiftKey) || key === "y") && canRedo) {
-        e.preventDefault();
-        void update(Editor.Redo);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
+  // Keyboard shortcuts (keymap.ts). A handler returning false did nothing,
+  // so the key keeps its usual effect.
+  const keyHandlers = useRef<Handlers>({});
+  keyHandlers.current = {
+    openProject: () => !busy && void replaceProject(Editor.OpenProject),
+    saveProject: () => !busy && !!p && void save(false),
+    import: () => !busy && void setImportTab("local"),
+    exportSrt: () => !busy && !!p && void save(true),
+    settings: () => void Editor.OpenSettings(),
+    dictionary: () => void Editor.OpenDictionary(),
+    shortcuts: () => setShortcutsOpen(true),
+    undo: () => canUndo && void update(Editor.Undo),
+    redo: () => canRedo && void update(Editor.Redo),
+    playPause: () => !!mediaUrl && togglePlay(),
+    pause: () => void video.current?.pause(),
+    back1: () => nudge(-1),
+    forward1: () => nudge(1),
+    back2: () => nudge(-2),
+    forward2: () => nudge(2),
+    back10: () => nudge(-10),
+    forward10: () => nudge(10),
+    slower: () => stepRate(-1),
+    faster: () => stepRate(1),
+    replay: () => {
+      if (!cue || !mediaUrl) return false;
+      seek(cue.start);
+      void video.current?.play().catch(() => undefined);
+    },
+    previousCue: () => !!cues.length && stepCue(-1),
+    nextCue: () => !!cues.length && stepCue(1),
+    editText: () => !!cue && editText(),
+    applyEdit: () => draftDirty && !busy && void applyDraft(),
+    setStart: () => !!cue && changeDraft({ start: formatTime(playhead) }),
+    setEnd: () => !!cue && changeDraft({ end: formatTime(playhead) }),
+    split: () => {
+      if (!cue || busy || draftDirty) return false;
+      if (cue.lines && cue.lines.length > 1)
+        void update(() => Editor.SplitCueLines(cue.id));
+      else splitCue();
+    },
+    mergeNext: () =>
+      !!cue && !!nextCue && !busy && !draftDirty && void mergeCues(cue),
+    mergePrevious: () =>
+      !!previousCue && !busy && !draftDirty && void mergeCues(previousCue),
+    toggleReview: () => !!cue && changeDraft({ review: !draft.review }),
+    zoomIn: () => setZoomRequest((z) => ({ kind: "in", n: (z?.n ?? 0) + 1 })),
+    zoomOut: () =>
+      setZoomRequest((z) => ({ kind: "out", n: (z?.n ?? 0) + 1 })),
+    zoomToCue: () =>
+      !!cue && setZoomRequest((z) => ({ kind: "cue", n: (z?.n ?? 0) + 1 })),
+  };
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 0])
+    keyHandlers.current[`speaker${n}` as CommandId] = () => assignSpeaker(n);
+  useEffect(() => bindKeymap(keyHandlers), []);
+  // The macOS menu bar sends its commands as events. A key the page took
+  // does not reach the menu; should one ever arrive too, it runs once.
+  useEffect(
+    () =>
+      Events.On("command", (e) => {
+        const id = String(e.data) as CommandId;
+        if (lastRun.id === id && performance.now() - lastRun.at < 300) return;
+        keyHandlers.current[id]?.();
+      }),
+    [],
+  );
 
   const speakerOptions = speakers.map((s) => ({ value: s.id, label: s.name }));
   const cueSuggestions = cue
@@ -770,19 +869,28 @@ function EditorApp({
                   children: [
                     {
                       key: "open",
-                      label: t.editor.openProject,
+                      label: t.editor.withShortcut(
+                        t.editor.openProject,
+                        shortcutOf("openProject"),
+                      ),
                       disabled: busy,
                       onClick: () => replaceProject(Editor.OpenProject),
                     },
                     {
                       key: "save",
-                      label: t.editor.saveProject,
+                      label: t.editor.withShortcut(
+                        t.editor.saveProject,
+                        shortcutOf("saveProject"),
+                      ),
                       disabled: busy || !p,
                       onClick: () => void save(false),
                     },
                     {
                       key: "export",
-                      label: t.editor.exportSrt,
+                      label: t.editor.withShortcut(
+                        t.editor.exportSrt,
+                        shortcutOf("exportSrt"),
+                      ),
                       disabled: busy || !p,
                       onClick: () => void save(true),
                     },
@@ -824,13 +932,13 @@ function EditorApp({
                   children: [
                     {
                       key: "undo",
-                      label: t.editor.withShortcut(t.editor.undo, "Ctrl+Z"),
+                      label: t.editor.withShortcut(t.editor.undo, shortcutOf("undo")),
                       disabled: !canUndo,
                       onClick: () => void update(Editor.Undo),
                     },
                     {
                       key: "redo",
-                      label: t.editor.withShortcut(t.editor.redo, "Ctrl+Shift+Z"),
+                      label: t.editor.withShortcut(t.editor.redo, shortcutOf("redo")),
                       disabled: !canRedo,
                       onClick: () => void update(Editor.Redo),
                     },
@@ -841,8 +949,19 @@ function EditorApp({
                     },
                     {
                       key: "dictionary",
-                      label: t.inspector.dictionaryOpen,
+                      label: t.editor.withShortcut(
+                        t.inspector.dictionaryOpen,
+                        shortcutOf("dictionary"),
+                      ),
                       onClick: () => void run(Editor.OpenDictionary),
+                    },
+                    {
+                      key: "shortcuts",
+                      label: t.editor.withShortcut(
+                        t.shortcuts.title,
+                        shortcutOf("shortcuts"),
+                      ),
+                      onClick: () => setShortcutsOpen(true),
                     },
                   ],
                 },
@@ -903,10 +1022,7 @@ function EditorApp({
             className="icon-button"
             placement="bottom"
             label={t.editor.undo}
-            tooltip={t.editor.withShortcut(
-              t.editor.undo,
-              isMac ? "⌘Z" : "Ctrl+Z",
-            )}
+            tooltip={t.editor.withShortcut(t.editor.undo, shortcutOf("undo"))}
             disabled={!canUndo}
             onClick={() => void update(Editor.Undo)}
             icon={<IconArrowBackUp size={16} {...decorative} />}
@@ -917,10 +1033,7 @@ function EditorApp({
             className="icon-button"
             placement="bottom"
             label={t.editor.redo}
-            tooltip={t.editor.withShortcut(
-              t.editor.redo,
-              isMac ? "⇧⌘Z" : "Ctrl+Shift+Z",
-            )}
+            tooltip={t.editor.withShortcut(t.editor.redo, shortcutOf("redo"))}
             disabled={!canRedo}
             onClick={() => void update(Editor.Redo)}
             icon={<IconArrowForwardUp size={16} {...decorative} />}
@@ -934,6 +1047,7 @@ function EditorApp({
             className="icon-button"
             placement="bottom"
             label={t.importer.title}
+            tooltip={t.editor.withShortcut(t.importer.title, shortcutOf("import"))}
             onClick={() => setImportTab("local")}
             icon={<IconFileImport size={16} {...decorative} />}
           />
@@ -956,6 +1070,10 @@ function EditorApp({
             className="icon-button"
             placement="bottom"
             label={t.editor.openProject}
+            tooltip={t.editor.withShortcut(
+              t.editor.openProject,
+              shortcutOf("openProject"),
+            )}
             disabled={busy}
             onClick={() => replaceProject(Editor.OpenProject)}
             icon={<IconFolderOpen size={16} {...decorative} />}
@@ -966,6 +1084,10 @@ function EditorApp({
             className="icon-button"
             placement="bottom"
             label={t.editor.saveProject}
+            tooltip={t.editor.withShortcut(
+              t.editor.saveProject,
+              shortcutOf("saveProject"),
+            )}
             disabled={busy || !p}
             onClick={() => void save(false)}
             icon={
@@ -978,7 +1100,9 @@ function EditorApp({
               </Badge>
             }
           />
-          <Tooltip title={t.editor.exportHint}>
+          <Tooltip
+            title={t.editor.withShortcut(t.editor.exportHint, shortcutOf("exportSrt"))}
+          >
             <Button
               size="small"
               type="primary"
@@ -1159,6 +1283,11 @@ function EditorApp({
                       setOverlayEditing(true);
                     }}
                     onBlur={() => setOverlayEditing(false)}
+                    onKeyDown={(e) => {
+                      // Esc leaves the text, keeping the draft, so the
+                      // single-key shortcuts work again.
+                      if (e.key === "Escape") e.currentTarget.blur();
+                    }}
                     onChange={(e) => changeDraft({ text: e.target.value })}
                   />
                 ) : (
@@ -1189,12 +1318,20 @@ function EditorApp({
             <div className="transport-buttons">
               <IconButton
                 label={t.viewer.previous}
+                tooltip={t.editor.withShortcut(
+                  t.viewer.previous,
+                  shortcutOf("previousCue"),
+                )}
                 icon={<IconPlayerSkipBack size={18} {...decorative} />}
                 disabled={busy || !cues.length}
                 onClick={() => stepCue(-1)}
               />
               <IconButton
                 label={playing ? t.viewer.pause : t.viewer.play}
+                tooltip={t.editor.withShortcut(
+                  playing ? t.viewer.pause : t.viewer.play,
+                  shortcutOf("playPause"),
+                )}
                 icon={
                   playing ? (
                     <IconPlayerPause size={18} {...decorative} />
@@ -1207,6 +1344,10 @@ function EditorApp({
               />
               <IconButton
                 label={t.viewer.next}
+                tooltip={t.editor.withShortcut(
+                  t.viewer.next,
+                  shortcutOf("nextCue"),
+                )}
                 icon={<IconPlayerSkipForward size={18} {...decorative} />}
                 disabled={busy || !cues.length}
                 onClick={() => stepCue(1)}
@@ -1217,11 +1358,8 @@ function EditorApp({
               aria-label={t.viewer.speed}
               value={rate}
               style={{ width: 72 }}
-              onChange={(value) => {
-                setRate(value);
-                if (video.current) video.current.playbackRate = value;
-              }}
-              options={[0.5, 0.75, 1, 1.25, 1.5, 2].map((v) => ({
+              onChange={setSpeed}
+              options={RATES.map((v) => ({
                 value: v,
                 label: `${v.toFixed(v % 0.5 ? 2 : 1)}×`,
               }))}
@@ -1377,7 +1515,7 @@ function EditorApp({
                       {t.inspector.assignSelection}
                     </span>
                     <Space size={4} wrap>
-                      {speakers.map((s) => (
+                      {speakers.map((s, i) => (
                         <Button
                           key={s.id}
                           size="small"
@@ -1391,6 +1529,11 @@ function EditorApp({
                             style={{ background: s.color }}
                           />
                           {s.name}
+                          {i < 9 && (
+                            <kbd className="muted">
+                              {shortcutOf(`speaker${i + 1}` as CommandId)}
+                            </kbd>
+                          )}
                         </Button>
                       ))}
                       <Button
@@ -1400,6 +1543,7 @@ function EditorApp({
                         onClick={() => assignSelection()}
                       >
                         {t.inspector.unassignedShort}
+                        <kbd className="muted">{shortcutOf("speaker0")}</kbd>
                       </Button>
                     </Space>
                   </div>
@@ -1733,6 +1877,7 @@ function EditorApp({
           onSeek={seek}
           onSelectCue={selectCue}
           onRangeChange={setRange}
+          zoomRequest={zoomRequest}
           actions={
             <>
               <span className={rangeValid ? "" : "range-invalid"}>
@@ -1884,6 +2029,11 @@ function EditorApp({
         )}
       </footer>
 
+      <ShortcutsDialog
+        open={shortcutsOpen}
+        speakers={speakers}
+        onClose={() => setShortcutsOpen(false)}
+      />
       <ImportDialog
         open={importTab !== null}
         tab={importTab ?? "local"}

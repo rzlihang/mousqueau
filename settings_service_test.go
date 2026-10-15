@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -471,5 +472,29 @@ func TestWindowURLNamesTheWindowAndItsChrome(t *testing.T) {
 	}
 	if got := windowURL(mainWindow, "system", ""); got != "/?chrome=custom&theme=system" {
 		t.Fatalf("window without native system appearance URL %q", got)
+	}
+}
+
+// Every menu command must be one the editor's keymap knows, with the same key.
+func TestMenuCommandsMatchTheKeymap(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("frontend", "src", "keymap.ts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	keymap := string(data)
+	for _, c := range append(slices.Clone(fileCommands), helpCommands...) {
+		key := strings.Replace(c.accelerator, "CmdOrCtrl+", "$mod+", 1)
+		last := key[strings.LastIndex(key, "+")+1:]
+		code := map[string]string{"/": "Slash", ",": "Comma"}[last]
+		if code == "" {
+			code = "Key" + last
+		}
+		want := fmt.Sprintf(`{ id: %q, keys: [%q]`, c.id, key[:len(key)-len(last)]+code)
+		if !strings.Contains(keymap, want) {
+			t.Errorf("keymap.ts lacks %s", want)
+		}
+		if !strings.Contains(keymap, fmt.Sprintf("  %q,\n", c.id)) {
+			t.Errorf("MENU_COMMANDS lacks %q", c.id)
+		}
 	}
 }
