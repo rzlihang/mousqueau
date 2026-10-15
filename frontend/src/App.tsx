@@ -12,6 +12,7 @@ import {
 import {
   Alert,
   App as AntApp,
+  Badge,
   Button,
   Checkbox,
   ConfigProvider,
@@ -32,6 +33,10 @@ import {
 import {
   IconArrowBackUp,
   IconArrowForwardUp,
+  IconDeviceFloppy,
+  IconFolderOpen,
+  IconMenu2,
+  IconPencil,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerSkipBack,
@@ -779,20 +784,8 @@ function EditorApp({
               title={t.menu.title}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M2 3.5h12M2 8h12M2 12.5h12" />
-              </svg>
-            </Button>
+              icon={<IconMenu2 size={16} {...decorative} />}
+            />
           </Dropdown>
         )}
         <div className="project-title">
@@ -869,21 +862,34 @@ function EditorApp({
         </div>
         <div className="spacer" />
         <div className="toolbar-group">
-          <Button
+          <IconButton
+            type="text"
             size="small"
+            className="icon-button"
+            placement="bottom"
+            label={t.editor.openProject}
             disabled={busy}
             onClick={() => replaceProject(Editor.OpenProject)}
-          >
-            {t.editor.openProject}
-          </Button>
-          <Button
+            icon={<IconFolderOpen size={16} {...decorative} />}
+          />
+          <IconButton
+            type="text"
             size="small"
+            className="icon-button"
+            placement="bottom"
+            label={t.editor.saveProject}
             disabled={busy || !p}
             onClick={() => void save(false)}
-          >
-            {t.editor.saveProject}
-            {dirty || draftDirty ? " •" : ""}
-          </Button>
+            icon={
+              <Badge
+                dot={dirty || draftDirty}
+                color="var(--accent)"
+                offset={[-1, 2]}
+              >
+                <IconDeviceFloppy size={16} {...decorative} />
+              </Badge>
+            }
+          />
           <Tooltip title={t.editor.exportHint}>
             <Button
               size="small"
@@ -1412,17 +1418,17 @@ function EditorApp({
                         )}
                       </span>
                       <div className="spacer" />
-                      <Button
+                      <IconButton
                         size="small"
                         type="text"
+                        label={t.inspector.rename}
                         disabled={busy}
                         onClick={() => {
                           setSpeakerId(s.id);
                           setSpeakerName(s.name);
                         }}
-                      >
-                        {t.inspector.rename}
-                      </Button>
+                        icon={<IconPencil size={16} {...decorative} />}
+                      />
                     </div>
                   ))}
                   <div className="speaker-row">

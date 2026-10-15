@@ -19,6 +19,7 @@ import {
   IconMessageCircle,
   IconPlus,
   IconTag,
+  IconTrash,
   IconUser,
 } from "@tabler/icons-react";
 import { Events } from "@wailsio/runtime";
@@ -29,6 +30,7 @@ import type {
 } from "../bindings/mousqueau/internal/dictionary/models";
 import type { DictionaryView } from "../bindings/mousqueau/models";
 import { errorText, useT } from "./i18n";
+import IconButton from "./IconButton";
 import { decorative } from "./icons";
 import { customChrome, isMac } from "./useSettings";
 import WindowControls from "./WindowControls";
@@ -558,15 +560,15 @@ export default function DictionaryWindow() {
                     </Button>
                   </>
                 ) : (
-                  <Button
+                  <IconButton
                     size="small"
                     type="text"
                     danger
+                    label={t.dictionary.deleteEntry}
                     disabled={readOnly}
                     onClick={() => setConfirmDelete(true)}
-                  >
-                    {t.dictionary.deleteEntry}
-                  </Button>
+                    icon={<IconTrash size={16} {...decorative} />}
+                  />
                 ))}
               <div className="spacer" />
               <Button

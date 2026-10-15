@@ -63,7 +63,7 @@ Contrast: `ink` and `muted` pass 4.5:1 on `bg`, `panel` and `select` in both the
 
 ## Iconography
 
-Mousqueau uses no icon set. Every action is a text button, and status is a word in a tag. The only glyphs on screen are antd's built-in ones (select arrow, checkbox tick, the confirm dialog's warning icon, the Empty illustration) and the punctuation marks above (`→`, `·`, `•`). Do not add icons or emoji.
+The app uses Tabler icons (`@tabler/icons-react`), outline style, 16px in toolbars and 18px on the transport. Use an icon alone only where the glyph is already understood everywhere: menu, undo/redo, open, save, previous/play/pause/next, edit (pencil), delete (trash), import/export and add in the dictionary list, and the window controls. Icon-only buttons go through `IconButton`, which gives the button an accessible name and a tooltip in the current locale. Settings sections and dictionary categories set a glyph beside their word. Domain actions with no agreed glyph (import media/SRT/YouTube, export SRT, merge and split cues, dictionary checks, accept and reject suggestions, analysis) stay text buttons. Status is a word in a tag; do not use emoji.
 
 ## Logo
 
