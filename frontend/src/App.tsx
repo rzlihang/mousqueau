@@ -360,6 +360,11 @@ function EditorApp({
   useEffect(() => {
     if (playing && active && !draftDirty) setSelected(active.id);
   }, [playing, active?.id, draftDirty]);
+  // A web view's video does not keep the display awake, so Go holds it
+  // while playing; failing to only means the screen saver may start.
+  useEffect(() => {
+    void Editor.KeepAwake(playing).catch(() => undefined);
+  }, [playing]);
 
   async function run<T>(action: () => Promise<T>): Promise<T | undefined> {
     setWorking(true);

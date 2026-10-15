@@ -59,6 +59,7 @@ type EditorService struct {
 	phaseArgs      []any
 	fraction       float64 // progress of the running phase; -1 unknown
 	waveformCancel context.CancelFunc
+	awakeRelease   func() // set while playback holds the display awake
 
 	settings       settings.Settings
 	settingsPath   string            // empty in tests: nothing is written
@@ -400,6 +401,10 @@ func (s *EditorService) ServiceShutdown() error {
 	}
 	if s.updateCancel != nil {
 		s.updateCancel()
+	}
+	if s.awakeRelease != nil {
+		s.awakeRelease()
+		s.awakeRelease = nil
 	}
 	return nil
 }
