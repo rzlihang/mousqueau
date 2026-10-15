@@ -4,12 +4,14 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build:dev": "tsc && vite build --minify false --mode development",
-    "build": "tsc && vite build --mode production",
+    "dev": "pnpm run colors:generate && vite",
+    "build:dev": "pnpm run colors:generate && tsc && vite build --minify false --mode development",
+    "build": "pnpm run colors:generate && tsc && vite build --mode production",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "pnpm run colors:check && node --test ../scripts/colors.test.mjs && vitest run",
+    "colors:generate": "node ../scripts/colors.mjs",
+    "colors:check": "node ../scripts/colors.mjs --check"
   },
   "dependencies": {
     "@tabler/icons-react": "^3.49.0",
@@ -20,10 +22,12 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@types/diff": "^7.0.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.0.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.2.2",
     "vite": "^8.0.5",
     "vitest": "^4.0.0"

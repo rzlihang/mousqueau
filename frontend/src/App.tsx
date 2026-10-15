@@ -1,3 +1,4 @@
+import { colors as themeColors } from "./colors.generated";
 import {
   type ComponentRef,
   type CSSProperties,
@@ -1893,15 +1894,6 @@ function EditorApp({
   );
 }
 
-// Contrast fixes from the design system: tag text and danger reach 4.5:1.
-const LIGHT_FIXES = {
-  colorError: "#cf1322",
-  green7: "#237804",
-  orange7: "#ad4e00",
-  gold7: "#995b00",
-};
-const DARK_FIXES = { colorError: "#ff7875" };
-
 // Each native window loads this bundle and says which one it is.
 const windowKind = new URLSearchParams(window.location.search).get("window");
 // Wider than the band in which the Wails runtime starts a window resize.
@@ -1983,9 +1975,18 @@ export default function App() {
       theme={{
         algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
-          colorPrimary: "#2867c7",
+          colorPrimary: themeColors[dark ? "dark" : "light"].accent,
+          colorBgLayout: themeColors[dark ? "dark" : "light"].bg,
+          colorBgElevated: themeColors[dark ? "dark" : "light"].panel,
           borderRadius: 6,
-          ...(dark ? DARK_FIXES : LIGHT_FIXES),
+          colorError: themeColors[dark ? "dark" : "light"]["error-seed"],
+          ...(!dark
+            ? {
+                green7: themeColors.light["tag-green-text"],
+                orange7: themeColors.light["tag-orange-text"],
+                gold7: themeColors.light["tag-gold-text"],
+              }
+            : {}),
         },
       }}
     >
@@ -1993,7 +1994,7 @@ export default function App() {
         <AntApp>
           <div
             data-theme={dark ? "dark" : "light"}
-            className={edged ? "window-edge" : undefined}
+            className={`bg-bg text-ink ${edged ? "window-edge" : ""}`}
             style={
               { "--subtitle-font": fontStack(subtitleFont) } as CSSProperties
             }

@@ -6,12 +6,10 @@ on:
     branches: [main]
     paths-ignore:
       - "**.md"
-      - "docs/**"
       - "LICENSE"
   pull_request:
     paths-ignore:
       - "**.md"
-      - "docs/**"
       - "LICENSE"
   workflow_dispatch:
 # A new push to a pull request cancels its run still in progress.
@@ -35,6 +33,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: node scripts/colors.mjs --check
       - run: go test -race ./internal/...
       - run: pnpm install --frozen-lockfile && pnpm run typecheck && pnpm test && pnpm run build
         working-directory: frontend

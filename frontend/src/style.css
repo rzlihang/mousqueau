@@ -1,3 +1,8 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "./colors.generated.css";
+
 * {
   box-sizing: border-box;
 }
@@ -9,7 +14,7 @@ body,
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
-  background: var(--bg, #f2f4f7);
+  background: var(--bg);
 }
 body {
   position: fixed;
@@ -27,20 +32,6 @@ textarea {
   font: inherit;
 }
 [data-theme] {
-  --bg: #f2f4f7;
-  --panel: #fff;
-  --head: #f7f8fa;
-  --ink: #1d2939;
-  --muted: #667085;
-  --line: #e4e7ec;
-  --select: #eef5ff;
-  --block: #fff;
-  --wave: #b3c6e3;
-  --wave-sel: #2867c7;
-  --accent: #2867c7;
-  --edge: rgb(0 0 0 / 22%);
-  --scroll-thumb: #a5afbd;
-  --scroll-thumb-hover: #7c899b;
   /* ui-monospace only exists in Safari, and a bare monospace resolves to
      a CJK font such as SimSun under a Chinese page language on Windows. */
   --mono:
@@ -48,21 +39,6 @@ textarea {
     "DejaVu Sans Mono", "Liberation Mono", monospace;
   background: var(--bg);
   color: var(--ink);
-}
-[data-theme="dark"] {
-  --bg: #0f0f0f;
-  --panel: #1a1a1a;
-  --head: #141414;
-  --ink: #f0f0f0;
-  --muted: #a6a6a6;
-  --line: #333333;
-  --select: #1f2f45;
-  --block: #242424;
-  --wave: #3b5680;
-  --wave-sel: #6f9de0;
-  --edge: rgb(255 255 255 / 16%);
-  --scroll-thumb: #4d4d4d;
-  --scroll-thumb-hover: #707070;
 }
 /* Apply to the document, including Ant Design portals and all three windows.
    Keep browser scrolling, keyboard navigation and thumb dragging intact. */

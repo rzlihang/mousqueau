@@ -41,7 +41,8 @@ var customChrome = runtime.GOOS != "darwin"
 
 // windowURL tells the frontend which window it is, whether to draw the
 // window controls, and a theme chosen in Settings to paint before its
-// settings arrive. With "system" the page's own media query is exact.
+// settings arrive. Pass "system" explicitly so stale browser storage cannot
+// override the native setting.
 func windowURL(name, theme string) string {
 	query := url.Values{}
 	if name != mainWindow {
@@ -50,22 +51,13 @@ func windowURL(name, theme string) string {
 	if customChrome {
 		query.Set("chrome", "custom")
 	}
-	if theme == "dark" || theme == "light" {
+	if theme == "dark" || theme == "light" || theme == "system" {
 		query.Set("theme", theme)
 	}
 	if len(query) == 0 {
 		return "/"
 	}
 	return "/?" + query.Encode()
-}
-
-// ground is a window's native background, the --bg of style.css, so a new
-// window is never white before its page has painted.
-func ground(dark bool) application.RGBA {
-	if dark {
-		return application.NewRGB(0x0f, 0x0f, 0x0f)
-	}
-	return application.NewRGB(0xf2, 0xf4, 0xf7)
 }
 
 func (s *EditorService) theme() string {
