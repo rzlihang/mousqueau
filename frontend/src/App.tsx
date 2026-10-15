@@ -360,6 +360,11 @@ function EditorApp({
   useEffect(() => {
     if (playing && active && !draftDirty) setSelected(active.id);
   }, [playing, active?.id, draftDirty]);
+  // A web view's video does not keep the display awake, so Go holds it
+  // while playing; failing to only means the screen saver may start.
+  useEffect(() => {
+    void Editor.KeepAwake(playing).catch(() => undefined);
+  }, [playing]);
 
   async function run<T>(action: () => Promise<T>): Promise<T | undefined> {
     setWorking(true);
@@ -1058,7 +1063,11 @@ function EditorApp({
                   onTimeUpdate={(e) =>
                     !playing && setPlayhead(e.currentTarget.currentTime)
                   }
-                  onError={() => void message.error(t.viewer.mediaError)}
+                  onError={() => {
+                    // A media error can stop playback without a pause event.
+                    setPlaying(false);
+                    void message.error(t.viewer.mediaError);
+                  }}
                 />
                 {!hasVideo && (
                   <span className="viewer-note">{t.viewer.audioOnly}</span>

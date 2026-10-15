@@ -133,6 +133,14 @@ export function ImportWeb(raw: string, req: $models.WebImport): $CancellableProm
     return $Call.ByID(249893745, raw, req);
 }
 
+/**
+ * KeepAwake holds the display awake while media plays, since a web view's
+ * <video> does not do that by itself; false lets it sleep again.
+ */
+export function KeepAwake(on: boolean): $CancellablePromise<void> {
+    return $Call.ByID(852073320, on);
+}
+
 export function LoadDemo(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(2920927275);
 }
