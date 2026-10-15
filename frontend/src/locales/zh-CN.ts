@@ -21,6 +21,7 @@ export const zhCN = {
     pendingReview: "需人工复核",
     pendingDecision: "待确认",
     emptyProject: "导入 SRT 或加载示例开始编辑",
+    startImport: "导入 SRT 开始编辑",
     seconds: (n: string | number) => `${n} 秒`,
     cues: (n: number) => `${n} 句`,
   },
@@ -173,6 +174,7 @@ export const zhCN = {
     saveSpeaker: "保存说话人",
     suggestionsHint: "建议不会自动改动字幕。每次接受都需要点击，并可撤销。",
     noSuggestions: "分析音频或加载示例后查看建议",
+    analyzeForSuggestions: "分析音频后查看建议",
     dictionaryHint:
       "词典检查在本地运行，不上传内容。接受建议只改文字，可撤销。",
     dictionaryHits: "当前字幕命中",

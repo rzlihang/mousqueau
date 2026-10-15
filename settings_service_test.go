@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mousqueau/internal/buildinfo"
 	"mousqueau/internal/i18n"
 	"mousqueau/internal/media"
 	"mousqueau/internal/project"
@@ -427,6 +428,13 @@ func TestGroundMatchesStartupColours(t *testing.T) {
 				t.Fatalf("%s missing %s", path, needle)
 			}
 		}
+	}
+}
+
+func TestSettingsReportTheDeveloperBuild(t *testing.T) {
+	s := &EditorService{settings: settings.Default()}
+	if s.GetSettings().Developer != buildinfo.Developer {
+		t.Fatal("settings did not report whether this is a developer build")
 	}
 }
 
