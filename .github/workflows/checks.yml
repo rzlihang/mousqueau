@@ -1,7 +1,6 @@
 name: checks
-# Actions minutes are billed on this private repository, macOS at 10x and
-# Windows at 2x. Pull requests run the Linux jobs only; the macOS and Windows
-# builds run on main, by hand, or when a pull request has the full-ci label.
+# The repository is public, so Actions minutes are free and every job runs
+# on pull requests, including the macOS and Windows builds.
 on:
   push:
     branches: [main]
@@ -10,20 +9,17 @@ on:
       - "docs/**"
       - "LICENSE"
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
       - "**.md"
       - "docs/**"
       - "LICENSE"
   workflow_dispatch:
-# A new push to a pull request cancels its run still in progress. Adding the
-# label gets a group of its own, so it never cancels the Linux jobs.
+# A new push to a pull request cancels its run still in progress.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event.action == 'labeled' && 'label' || 'push' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   verify:
-    if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,10 +43,6 @@ jobs:
       - run: CGO_ENABLED=0 go test -tags server ./...
       - run: CGO_ENABLED=0 go build -tags server -o /tmp/mousqueau-headless .
   macos-build:
-    if: >-
-      github.event_name != 'pull_request' ||
-      (contains(github.event.pull_request.labels.*.name, 'full-ci') &&
-      (github.event.action != 'labeled' || github.event.label.name == 'full-ci'))
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +62,6 @@ jobs:
       - run: go test ./...
       - run: go build -tags production -o /tmp/mousqueau .
   linux-desktop:
-    if: github.event.action != 'labeled'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -100,10 +91,6 @@ jobs:
           name: linux-gui-screenshots
           path: linux-gui
   windows-build:
-    if: >-
-      github.event_name != 'pull_request' ||
-      (contains(github.event.pull_request.labels.*.name, 'full-ci') &&
-      (github.event.action != 'labeled' || github.event.label.name == 'full-ci'))
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
