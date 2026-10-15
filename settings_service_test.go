@@ -246,7 +246,7 @@ func TestLanguageFollowsTheSystemUntilChosen(t *testing.T) {
 	if _, err := s.EditCue(subtitle.Cue{}); err == nil || err.Error() != "请先导入 SRT 字幕" {
 		t.Fatalf("error not in Chinese: %v", err)
 	}
-	if s.begin(i18n.N("Discovering YouTube subtitles…")); s.GetStatus().Phase != "正在查找 YouTube 字幕…" {
+	if s.begin(i18n.N("Looking up the video…")); s.GetStatus().Phase != "正在查找视频…" {
 		t.Fatalf("phase not in Chinese: %q", s.GetStatus().Phase)
 	}
 	s.finish()

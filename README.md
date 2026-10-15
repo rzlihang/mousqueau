@@ -15,7 +15,7 @@ If Vite+ manages your environment, it reads the pnpm pin in `frontend/package.js
 ```sh
 xcode-select --install
 brew install go node ffmpeg
-# Optional: YouTube import (install independently of Mousqueau)
+# Optional: downloads from video pages (install independently of Mousqueau)
 brew install yt-dlp
 
 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
@@ -75,8 +75,8 @@ Open the path printed by `wslpath` in Windows Explorer. Windows needs the WebVie
 
 ## Use the editor
 
-1. **Import Media**: select a local video or audio file. MP4/H.264/AAC is the most portable playback format. Native WebView codecs determine whether other formats play.
-2. **Import SRT**: select UTF-8 SRT subtitles. Identifiers, millisecond timestamps, and multiline text are preserved in the project. The window follows a video-editor layout: cue list (with text search and a To do / Unknown filter), viewer with the current subtitle overlaid, inspector, and a timeline with the audio waveform, subtitle blocks, speaker and suggestion tracks. Click a cue row or block to pause and seek; click the ruler or waveform to move the playhead. Playback follows the current cue when there are no pending field edits. Drag the dividers between the three columns and above the timeline to resize them; double-click one to restore its default size. The timeline shrinks with its tracks scrolling but does not grow past its content. The waveform is decoded locally by FFmpeg and needs FFmpeg on `PATH`; nothing is uploaded for it.
+1. **Import** (the toolbar icon) › **Local Files** › **Media File**: select a local video or audio file. MP4/H.264/AAC is the most portable playback format. Native WebView codecs determine whether other formats play.
+2. **Import** › **Local Files** › **SRT Subtitles**: select UTF-8 SRT subtitles. Identifiers, millisecond timestamps, and multiline text are preserved in the project. The window follows a video-editor layout: cue list (with text search and a To do / Unknown filter), viewer with the current subtitle overlaid, inspector, and a timeline with the audio waveform, subtitle blocks, speaker and suggestion tracks. Click a cue row or block to pause and seek; click the ruler or waveform to move the playhead. Playback follows the current cue when there are no pending field edits. Drag the dividers between the three columns and above the timeline to resize them; double-click one to restore its default size. The timeline shrinks with its tracks scrolling but does not grow past its content. The waveform is decoded locally by FFmpeg and needs FFmpeg on `PATH`; nothing is uploaded for it.
 3. Click the subtitle in the viewer to edit its text; this pauses playback and opens the inspector's **Edit** tab, where start/end (`HH:MM:SS,mmm`) and speaker annotations are edited. Click **Apply Edit** to apply. The same tab holds the dictionary hits for the cue and its dictionary actions. Add A/B/C or other speaker identities in the **Speakers** tab. An unassigned cue shows **Unknown**. One cue can have multiple speakers. Undo/redo (toolbar, ⌘Z / ⇧⌘Z, or Ctrl+Z / Ctrl+Shift+Z outside text fields) covers edits, speaker names, analysis results, and accept/reject decisions; the last 100 undo snapshots are retained.
 4. Optionally select **60–300 seconds** by dragging on the timeline ruler or with **Adjust Range**, and explicitly confirm **Upload & Analyze**. Go extracts mono AAC using FFmpeg, limits uploads to 24 MB, and sends it to the provider chosen in Settings with `language=zh` (OpenAI: `gpt-4o-transcribe-diarize` with `diarized_json` and `chunking_strategy=auto`). Speaker numbers are shown as letters. API calls and subprocesses can be cancelled. Cancellation discards pending results; it cannot recall bytes already sent or cancel provider billing.
 5. Compare original text with transcription suggestions and highlighted changes in the **Fixes** tab, or for the selected cue under **Edit**. Accept or reject individually. Review flags identify multiple speakers, overlap, and segments crossing a cue/range boundary. Suggestions **never silently modify text or speakers**. Accepting a stale suggestion after a manual text change is refused; analyze again or edit manually.
@@ -85,11 +85,14 @@ Open the path printed by `wslpath` in Windows Explorer. Windows needs the WebVie
 
 Use **Load Demo** for a Traditional Chinese conversation and mock diarization without an API key. The third cue deliberately includes overlapping speakers. The UI follows the system appearance by default and can be fixed to light or dark in Settings. Existing UTF-8 Traditional Chinese text is preserved. Taiwan Mandarin audio is processed with Chinese-language transcription; OpenAI can still return Simplified Chinese or misrecognize names. Verify wording and script before accepting. The diarization model does not support a transcription prompt, so v0.1 does not invent a prompt-based Traditional Chinese guarantee or apply stylistic rewriting.
 
-## Optional YouTube import
+## Optional download from the web
 
-Open **Import from YouTube** and enter an HTTPS URL for one video. **Find Subtitles** lists manual tracks before automatic captions; select a track and explicitly download/import it. `yt-dlp` and FFmpeg convert supported SRT/VTT captions to SRT. Import replaces the active subtitle project after confirmation.
+Open **Import** › **Download from the Web** and paste an HTTPS link to one video page. Any site your yt-dlp supports works, YouTube included; YouTube links are reduced to the single video. **Find** shows the title, site and length, and lists manual subtitle tracks before automatic captions. Choose what to import, then press **Import** once:
 
-Audio is downloaded only through a separate action after you confirm you have authorization. Choose a new `.m4a` destination; it becomes the local media source. Downloading does not upload anything. Videos with playlists, channels, and batch downloading are excluded. Availability depends on yt-dlp, the network, and the video; authenticated/cookie-based downloads are outside v0.1. Full YouTube support in current yt-dlp releases may also require its documented JavaScript runtime/EJS dependencies. Local file imports remain independent of yt-dlp.
+- **Subtitles**: the selected track, converted to SRT by `yt-dlp` and FFmpeg. It replaces the active subtitle project after confirmation.
+- **Media**: **None**, **Audio Only** (`.m4a`) or **Video** (`.mp4`, H.264/AAC where the site offers it, at most 1080p, so it plays in every platform's web view). Media needs the "I am authorized" box. You choose a new file name; existing files are never replaced, and the download becomes the local media source.
+
+The dialog shows the current step with a percentage and a **Cancel** button. Downloading never uploads anything. Playlists, channels and batch downloads are excluded. Availability depends on yt-dlp, the network and the video; logins and cookies are outside v0.1. Full YouTube support in current yt-dlp releases may also require its documented JavaScript runtime/EJS dependencies. Local file imports do not need yt-dlp.
 
 ## Tests and builds
 

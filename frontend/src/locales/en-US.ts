@@ -81,7 +81,7 @@ export const enUS: Messages = {
     undo: "Undo",
     redo: "Redo",
     withShortcut: (label, keys) => `${label} (${keys})`,
-    importYoutube: "Import from YouTube",
+    importWeb: "Download from the Web…",
     openProject: "Open Project",
     saveProject: "Save Project",
     exportSrt: "Export SRT",
@@ -303,21 +303,44 @@ export const enUS: Messages = {
     cancel: "Cancel",
     selected: (id) => `Selected #${id}`,
   },
-  youtube: {
-    title: "Optional YouTube Import",
-    intro:
-      "One video at a time. Manual subtitles are preferred; subtitles and audio are downloaded by separate actions.",
+  importer: {
+    title: "Import",
+    local: "Local Files",
+    web: "Download from the Web",
+    mediaTitle: "Media File",
+    mediaBody:
+      "Load a video or audio file for playback and the waveform. Subtitles stay as they are.",
+    mediaFormats: "MP4 · MOV · M4V · WebM · MKV · M4A · MP3 · WAV",
+    srtTitle: "SRT Subtitles",
+    srtBody:
+      "Start a new project from the subtitles, replacing the current one. The original subtitles are never changed.",
+    chooseFile: "Choose File…",
+    localNote:
+      "Files are read on this computer and never uploaded. To open a saved project, use Open Project in the toolbar.",
+    webIntro:
+      "Paste the link to one video page, such as YouTube. One video at a time; which sites work depends on your yt-dlp.",
     needsYtdlp:
-      "Install yt-dlp and add it to PATH first. Local media and SRT imports are not affected.",
-    discover: "Find Subtitles",
+      "Install yt-dlp and add it to PATH first. Local file imports are not affected.",
+    urlLabel: "Video page link",
+    find: "Find",
+    subtitles: "Subtitles",
+    trackLabel: "Subtitle track",
     automatic: "automatic",
     manual: "manual (preferred)",
     noCaptions: "No SRT / VTT subtitles to import",
-    importCaption: "Download and Import Selected Subtitles",
-    authorized: "I confirm I am authorized to download this video's audio",
-    downloadAudio: "Download Audio Separately and Load It",
+    media: "Media",
+    mediaNone: "None",
+    mediaAudio: "Audio Only",
+    mediaVideo: "Video",
+    hintNone: "Import subtitles only. You can still import media from a local file later.",
+    hintAudio: "Download audio only, for the waveform and analysis. Smallest file.",
+    hintVideo:
+      "Download the video with its audio, to watch while you proofread. Larger file.",
+    applyFirst: "Apply or revert the subtitle you are editing before downloading media.",
+    authorized: "I confirm I am authorized to download this video's content",
     noUpload:
-      "Downloading never uploads anything. Analysis still needs its own confirmation.",
+      "Files are only downloaded to this computer, never uploaded. Analysis still needs its own confirmation.",
+    import: "Import",
   },
   timeline: {
     label: "Timeline",

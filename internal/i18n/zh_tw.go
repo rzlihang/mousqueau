@@ -16,6 +16,7 @@ var zhTW = map[string]string{
 	"SubRip subtitles":            "SubRip 字幕",
 	"Mousqueau project":           "Mousqueau 專案",
 	"M4A audio":                   "M4A 音訊",
+	"MP4 video":                   "MP4 影片",
 	"Choose the %s executable":    "選擇 %s 執行檔",
 
 	// Standard macOS menu items
@@ -53,11 +54,12 @@ var zhTW = map[string]string{
 	"Bring All to Front":    "將此程式所有視窗移至最前",
 
 	// Progress
-	"Cancelling…":                           "正在取消⋯",
-	"Extracting audio with FFmpeg…":         "正在以 FFmpeg 擷取音訊⋯",
-	"Discovering YouTube subtitles…":        "正在尋找 YouTube 字幕⋯",
-	"Downloading selected subtitle track…":  "正在下載所選字幕軌⋯",
-	"Downloading authorized YouTube audio…": "正在下載已授權的 YouTube 音訊⋯",
+	"Cancelling…":                          "正在取消⋯",
+	"Extracting audio with FFmpeg…":        "正在以 FFmpeg 擷取音訊⋯",
+	"Looking up the video…":                "正在尋找影片⋯",
+	"Downloading selected subtitle track…": "正在下載所選字幕軌⋯",
+	"Downloading video… %d%%":              "正在下載影片⋯ %d%%",
+	"Downloading audio… %d%%":              "正在下載音訊⋯ %d%%",
 
 	// Editor
 	"wait for processing to finish or cancel it":                    "請等待處理完成，或取消處理",
@@ -68,7 +70,8 @@ var zhTW = map[string]string{
 	"processing cancelled or timed out; subtitles were not changed": "處理已取消或逾時；字幕未被修改",
 	"confirm audio upload before analysis":                          "分析前請確認上傳音訊",
 	"import media and SRT subtitles before analysis":                "分析前請先匯入媒體與 SRT 字幕",
-	"confirm you are authorized to download this audio":             "請確認你有權下載此音訊",
+	"confirm you are authorized to download this video":             "請確認你有權下載此影片",
+	"choose subtitles, audio or video to import":                    "請選擇要匯入的字幕、音訊或影片",
 	"unknown action":        "未知的動作",
 	"unknown theme":         "未知的主題",
 	"unknown language":      "未知的語言",
@@ -103,7 +106,7 @@ var zhTW = map[string]string{
 	"invalid SRT identifier":                                "SRT 序號無效",
 	"cue %s: text must not be empty or contain blank lines": "字幕 %s：文字不能為空，也不能包含空行",
 
-	// Media and YouTube
+	// Media and web downloads
 	"select a 1–5 minute range with a nonnegative start":                                         "請選擇 1–5 分鐘的範圍，且開始時間不能為負",
 	"FFmpeg was not found; install it or set its location in Settings":                           "找不到 FFmpeg；請安裝，或在設定中指定其位置",
 	"select an existing local video or audio file":                                               "請選擇一個現有的本機影片或音訊檔案",
@@ -111,20 +114,19 @@ var zhTW = map[string]string{
 	"extracted audio is empty or exceeds the 24 MB upload limit":                                 "擷取的音訊為空，或超過 24 MB 上傳上限",
 	"destination already exists; choose a new filename to preserve original files":               "目標檔案已存在；請使用新檔名，以免覆寫原始檔案",
 	"FFmpeg could not decode audio for the waveform":                                             "FFmpeg 無法解碼音訊以產生波形",
-	"use an HTTPS URL for one YouTube video":                                                     "請使用單一 YouTube 影片的 HTTPS 網址",
+	"use an HTTPS link to one video page":                                                        "請使用指向單一影片頁面的 HTTPS 網址",
 	"playlists and channels are not supported":                                                   "不支援播放清單與頻道",
-	"only youtube.com and youtu.be video URLs are supported":                                     "僅支援 youtube.com 與 youtu.be 的影片網址",
-	"URL must identify a single YouTube video":                                                   "網址必須指向單一 YouTube 影片",
 	"yt-dlp was not found; install it or set its location in Settings. Local imports still work": "找不到 yt-dlp；請安裝，或在設定中指定其位置。本機匯入不受影響",
-	"yt-dlp could not discover subtitles; check URL, network, and yt-dlp version":                "yt-dlp 無法取得字幕；請檢查網址、網路與 yt-dlp 版本",
+	"yt-dlp could not read this page; check the link, network and yt-dlp version":                "yt-dlp 無法讀取此頁面；請檢查網址、網路與 yt-dlp 版本",
 	"invalid subtitle language":                                                                  "字幕語言無效",
 	"yt-dlp is missing":                                                                          "缺少 yt-dlp",
 	"FFmpeg is required for subtitle conversion":                                                 "轉換字幕需要 FFmpeg",
 	"subtitle download failed; verify the selected track is still available":                     "字幕下載失敗；請確認所選字幕軌仍可使用",
 	"no unique SRT subtitle downloaded":                                                          "未能下載到唯一的 SRT 字幕",
-	"yt-dlp and FFmpeg are required for audio download":                                          "下載音訊需要 yt-dlp 與 FFmpeg",
-	"choose an .m4a destination":                                                                 "請選擇 .m4a 目標檔案",
-	"audio download failed; check authorization, availability and yt-dlp version":                "音訊下載失敗；請檢查授權、影片是否可用與 yt-dlp 版本",
+	"yt-dlp and FFmpeg are required for downloads":                                               "下載需要 yt-dlp 與 FFmpeg",
+	"choose a %s destination":                                                                    "請選擇 %s 目標檔案",
+	"choose audio or video":                                                                      "請選擇音訊或影片",
+	"download failed; check authorization, availability and yt-dlp version":                      "下載失敗；請檢查授權、影片是否可用與 yt-dlp 版本",
 
 	// Analysis
 	"invalid diarization segment %d":              "說話者分段 %d 無效",

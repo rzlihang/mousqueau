@@ -17,17 +17,21 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
 
 type Status struct {
-	Busy          bool   `json:"busy"`
-	Phase         string `json:"phase"`
-	FFmpeg        bool   `json:"ffmpeg"`
-	YTDLP         bool   `json:"ytdlp"`
-	APIConfigured bool   `json:"apiConfigured"` // the provider in use can analyze
-	Provider      string `json:"provider"`      // its name; "" when none is added
+	Busy  bool   `json:"busy"`
+	Phase string `json:"phase"`
+	// Progress is the running phase's completed fraction, or -1 when it
+	// has none.
+	Progress      float64 `json:"progress"`
+	FFmpeg        bool    `json:"ffmpeg"`
+	YTDLP         bool    `json:"ytdlp"`
+	APIConfigured bool    `json:"apiConfigured"` // the provider in use can analyze
+	Provider      string  `json:"provider"`      // its name; "" when none is added
 	// ProviderCaution marks a provider under mainland China's jurisdiction
 	// (region "china") or a custom endpoint, so the upload confirmation can
 	// advise care.
@@ -53,6 +57,7 @@ type EditorService struct {
 	cancel         context.CancelFunc
 	phase          string // English; translated when read
 	phaseArgs      []any
+	fraction       float64 // progress of the running phase; -1 unknown
 	waveformCancel context.CancelFunc
 
 	settings       settings.Settings
@@ -109,7 +114,7 @@ func (s *EditorService) GetSnapshot() Snapshot { s.mu.Lock(); defer s.mu.Unlock(
 func (s *EditorService) GetStatus() Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	status := Status{Busy: s.cancel != nil, Phase: i18n.T(s.phase, s.phaseArgs...), FFmpeg: media.Dependency("ffmpeg"), YTDLP: media.Dependency("yt-dlp")}
+	status := Status{Busy: s.cancel != nil, Phase: i18n.T(s.phase, s.phaseArgs...), Progress: s.fraction, FFmpeg: media.Dependency("ffmpeg"), YTDLP: media.Dependency("yt-dlp")}
 	if active, ok := s.activeLocked(); ok {
 		status.APIConfigured, status.Provider, status.ProviderCaution, status.ProviderRegion = active.ready, active.name, active.info.Caution(), active.info.Region
 	}
@@ -317,15 +322,32 @@ func (s *EditorService) DecideSuggestion(id, decision string) (Snapshot, error) 
 	return s.snapshot(), nil
 }
 func (s *EditorService) begin(phase string) (context.Context, error) {
+	return s.beginFor(phase, 10*time.Minute)
+}
+func (s *EditorService) beginFor(phase string, timeout time.Duration) (context.Context, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.ready(); err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	s.cancel = cancel
-	s.phase, s.phaseArgs = phase, nil
+	s.phase, s.phaseArgs, s.fraction = phase, nil, -1
 	return ctx, nil
+}
+
+// progress updates the running phase. A phase with %d shows fraction as a
+// percentage; -1 means the amount is unknown.
+func (s *EditorService) progress(phase string, fraction float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cancel == nil || s.phase == i18n.N("Cancelling…") {
+		return
+	}
+	s.phase, s.phaseArgs, s.fraction = phase, nil, fraction
+	if strings.Contains(phase, "%d") {
+		s.phaseArgs = []any{int(max(fraction, 0) * 100)}
+	}
 }
 func (s *EditorService) finish() {
 	s.mu.Lock()
@@ -334,7 +356,7 @@ func (s *EditorService) finish() {
 		s.cancel()
 	}
 	s.cancel = nil
-	s.phase, s.phaseArgs = "", nil
+	s.phase, s.phaseArgs, s.fraction = "", nil, -1
 }
 func (s *EditorService) Cancel() {
 	s.mu.Lock()
@@ -487,65 +509,103 @@ func (s *EditorService) LoadDemo() (Snapshot, error) {
 	s.project.AddAnalysis(analysis.Align(cues, response.Segments, 0, 300))
 	return s.snapshot(), nil
 }
-func (s *EditorService) DiscoverYouTube(raw string) (media.YouTubeInfo, error) {
-	ctx, err := s.begin(i18n.N("Discovering YouTube subtitles…"))
+func (s *EditorService) DiscoverWeb(raw string) (media.WebInfo, error) {
+	ctx, err := s.begin(i18n.N("Looking up the video…"))
 	if err != nil {
-		return media.YouTubeInfo{}, err
+		return media.WebInfo{}, err
 	}
 	defer s.finish()
 	info, err := media.Discover(ctx, raw)
 	return info, friendly(err)
 }
-func (s *EditorService) ImportYouTubeCaption(raw, language string, automatic bool) (Snapshot, error) {
-	ctx, err := s.begin(i18n.N("Downloading selected subtitle track…"))
-	if err != nil {
-		return Snapshot{}, err
-	}
-	defer s.finish()
-	data, err := media.DownloadCaption(ctx, raw, language, automatic)
-	if err != nil {
-		return Snapshot{}, friendly(err)
-	}
-	cues, err := subtitle.Parse(string(data))
-	if err != nil {
-		return Snapshot{}, err
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if ctx.Err() != nil {
-		return Snapshot{}, friendly(ctx.Err())
-	}
-	s.project = project.New(cues, raw)
-	s.project.VideoPath = s.mediaPath
-	return s.snapshot(), nil
+
+// WebImport is what the import dialog asks for from one video page.
+type WebImport struct {
+	Title string `json:"title"`
+	// Caption track to import; empty Language skips subtitles.
+	Language  string `json:"language"`
+	Automatic bool   `json:"automatic"`
+	// "", "audio" or "video".
+	Media string `json:"media"`
+	// The user confirmed they may download this page's media.
+	Authorized bool `json:"authorized"`
 }
-func (s *EditorService) DownloadYouTubeAudio(raw string, authorized bool) (Snapshot, error) {
-	if !authorized {
-		return Snapshot{}, i18n.Errorf("confirm you are authorized to download this audio")
+
+// ImportWeb downloads the chosen media first, asking where to save it, then
+// imports the subtitle track as a new project that keeps that media.
+// Cancelling the save dialog changes nothing.
+func (s *EditorService) ImportWeb(raw string, req WebImport) (Snapshot, error) {
+	if req.Language == "" && req.Media == "" {
+		return Snapshot{}, i18n.Errorf("choose subtitles, audio or video to import")
 	}
-	path, err := s.app.Dialog.SaveFile().SetFilename("youtube-audio.m4a").AddFilter(i18n.T("M4A audio"), "*.m4a").PromptForSingleSelection()
-	if err != nil || path == "" {
-		return s.GetSnapshot(), err
+	var path string
+	if req.Media != "" {
+		if !req.Authorized {
+			return Snapshot{}, i18n.Errorf("confirm you are authorized to download this video")
+		}
+		ext, ok := media.MediaExtension(req.Media)
+		if !ok {
+			return Snapshot{}, i18n.Errorf("choose audio or video")
+		}
+		filter := i18n.T("MP4 video")
+		if req.Media == media.WebAudio {
+			filter = i18n.T("M4A audio")
+		}
+		var err error
+		path, err = s.app.Dialog.SaveFile().SetFilename(media.FileName(req.Title, ext)).AddFilter(filter, "*"+ext).PromptForSingleSelection()
+		if err != nil || path == "" {
+			return s.GetSnapshot(), err
+		}
+		if !media.HasExtension(path, ext) {
+			path += ext
+		}
 	}
-	if !media.HasExtension(path, ".m4a") {
-		path += ".m4a"
+	phase := i18n.N("Downloading video… %d%%")
+	if req.Media == media.WebAudio {
+		phase = i18n.N("Downloading audio… %d%%")
 	}
-	ctx, err := s.begin(i18n.N("Downloading authorized YouTube audio…"))
+	if req.Media == "" {
+		phase = i18n.N("Downloading selected subtitle track…")
+	}
+	ctx, err := s.beginFor(phase, time.Hour)
 	if err != nil {
 		return Snapshot{}, err
 	}
 	defer s.finish()
-	if err := media.DownloadAudio(ctx, raw, path); err != nil {
-		return Snapshot{}, friendly(err)
+	if path != "" {
+		s.progress(phase, 0)
+		err := media.DownloadMedia(ctx, raw, req.Media, path, func(f float64) { s.progress(phase, f) })
+		if err != nil {
+			return Snapshot{}, friendly(err)
+		}
+		s.mu.Lock()
+		s.mediaPath = path
+		s.mediaRevision++
+		if s.project != nil {
+			s.project.VideoPath = path
+		}
+		s.mu.Unlock()
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.mediaPath = path
-	s.mediaRevision++
-	if s.project != nil {
-		s.project.VideoPath = path
+	if req.Language != "" {
+		s.progress(i18n.N("Downloading selected subtitle track…"), -1)
+		data, err := media.DownloadCaption(ctx, raw, req.Language, req.Automatic)
+		if err != nil {
+			return Snapshot{}, friendly(err)
+		}
+		cues, err := subtitle.Parse(string(data))
+		if err != nil {
+			return Snapshot{}, err
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if ctx.Err() != nil {
+			return Snapshot{}, friendly(ctx.Err())
+		}
+		s.project = project.New(cues, raw)
+		s.project.VideoPath = s.mediaPath
+		return s.snapshot(), nil
 	}
-	return s.snapshot(), nil
+	return s.GetSnapshot(), nil
 }
 
 // Only the explicitly selected media file is accessible, never arbitrary paths.

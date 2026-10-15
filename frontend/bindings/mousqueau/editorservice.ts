@@ -69,12 +69,8 @@ export function DeleteDictionaryEntry(id: string): $CancellablePromise<$models.D
     return $Call.ByID(2294366933, id);
 }
 
-export function DiscoverYouTube(raw: string): $CancellablePromise<media$0.YouTubeInfo> {
-    return $Call.ByID(3289588596, raw);
-}
-
-export function DownloadYouTubeAudio(raw: string, authorized: boolean): $CancellablePromise<$models.Snapshot> {
-    return $Call.ByID(3207709357, raw, authorized);
+export function DiscoverWeb(raw: string): $CancellablePromise<media$0.WebInfo> {
+    return $Call.ByID(847981655, raw);
 }
 
 export function EditCue(cue: subtitle$0.Cue): $CancellablePromise<$models.Snapshot> {
@@ -128,8 +124,13 @@ export function ImportVideo(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(2154027340);
 }
 
-export function ImportYouTubeCaption(raw: string, language: string, automatic: boolean): $CancellablePromise<$models.Snapshot> {
-    return $Call.ByID(756973592, raw, language, automatic);
+/**
+ * ImportWeb downloads the chosen media first, asking where to save it, then
+ * imports the subtitle track as a new project that keeps that media.
+ * Cancelling the save dialog changes nothing.
+ */
+export function ImportWeb(raw: string, req: $models.WebImport): $CancellablePromise<$models.Snapshot> {
+    return $Call.ByID(249893745, raw, req);
 }
 
 export function LoadDemo(): $CancellablePromise<$models.Snapshot> {

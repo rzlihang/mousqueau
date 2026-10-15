@@ -104,6 +104,12 @@ export interface Snapshot {
 export interface Status {
     "busy": boolean;
     "phase": string;
+
+    /**
+     * Progress is the running phase's completed fraction, or -1 when it
+     * has none.
+     */
+    "progress": number;
     "ffmpeg": boolean;
     "ytdlp": boolean;
 
@@ -136,4 +142,27 @@ export interface Waveform {
     "mediaUrl": string;
     "peaksPerSecond": number;
     "peaks": number[] | null;
+}
+
+/**
+ * WebImport is what the import dialog asks for from one video page.
+ */
+export interface WebImport {
+    "title": string;
+
+    /**
+     * Caption track to import; empty Language skips subtitles.
+     */
+    "language": string;
+    "automatic": boolean;
+
+    /**
+     * "", "audio" or "video".
+     */
+    "media": string;
+
+    /**
+     * The user confirmed they may download this page's media.
+     */
+    "authorized": boolean;
 }
