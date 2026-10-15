@@ -105,6 +105,12 @@ func (p *Project) Split(id string, at float64, offset int) error {
 	return p.commitStructure(next)
 }
 
+// sameSpeakers reports whether two lines name the same speakers, in any
+// order.
+func sameSpeakers(a, b []string) bool {
+	return len(a) == len(b) && !slices.ContainsFunc(a, func(s string) bool { return !slices.Contains(b, s) })
+}
+
 // SplitLines turns each line of a cue with several speakers into a cue of
 // its own over the same time, since the lines were spoken at once. The
 // first keeps the cue's ID, and with it any suggestions.
@@ -151,8 +157,21 @@ func (p *Project) Merge(id string) error {
 	a.Start = math.Min(a.Start, b.Start)
 	a.End = math.Max(a.End, b.End)
 	if len(a.Lines) > 0 || len(b.Lines) > 0 {
-		// Overlapping speech stays one line per speaker.
-		a.Lines = append(subtitle.AsLines(a), subtitle.AsLines(b)...)
+		// Overlapping speech stays one line per speaker: a line of the
+		// second cue joins the first cue's line with the same speakers.
+		// Unassigned lines may be different people and stay apart.
+		lines := subtitle.AsLines(a)
+		for _, l := range subtitle.AsLines(b) {
+			k := slices.IndexFunc(lines, func(x subtitle.Line) bool {
+				return len(l.SpeakerIDs) > 0 && sameSpeakers(x.SpeakerIDs, l.SpeakerIDs)
+			})
+			if k < 0 {
+				lines = append(lines, l)
+			} else {
+				lines[k].Text = subtitle.JoinText(lines[k].Text, l.Text)
+			}
+		}
+		a.Lines = lines
 		var err error
 		if a, err = subtitle.Normalize(a); err != nil {
 			return err
