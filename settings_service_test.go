@@ -481,7 +481,8 @@ func TestMenuCommandsMatchTheKeymap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	keymap := string(data)
+	// Windows checkouts may use CRLF.
+	keymap := strings.ReplaceAll(string(data), "\r\n", "\n")
 	for _, c := range append(slices.Clone(fileCommands), helpCommands...) {
 		key := strings.Replace(c.accelerator, "CmdOrCtrl+", "$mod+", 1)
 		last := key[strings.LastIndex(key, "+")+1:]
