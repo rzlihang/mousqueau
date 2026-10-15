@@ -60,15 +60,6 @@ func windowURL(name, theme, systemTheme string) string {
 	return "/?" + query.Encode()
 }
 
-// ground is the theme's --bg (style.css and the inline style in index.html).
-// A new window shows this colour before its page has painted.
-func ground(dark bool) application.RGBA {
-	if dark {
-		return application.NewRGB(0x0f, 0x0f, 0x0f)
-	}
-	return application.NewRGB(0xf2, 0xf4, 0xf7)
-}
-
 func (s *EditorService) theme() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()

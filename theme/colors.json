@@ -1,0 +1,24 @@
+{
+  "about": "Application colours. scripts/colors.mjs generates frontend/src/colors.generated.{css,ts}, the startup style in frontend/index.html and ground() in colors_generated.go from this file; run `pnpm colors:generate` in frontend after editing it. A token is one colour, or a light and a dark value.",
+  "tokens": [
+    { "name": "bg", "value": { "light": "#f2f4f7", "dark": "#0f0f0f" }, "usage": "Window ground behind the panels, the startup background before the page paints, the native window background (ground() in Go) and Ant Design's colorBgLayout." },
+    { "name": "panel", "value": { "light": "#fff", "dark": "#1a1a1a" }, "usage": "Panels, title bars, sidebars and setting cards." },
+    { "name": "head", "value": { "light": "#f7f8fa", "dark": "#141414" }, "usage": "Column header of the cue grid and the timeline ruler." },
+    { "name": "ink", "value": { "light": "#1d2939", "dark": "#f0f0f0" }, "usage": "Body text and headings." },
+    { "name": "muted", "value": { "light": "#667085", "dark": "#a6a6a6" }, "usage": "Captions, hints, metadata and inactive sidebar items." },
+    { "name": "line", "value": { "light": "#e4e7ec", "dark": "#333333" }, "usage": "1 px hairlines: panel, card and title-bar borders. Decorative, never the only edge of a control." },
+    { "name": "select", "value": { "light": "#eef5ff", "dark": "#1f2f45" }, "usage": "Selected or hovered rows, sidebar items and window-control hover." },
+    { "name": "block", "value": { "light": "#fff", "dark": "#242424" }, "usage": "Subtitle blocks on the timeline and dictionary previews." },
+    { "name": "wave", "value": { "light": "#b3c6e3", "dark": "#3b5680" }, "usage": "Waveform outside the selected range (read by Timeline.tsx)." },
+    { "name": "wave-sel", "value": { "light": "#2867c7", "dark": "#6f9de0" }, "usage": "Waveform inside the selected range (read by Timeline.tsx)." },
+    { "name": "accent", "value": "#2867c7", "usage": "Brand blue: Ant Design's colorPrimary, focus rings, the playhead and selected cues." },
+    { "name": "edge", "value": { "light": "rgb(0 0 0 / 22%)", "dark": "rgb(255 255 255 / 16%)" }, "usage": "1 px outline of frameless windows outside macOS." },
+    { "name": "scroll-thumb", "value": { "light": "#a5afbd", "dark": "#4d4d4d" }, "usage": "Scrollbar and timeline zoom thumbs." },
+    { "name": "scroll-thumb-hover", "value": { "light": "#7c899b", "dark": "#707070" }, "usage": "Scrollbar and timeline zoom thumbs while hovered or dragged." },
+    { "name": "video-ground", "value": "#0a0a0a", "usage": "Letterbox behind the video in both themes." },
+    { "name": "error", "value": { "light": "#cf1322", "dark": "#ff7875" }, "usage": "Ant Design's colorError seed. Light reaches 4.5:1; the dark algorithm turns the dark seed into #dc6966." },
+    { "name": "tag-green-text", "value": { "light": "#237804", "dark": "#6abe39" }, "usage": "Green tag text. The light value overrides Ant Design's green7 to reach 4.5:1; dark keeps Ant Design's own." },
+    { "name": "tag-orange-text", "value": { "light": "#ad4e00", "dark": "#e89a3c" }, "usage": "Orange tag text. The light value overrides Ant Design's orange7 to reach 4.5:1; dark keeps Ant Design's own." },
+    { "name": "tag-gold-text", "value": { "light": "#995b00", "dark": "#e8b339" }, "usage": "Gold tag text. The light value overrides Ant Design's gold7 to reach 4.5:1; dark keeps Ant Design's own." }
+  ]
+}

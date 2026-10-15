@@ -418,7 +418,7 @@ func TestGroundMatchesStartupColours(t *testing.T) {
 	if light.Red != 0xf2 || light.Green != 0xf4 || light.Blue != 0xf7 || light.Alpha != 255 {
 		t.Fatalf("light ground %+v", light)
 	}
-	for _, path := range []string{"frontend/index.html", "frontend/src/style.css"} {
+	for _, path := range []string{"frontend/index.html", "frontend/src/colors.generated.css"} {
 		body, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
