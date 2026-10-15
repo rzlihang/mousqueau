@@ -87,6 +87,12 @@ export interface SettingsView {
     "version": string;
     "lastUpdateCheck": string;
     "updateVersion": string;
+
+    /**
+     * Developer is true for wails3 dev and other builds without -tags production.
+     * Sample-import controls are shown only then.
+     */
+    "developer": boolean;
 }
 
 export interface Snapshot {

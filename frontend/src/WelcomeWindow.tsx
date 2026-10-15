@@ -31,6 +31,7 @@ import {
   toolSearch,
 } from "./useSettings";
 import WindowControls from "./WindowControls";
+import { showSampleImport } from "./sampleImport";
 
 type Props = {
   settings: SettingsView;
@@ -398,9 +399,11 @@ export default function WelcomeWindow({
             </Button>
           ) : (
             <>
-              <Button onClick={() => finish("demo")}>
-                {t.common.loadDemo}
-              </Button>
+              {showSampleImport(settings.developer) && (
+                <Button onClick={() => finish("demo")}>
+                  {t.common.loadDemo}
+                </Button>
+              )}
               <Button type="primary" onClick={() => finish("srt")}>
                 {t.common.importSrt}
               </Button>

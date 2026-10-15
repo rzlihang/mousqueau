@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"mousqueau/internal/analysis"
+	"mousqueau/internal/buildinfo"
 	"mousqueau/internal/i18n"
 	"mousqueau/internal/keychain"
 	"mousqueau/internal/media"
@@ -145,6 +146,9 @@ type SettingsView struct {
 	Version           string         `json:"version"`
 	LastUpdateCheck   string         `json:"lastUpdateCheck"`
 	UpdateVersion     string         `json:"updateVersion"`
+	// Developer is true for wails3 dev and other builds without -tags production.
+	// Sample-import controls are shown only then.
+	Developer bool `json:"developer"`
 }
 
 // credentialStore is the keychain, or a stand-in under test.
@@ -257,7 +261,7 @@ func (s *EditorService) settingsView() SettingsView {
 		FFmpeg: toolStatus("ffmpeg", s.settings.FFmpegPath), YTDLP: toolStatus("yt-dlp", s.settings.YTDLPPath),
 		Provider: s.settings.Provider, Providers: s.providerViews(), KeychainAvailable: s.keyStore().Available(),
 		AutoUpdate: s.settings.AutoUpdate, Beta: s.settings.Beta,
-		Version: version, UpdateVersion: s.update.Version,
+		Version: version, UpdateVersion: s.update.Version, Developer: buildinfo.Developer,
 	}
 	if !s.settings.LastUpdateCheck.IsZero() {
 		view.LastUpdateCheck = s.settings.LastUpdateCheck.Format(time.RFC3339)
