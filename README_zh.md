@@ -126,6 +126,15 @@ xvfb-run -a -s "-screen 0 1700x1050x24" dbus-run-session -- scripts/linux-gui-sm
 
 该脚本会用全新配置打开欢迎窗口，点击绘制出来的关闭按钮将其关闭；分别用按钮和双击标题栏把编辑器最大化再还原；用 Ctrl+, 打开设置并关闭；最后关闭编辑器退出应用，并为每个状态保存一张截图。它只检查 GTK/WebKitGTK 的行为，不涉及 macOS 或 Windows。
 
+在 macOS 上（Xcode 命令行工具提供 `swiftc`），先构建前端，然后：
+
+```sh
+go build -tags production -o /tmp/mousqueau .
+scripts/macos-launch-smoke.sh /tmp/mousqueau /tmp/mousqueau-shots
+```
+
+该脚本用全新配置在浅色和深色系统外观下各启动应用三次；如果应用退出、日志中出现 panic，或 30 秒内没有显示窗口，就判定失败。每次启动都会保持运行超过窗口显示的十秒兜底时间后再结束。运行期间它会切换系统外观，结束后恢复原设置。截图仅供人工查看：脚本不检查颜色，首帧是否白屏仍需在 Mac 上肉眼确认。
+
 要在没有 GTK/WebKit 的 Linux 上做无界面验证，先构建前端，然后：
 
 ```sh

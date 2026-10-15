@@ -61,6 +61,14 @@ jobs:
         working-directory: frontend
       - run: go test ./...
       - run: go build -tags production -o /tmp/mousqueau .
+      # Launches the app three times each in light and dark appearance and
+      # fails on a crash, a panic, or no window. Colours are not asserted.
+      - run: scripts/macos-launch-smoke.sh /tmp/mousqueau macos-launch
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-launch-screenshots
+          path: macos-launch
   linux-desktop:
     runs-on: ubuntu-24.04
     steps:
