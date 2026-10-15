@@ -310,3 +310,44 @@ func TestAcceptedSuggestionKeepsMatchingLines(t *testing.T) {
 		t.Fatalf("accept: %+v", c)
 	}
 }
+func TestMergeJoinsLinesOfTheSameSpeaker(t *testing.T) {
+	p := New([]subtitle.Cue{
+		{ID: "cue-1", Identifier: "1", Start: 1, End: 3, Text: "x", SpeakerIDs: []string{}, Lines: []subtitle.Line{
+			{Text: "这是没钱", SpeakerIDs: []string{"C"}},
+			{Text: "要钱了呗", SpeakerIDs: []string{"A"}},
+			{Text: "嗯", SpeakerIDs: []string{}},
+		}},
+		{ID: "cue-2", Identifier: "2", Start: 3, End: 5, Text: "x", SpeakerIDs: []string{}, Lines: []subtitle.Line{
+			{Text: "还要多少", SpeakerIDs: []string{"A"}},
+			{Text: "啊", SpeakerIDs: []string{}},
+			{Text: "够了", SpeakerIDs: []string{"B"}},
+		}},
+	}, "")
+	for i := range p.State.Cues {
+		c, err := subtitle.Normalize(p.State.Cues[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		p.State.Cues[i] = c
+	}
+	if err := p.Merge("cue-1"); err != nil {
+		t.Fatal(err)
+	}
+	c := p.State.Cues[0]
+	want := "- 这是没钱\n- 要钱了呗还要多少\n- 嗯\n- 啊\n- 够了"
+	if c.Text != want || len(c.Lines) != 5 {
+		t.Fatalf("merge: %q %+v", c.Text, c.Lines)
+	}
+	if err := p.SplitLines("cue-1"); err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for _, cue := range p.State.Cues {
+		for _, s := range cue.SpeakerIDs {
+			if seen[s] {
+				t.Fatalf("speaker %s split into two cues", s)
+			}
+			seen[s] = true
+		}
+	}
+}
