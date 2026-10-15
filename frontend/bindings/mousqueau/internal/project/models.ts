@@ -9,6 +9,7 @@ import * as analysis$0 from "../analysis/models.js";
 import * as subtitle$0 from "../subtitle/models.js";
 
 export interface Project {
+    "$schema"?: string;
     "version": number;
     "videoPath": string;
     "subtitlePath": string;

@@ -20,7 +20,12 @@ type State struct {
 	Segments    []analysis.Segment    `json:"segments"`
 	Suggestions []analysis.Suggestion `json:"suggestions"`
 }
+
+// SchemaURL names the JSON Schema that describes a saved project.
+const SchemaURL = "https://raw.githubusercontent.com/rzlihang/mousqueau/main/schema/project.schema.json"
+
 type Project struct {
+	Schema       string         `json:"$schema,omitempty"`
 	Version      int            `json:"version"`
 	VideoPath    string         `json:"videoPath"`
 	SubtitlePath string         `json:"subtitlePath"`
@@ -32,7 +37,7 @@ type Project struct {
 
 func clone[T any](v T) T { b, _ := json.Marshal(v); var out T; _ = json.Unmarshal(b, &out); return out }
 func New(cues []subtitle.Cue, source string) *Project {
-	return &Project{Version: 1, SubtitlePath: source, Original: clone(cues), State: State{Cues: clone(cues), Speakers: []analysis.Speaker{}, Segments: []analysis.Segment{}, Suggestions: []analysis.Suggestion{}}, Undo: []State{}, Redo: []State{}}
+	return &Project{Schema: SchemaURL, Version: 1, SubtitlePath: source, Original: clone(cues), State: State{Cues: clone(cues), Speakers: []analysis.Speaker{}, Segments: []analysis.Segment{}, Suggestions: []analysis.Suggestion{}}, Undo: []State{}, Redo: []State{}}
 }
 func (p *Project) commit(next State) {
 	p.Undo = append(p.Undo, clone(p.State))
@@ -43,6 +48,10 @@ func (p *Project) commit(next State) {
 	p.State = clone(next)
 }
 func (p *Project) Edit(cue subtitle.Cue) error {
+	cue, err := subtitle.Normalize(cue)
+	if err != nil {
+		return err
+	}
 	if err := subtitle.Validate(cue); err != nil {
 		return err
 	}
@@ -70,6 +79,9 @@ func (p *Project) Split(id string, at float64, offset int) error {
 		return i18n.Errorf("subtitle no longer exists")
 	}
 	first := next.Cues[i]
+	if len(first.Lines) > 0 {
+		return i18n.Errorf("a subtitle with several speakers splits by its lines")
+	}
 	ms := func(t float64) int64 { return int64(math.Round(t * 1000)) }
 	if math.IsNaN(at) || ms(at) <= ms(first.Start) || ms(at) >= ms(first.End) {
 		return i18n.Errorf("the split time must fall inside the subtitle")
@@ -93,6 +105,35 @@ func (p *Project) Split(id string, at float64, offset int) error {
 	return p.commitStructure(next)
 }
 
+// SplitLines turns each line of a cue with several speakers into a cue of
+// its own over the same time, since the lines were spoken at once. The
+// first keeps the cue's ID, and with it any suggestions.
+func (p *Project) SplitLines(id string) error {
+	next := clone(p.State)
+	i := slices.IndexFunc(next.Cues, func(c subtitle.Cue) bool { return c.ID == id })
+	if i < 0 {
+		return i18n.Errorf("subtitle no longer exists")
+	}
+	c := next.Cues[i]
+	if len(c.Lines) < 2 {
+		return i18n.Errorf("this subtitle has only one line to split")
+	}
+	parts := make([]subtitle.Cue, len(c.Lines))
+	used := []string{}
+	for k, l := range c.Lines {
+		part := c
+		part.Lines = nil
+		part.Text, part.SpeakerIDs = l.Text, slices.Clone(l.SpeakerIDs)
+		if k > 0 {
+			part.ID = p.newCueID(used...)
+			used = append(used, part.ID)
+		}
+		parts[k] = part
+	}
+	next.Cues = slices.Concat(next.Cues[:i], parts, next.Cues[i+1:])
+	return p.commitStructure(next)
+}
+
 // Merge joins a cue with the one after it. The merged cue keeps the first
 // ID; suggestions for the second move to it and, since the text no longer
 // matches what was analyzed, can only be rejected.
@@ -109,10 +150,19 @@ func (p *Project) Merge(id string) error {
 	// Cues need not be in time order, so cover both intervals.
 	a.Start = math.Min(a.Start, b.Start)
 	a.End = math.Max(a.End, b.End)
-	a.Text = joinText(a.Text, b.Text)
-	for _, s := range b.SpeakerIDs {
-		if !slices.Contains(a.SpeakerIDs, s) {
-			a.SpeakerIDs = append(a.SpeakerIDs, s)
+	if len(a.Lines) > 0 || len(b.Lines) > 0 {
+		// Overlapping speech stays one line per speaker.
+		a.Lines = append(subtitle.AsLines(a), subtitle.AsLines(b)...)
+		var err error
+		if a, err = subtitle.Normalize(a); err != nil {
+			return err
+		}
+	} else {
+		a.Text = subtitle.JoinText(a.Text, b.Text)
+		for _, s := range b.SpeakerIDs {
+			if !slices.Contains(a.SpeakerIDs, s) {
+				a.SpeakerIDs = append(a.SpeakerIDs, s)
+			}
 		}
 	}
 	if a.SpeakerIDs == nil {
@@ -127,25 +177,6 @@ func (p *Project) Merge(id string) error {
 		}
 	}
 	return p.commitStructure(next)
-}
-
-// joinText joins two subtitle texts with a space, or with nothing where
-// either side of the join is CJK, which is written without spaces.
-func joinText(a, b string) string {
-	a = strings.TrimRightFunc(a, unicode.IsSpace)
-	b = strings.TrimLeftFunc(b, unicode.IsSpace)
-	if a == "" || b == "" {
-		return a + b
-	}
-	ra, rb := []rune(a), []rune(b)
-	if unbroken(ra[len(ra)-1]) || unbroken(rb[0]) {
-		return a + b
-	}
-	return a + " " + b
-}
-func unbroken(r rune) bool {
-	return unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana, unicode.Hangul) ||
-		(r >= 0x3000 && r <= 0x303f) || (r >= 0xff00 && r <= 0xffef)
 }
 
 // commitStructure renumbers SRT identifiers after cues were added or removed,
@@ -163,8 +194,11 @@ func (p *Project) commitStructure(next State) error {
 
 // newCueID returns an ID that no cue in the project, its originals or its
 // history has used.
-func (p *Project) newCueID() string {
+func (p *Project) newCueID(taken ...string) string {
 	used := map[string]bool{}
+	for _, id := range taken {
+		used[id] = true
+	}
 	for _, cues := range [][]subtitle.Cue{p.Original, p.State.Cues} {
 		for _, c := range cues {
 			used[c.ID] = true
@@ -248,11 +282,19 @@ func (p *Project) Decide(id, decision string) error {
 							return i18n.Errorf("subtitle changed since analysis; analyze again or edit manually")
 						}
 						c.Text = s.Proposed
+						// Lines survive when the proposal keeps one dashed line each.
+						c.Lines = subtitle.Retext(c.Lines, s.Proposed)
 						// Dictionary suggestions only correct wording; speakers and
 						// the review flag stay as the user left them.
 						if analysis.SuggestionSource(s) != analysis.SourceDictionary {
-							c.SpeakerIDs = s.SpeakerIDs
+							if c.Lines == nil {
+								c.SpeakerIDs = s.SpeakerIDs
+							}
 							c.Review = s.Review
+						}
+						var err error
+						if c, err = subtitle.Normalize(c); err != nil {
+							return err
 						}
 						if _, err := subtitle.Render([]subtitle.Cue{c}); err != nil {
 							return err
@@ -299,7 +341,16 @@ func Decode(data []byte) (*Project, error) {
 	}
 	validate := func(cues []subtitle.Cue) error {
 		ids := map[string]bool{}
-		for _, c := range cues {
+		for i, c := range cues {
+			// Lines that no longer match the text (say, edited by hand or by
+			// an older version) give way to the text.
+			if len(c.Lines) > 0 {
+				if n, err := subtitle.Normalize(c); err != nil || n.Text != c.Text {
+					cues[i].Lines = nil
+				} else {
+					cues[i] = n
+				}
+			}
 			if c.ID == "" || ids[c.ID] {
 				return i18n.Errorf("missing or duplicate cue ID")
 			}
@@ -314,10 +365,13 @@ func Decode(data []byte) (*Project, error) {
 	if err := validate(p.State.Cues); err != nil {
 		return nil, err
 	}
-	for _, state := range append(append([]State{}, p.Undo...), p.Redo...) {
-		if err := validate(state.Cues); err != nil {
-			return nil, err
+	for _, states := range [][]State{p.Undo, p.Redo} {
+		for _, state := range states {
+			if err := validate(state.Cues); err != nil {
+				return nil, err
+			}
 		}
 	}
+	p.Schema = SchemaURL
 	return &p, nil
 }

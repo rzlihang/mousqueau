@@ -281,6 +281,13 @@ export function SplitCue(id: string, at: number, offset: number): $CancellablePr
 }
 
 /**
+ * SplitCueLines turns each speaker's line of a cue into a cue of its own.
+ */
+export function SplitCueLines(id: string): $CancellablePromise<$models.Snapshot> {
+    return $Call.ByID(2026323126, id);
+}
+
+/**
  * TakePendingAction returns the action chosen at the end of setup, once.
  */
 export function TakePendingAction(): $CancellablePromise<string> {

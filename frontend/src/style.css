@@ -695,6 +695,48 @@ button.side-item {
 .speaker-form button {
   grid-column: 1/-1;
 }
+/* Lines of overlapping speech in one cue */
+.cue-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  color: var(--ink);
+}
+.cue-line-mark {
+  width: 3px;
+  align-self: stretch;
+  flex: none;
+  border-radius: 2px;
+}
+.cue-line-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.cue-line-speakers {
+  width: 120px;
+  flex: none;
+}
+.assign-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.assign-row .ant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.speaker-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
 
 /* Suggestions */
 .suggestion {

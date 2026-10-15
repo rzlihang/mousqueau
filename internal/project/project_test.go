@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"mousqueau/internal/analysis"
 	"mousqueau/internal/subtitle"
+	"slices"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -201,15 +204,109 @@ func TestAudioAndDictionarySuggestionsCoexist(t *testing.T) {
 		t.Fatal("undo after dictionary accept")
 	}
 }
-func TestJoinText(t *testing.T) {
-	for _, tc := range [][3]string{
-		{"Hello", "there", "Hello there"},
-		{"你好，", "世界", "你好，世界"},
-		{"Line one\n", "  two", "Line one two"},
-		{"OK", "。", "OK。"},
-	} {
-		if got := joinText(tc[0], tc[1]); got != tc[2] {
-			t.Errorf("joinText(%q, %q) = %q", tc[0], tc[1], got)
+
+func crosstalk() *Project {
+	return New([]subtitle.Cue{
+		{ID: "cue-1", Identifier: "1", Start: 1, End: 3, Text: "这是没钱 要钱了呗 要没钱", SpeakerIDs: []string{"C"}},
+		{ID: "cue-2", Identifier: "2", Start: 3, End: 5, Text: "好", SpeakerIDs: []string{}},
+	}, "")
+}
+func TestEditWithLinesKeepsOneCue(t *testing.T) {
+	p := crosstalk()
+	cue := p.State.Cues[0]
+	cue.Lines = []subtitle.Line{{Text: "这是没钱 要没钱", SpeakerIDs: []string{"C"}}, {Text: "要钱了呗", SpeakerIDs: []string{"A"}}}
+	if err := p.Edit(cue); err != nil {
+		t.Fatal(err)
+	}
+	c := p.State.Cues[0]
+	if len(p.State.Cues) != 2 || c.Text != "- 这是没钱 要没钱\n- 要钱了呗" || len(c.SpeakerIDs) != 2 || len(c.Lines) != 2 {
+		t.Fatalf("edit: %+v", c)
+	}
+	if p.Split("cue-1", 2, 3) == nil {
+		t.Fatal("time split of a cue with lines")
+	}
+	p.UndoEdit()
+	if p.State.Cues[0].Lines != nil || p.State.Cues[0].Text != "这是没钱 要钱了呗 要没钱" {
+		t.Fatal("undo")
+	}
+}
+func TestSplitLinesMakesOverlappingCues(t *testing.T) {
+	p := crosstalk()
+	cue := p.State.Cues[0]
+	cue.Lines = []subtitle.Line{{Text: "这是没钱", SpeakerIDs: []string{"C"}}, {Text: "要钱了呗", SpeakerIDs: []string{"A"}}, {Text: "要没钱", SpeakerIDs: []string{"B"}}}
+	if err := p.Edit(cue); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.SplitLines("cue-1"); err != nil {
+		t.Fatal(err)
+	}
+	c := p.State.Cues
+	if len(c) != 4 || c[0].ID != "cue-1" || c[1].ID == c[2].ID || c[2].ID == "cue-2" {
+		t.Fatalf("ids: %+v", c)
+	}
+	for k, want := range []string{"这是没钱", "要钱了呗", "要没钱"} {
+		if c[k].Text != want || c[k].Start != 1 || c[k].End != 3 || c[k].Lines != nil || len(c[k].SpeakerIDs) != 1 || c[k].Identifier != strconv.Itoa(k+1) {
+			t.Fatalf("part %d: %+v", k, c[k])
 		}
+	}
+	if p.SplitLines("cue-2") == nil {
+		t.Fatal("split a single line")
+	}
+}
+func TestMergeKeepsSpeakersOnTheirLines(t *testing.T) {
+	p := crosstalk()
+	cue := p.State.Cues[0]
+	cue.Lines = []subtitle.Line{{Text: "这是没钱", SpeakerIDs: []string{"C"}}, {Text: "要钱了呗", SpeakerIDs: []string{"A"}}}
+	if err := p.Edit(cue); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Merge("cue-1"); err != nil {
+		t.Fatal(err)
+	}
+	c := p.State.Cues[0]
+	if len(c.Lines) != 3 || c.Lines[2].Text != "好" || c.Text != "- 这是没钱\n- 要钱了呗\n- 好" {
+		t.Fatalf("merge: %+v", c)
+	}
+}
+func TestDecodeDropsLinesThatNoLongerMatchTheText(t *testing.T) {
+	p := crosstalk()
+	cue := p.State.Cues[0]
+	cue.Lines = []subtitle.Line{{Text: "这是没钱", SpeakerIDs: []string{"C"}}, {Text: "要钱了呗", SpeakerIDs: []string{"A"}}}
+	if err := p.Edit(cue); err != nil {
+		t.Fatal(err)
+	}
+	p.State.Cues[0].Text = "手改过的文字"
+	data, _ := json.Marshal(p)
+	if !strings.Contains(string(data), `"$schema":"`+SchemaURL) {
+		t.Fatal("no schema reference")
+	}
+	loaded, err := Decode(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := loaded.State.Cues[0]; c.Lines != nil || c.Text != "手改过的文字" {
+		t.Fatalf("stale lines kept: %+v", c)
+	}
+	if loaded.Undo[len(loaded.Undo)-1].Cues[0].Lines != nil {
+		t.Fatal("history changed")
+	}
+}
+func TestAcceptedSuggestionKeepsMatchingLines(t *testing.T) {
+	p := crosstalk()
+	cue := p.State.Cues[0]
+	cue.Lines = []subtitle.Line{{Text: "这是没前", SpeakerIDs: []string{"C"}}, {Text: "要钱了呗", SpeakerIDs: []string{"A"}}}
+	if err := p.Edit(cue); err != nil {
+		t.Fatal(err)
+	}
+	p.AddAnalysis(analysis.Result{Suggestions: []analysis.Suggestion{{
+		ID: "s1", CueID: "cue-1", Original: "- 这是没前\n- 要钱了呗", Proposed: "- 这是没钱\n- 要钱了呗",
+		SpeakerIDs: []string{"X"}, Status: "pending",
+	}}})
+	if err := p.Decide("s1", "accepted"); err != nil {
+		t.Fatal(err)
+	}
+	c := p.State.Cues[0]
+	if len(c.Lines) != 2 || c.Lines[0].Text != "这是没钱" || c.Lines[1].SpeakerIDs[0] != "A" || slices.Contains(c.SpeakerIDs, "X") {
+		t.Fatalf("accept: %+v", c)
 	}
 }
