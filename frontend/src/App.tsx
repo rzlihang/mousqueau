@@ -1993,6 +1993,8 @@ export default function App() {
   return (
     <ConfigProvider
       {...antdIconConfig}
+      // Dialogs hold typed input and downloads; only × or Esc closes them.
+      modal={{ ...antdIconConfig.modal, mask: { closable: false } }}
       locale={ANTD_LOCALES[locale]}
       button={{ autoInsertSpace: false }}
       theme={{
