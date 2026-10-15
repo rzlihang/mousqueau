@@ -331,12 +331,14 @@ function EditorApp({
       /* pane sizes are only a convenience */
     }
   }, [layout]);
+  // Focus waits until the viewer shows the selected cue's text field, which
+  // may take a seek after the selection itself.
   useEffect(() => {
-    if (focusOverlay.current && cue) {
+    if (focusOverlay.current && cue && overlayCue?.id === cue.id) {
       focusOverlay.current = false;
       textArea.current?.focus();
     }
-  }, [cue?.id]);
+  }, [cue?.id, overlayCue?.id]);
   useEffect(() => {
     if (!cue && cues.length) setSelected(cues[0].id);
   }, [cue, cues]);
