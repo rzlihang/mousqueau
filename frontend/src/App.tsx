@@ -64,6 +64,7 @@ import {
   lineSpeakers,
   relines,
   renderLines,
+  survivingSpeakers,
 } from "./cueLines";
 import {
   type CueFilter,
@@ -549,7 +550,8 @@ function EditorApp({
       // ordinary cue again, spoken by everyone the lines had.
       if (patch.text !== undefined && d.lines && patch.lines === undefined) {
         next.lines = relines(patch.text, d.lines);
-        if (!next.lines) next.speakerIds = lineSpeakers(d.lines);
+        if (!next.lines)
+          next.speakerIds = survivingSpeakers(patch.text, d.lines);
       }
       return next;
     });
@@ -585,7 +587,9 @@ function EditorApp({
       void message.info(
         result.error === "acrossLines"
           ? t.inspector.assignAcrossLines
-          : t.inspector.assignNeedsSelection,
+          : result.error === "sameSpeaker"
+            ? t.inspector.assignSameSpeaker
+            : t.inspector.assignNeedsSelection,
       );
       return;
     }

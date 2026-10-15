@@ -166,6 +166,7 @@ export const zhTW: Messages = {
     assignSelection: "把畫面字幕中選取的文字移到新的一行，說話者：",
     assignNeedsSelection: "請先在畫面字幕中選取文字",
     assignAcrossLines: "請在同一行內選取文字",
+    assignSameSpeaker: "這些文字已屬於這位說話者",
     splitLines: (n: number) => `按行分割成 ${n} 則字幕`,
     splitLinesHint: "每一行都會成為一則獨立字幕，時間相同，因為這些話是同時說的。",
     splitHint:
