@@ -681,6 +681,19 @@ function EditorApp({
         void Editor.OpenSettings();
         return;
       }
+      // Space plays and pauses unless it is typing into a field. Taking the
+      // key also stops it from pressing whichever button has focus.
+      if (
+        e.code === "Space" &&
+        !(e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) &&
+        !target.closest(
+          "input, textarea, select, [contenteditable], .ant-modal, .ant-select",
+        )
+      ) {
+        e.preventDefault();
+        if (!e.repeat) togglePlay();
+        return;
+      }
       if (
         !(e.metaKey || e.ctrlKey) ||
         target.closest("input, textarea, [contenteditable], .ant-modal")

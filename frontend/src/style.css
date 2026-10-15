@@ -780,6 +780,8 @@ button.side-item {
   display: flex;
   flex-direction: column;
   background: var(--bg);
+  -webkit-user-select: none;
+  user-select: none;
 }
 .timeline-toolbar {
   height: 38px;
