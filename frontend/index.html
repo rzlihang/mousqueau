@@ -8,19 +8,30 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mousqueau</title>
-    <!-- Paint the theme's ground before the bundle loads, so a window never
-         flashes white. Keep these in step with --bg in src/style.css. -->
+    <!-- Paint the theme's ground before the bundle loads. color-scheme is what
+         WebKit uses for the canvas; without it the canvas stays white until
+         CSS runs. Keep the colours in step with --bg in src/style.css. -->
+    <meta name="color-scheme" content="light dark" />
     <style>
-      html { background: #f2f4f7; }
-      @media (prefers-color-scheme: dark) { html { background: #0f0f0f; } }
-      html[data-theme="light"] { background: #f2f4f7; }
-      html[data-theme="dark"] { background: #0f0f0f; }
+      html { background: #f2f4f7; color-scheme: light; }
+      body { margin: 0; background: inherit; }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]) { background: #0f0f0f; color-scheme: dark; }
+      }
+      html[data-theme="light"] { background: #f2f4f7; color-scheme: light; }
+      html[data-theme="dark"] { background: #0f0f0f; color-scheme: dark; }
     </style>
     <script>
-      // Go passes a theme chosen in Settings; "system" uses the query above.
-      var theme = new URLSearchParams(location.search).get("theme");
-      if (theme === "dark" || theme === "light")
+      // Native appearance is available before a new webview's media query.
+      var query = new URLSearchParams(location.search);
+      var theme = query.get("theme");
+      if (theme !== "dark" && theme !== "light")
+        theme = query.get("systemTheme");
+      if (theme === "dark" || theme === "light") {
         document.documentElement.dataset.theme = theme;
+        var scheme = document.querySelector('meta[name="color-scheme"]');
+        if (scheme) scheme.setAttribute("content", theme);
+      }
     </script>
   </head>
   <body>

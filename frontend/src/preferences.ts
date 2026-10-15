@@ -82,6 +82,11 @@ export function resolveDark(theme: ThemeChoice, systemDark: boolean): boolean {
   return theme === "dark" || (theme === "system" && systemDark);
 }
 
+export function initialSystemDark(search: string, mediaDark: boolean): boolean {
+  const native = new URLSearchParams(search).get("systemTheme");
+  return native === "dark" || (native !== "light" && mediaDark);
+}
+
 export type ToolLike = { path: string; custom: boolean; ready: boolean };
 
 // A configured location that does not work is reported as such, instead of

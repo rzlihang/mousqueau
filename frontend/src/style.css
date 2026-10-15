@@ -11,6 +11,28 @@ body,
   overscroll-behavior: none;
   background: var(--bg, #f2f4f7);
 }
+/* The bundle replaces the inline ground in index.html. Until data-theme is
+   set, --bg is unset; follow the system instead of falling back to light.
+   Keep the colours in step with index.html and ground() in Go. */
+html {
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
+  html:not([data-theme="light"]),
+  html:not([data-theme="light"]) body,
+  html:not([data-theme="light"]) #root {
+    background-color: var(--bg, #0f0f0f);
+  }
+}
+html[data-theme="light"] {
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
 body {
   position: fixed;
   inset: 0;
