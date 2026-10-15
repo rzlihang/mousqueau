@@ -58,6 +58,15 @@ import type { Snapshot, Status } from "../bindings/mousqueau/models";
 import type { Cue } from "../bindings/mousqueau/internal/subtitle/models";
 import { activeCue, formatTime, parseTime } from "./editor";
 import {
+  type CueLine,
+  extract,
+  joinUp,
+  lineSpeakers,
+  relines,
+  renderLines,
+  survivingSpeakers,
+} from "./cueLines";
+import {
   type CueFilter,
   codePointOffset,
   cueStatus,
@@ -111,6 +120,8 @@ type Draft = {
   end: string;
   speakerIds: string[];
   review: boolean;
+  // Overlapping speech: one line per row of text, each with its speakers.
+  lines: CueLine[] | null;
 };
 const EMPTY_DRAFT: Draft = {
   text: "",
@@ -118,7 +129,21 @@ const EMPTY_DRAFT: Draft = {
   end: "",
   speakerIds: [],
   review: false,
+  lines: null,
 };
+function draftOf(cue: Cue): Draft {
+  return {
+    text: cue.text,
+    start: formatTime(cue.start),
+    end: formatTime(cue.end),
+    speakerIds: cue.speakerIds ?? [],
+    review: cue.review,
+    lines:
+      cue.lines && cue.lines.length > 1
+        ? cue.lines.map((l) => ({ text: l.text, speakerIds: l.speakerIds ?? [] }))
+        : null,
+  };
+}
 type Tab = "edit" | "speakers" | "suggestions";
 type Wave =
   | { url: string; peaks: number[]; rate: number }
@@ -285,15 +310,7 @@ function EditorApp({
     return () => clearTimeout(handle);
   }, [draft.text, draftDirty, matchesByCue, selected]);
   useEffect(() => {
-    if (cue) {
-      setDraft({
-        text: cue.text,
-        start: formatTime(cue.start),
-        end: formatTime(cue.end),
-        speakerIds: cue.speakerIds ?? [],
-        review: cue.review,
-      });
-    } else setDraft(EMPTY_DRAFT);
+    setDraft(cue ? draftOf(cue) : EMPTY_DRAFT);
     setDraftDirty(false);
   }, [cue]);
   useEffect(() => {
@@ -389,13 +406,22 @@ function EditorApp({
   async function applyDraft(): Promise<boolean> {
     if (!cue || !draftDirty) return true;
     try {
+      // Blank rows typed in the viewer are not lines; one line left is an
+      // ordinary cue.
+      const lines = draft.lines?.filter((l) => l.text.trim()) ?? null;
+      const plain = lines && lines.length < 2 ? lines[0] : undefined;
       const edited: Cue = {
         ...cue,
-        text: draft.text,
+        text: plain ? plain.text : lines ? renderLines(lines) : draft.text,
         start: parseTime(draft.start, t.editor.invalidTime),
         end: parseTime(draft.end, t.editor.invalidTime),
-        speakerIds: draft.speakerIds,
+        speakerIds: plain
+          ? plain.speakerIds
+          : lines
+            ? lineSpeakers(lines)
+            : draft.speakerIds,
         review: draft.review,
+        lines: lines && lines.length > 1 ? lines : null,
       };
       if (edited.end <= edited.start) throw new Error(t.editor.endBeforeStart);
       return !!(await update(() => Editor.EditCue(edited)));
@@ -406,13 +432,7 @@ function EditorApp({
   }
   function discardDraft() {
     if (!cue) return;
-    setDraft({
-      text: cue.text,
-      start: formatTime(cue.start),
-      end: formatTime(cue.end),
-      speakerIds: cue.speakerIds ?? [],
-      review: cue.review,
-    });
+    setDraft(draftOf(cue));
     setDraftDirty(false);
   }
   // Resolves with the new snapshot, or undefined when the user backs out
@@ -529,8 +549,56 @@ function EditorApp({
     setLayout((l) => ({ ...l, [key]: undefined }));
   }
   function changeDraft(patch: Partial<Draft>) {
-    setDraft((d) => ({ ...d, ...patch }));
+    setDraft((d) => {
+      const next = { ...d, ...patch };
+      // Typing in the viewer keeps each row's speakers; one row left is an
+      // ordinary cue again, spoken by everyone the lines had.
+      if (patch.text !== undefined && d.lines && patch.lines === undefined) {
+        next.lines = relines(patch.text, d.lines);
+        if (!next.lines)
+          next.speakerIds = survivingSpeakers(patch.text, d.lines);
+      }
+      return next;
+    });
     setDraftDirty(true);
+  }
+  function changeLines(lines: CueLine[]) {
+    if (lines.length > 1) changeDraft({ lines, text: renderLines(lines) });
+    else
+      changeDraft({
+        lines: null,
+        text: lines[0]?.text ?? "",
+        speakerIds: lines[0]?.speakerIds ?? [],
+      });
+  }
+  // Moves the text selected in the viewer to a new line for speaker.
+  function assignSelection(speaker?: string) {
+    const el = textArea.current?.resizableTextArea?.textArea;
+    const start = el?.selectionStart ?? 0;
+    const end = el?.selectionEnd ?? 0;
+    if (!el || end <= start) {
+      void message.info(t.inspector.assignNeedsSelection);
+      return;
+    }
+    const result = extract(
+      draft.text,
+      draft.lines,
+      draft.speakerIds,
+      start,
+      end,
+      speaker,
+    );
+    if ("error" in result) {
+      void message.info(
+        result.error === "acrossLines"
+          ? t.inspector.assignAcrossLines
+          : result.error === "sameSpeaker"
+            ? t.inspector.assignSameSpeaker
+            : t.inspector.assignNeedsSelection,
+      );
+      return;
+    }
+    changeLines(result.lines);
   }
   function setRange(start: number, end: number) {
     setRangeStart(Math.max(0, start));
@@ -1252,18 +1320,102 @@ function EditorApp({
                       />
                     </p>
                   )}
-                  <label className="field">
-                    {t.inspector.speaker}
-                    <Select
-                      mode="multiple"
-                      size="small"
-                      disabled={busy}
-                      placeholder={t.inspector.unassigned}
-                      value={draft.speakerIds}
-                      options={speakerOptions}
-                      onChange={(speakerIds) => changeDraft({ speakerIds })}
-                    />
-                  </label>
+                  {draft.lines ? (
+                    <div className="field">
+                      {t.inspector.lines}
+                      {draft.lines.map((line, i) => (
+                        <div key={i} className="cue-line">
+                          <span
+                            className="cue-line-mark"
+                            aria-hidden="true"
+                            style={{
+                              background:
+                                speakers.find(
+                                  (s) => s.id === line.speakerIds[0],
+                                )?.color ?? "var(--line)",
+                            }}
+                          />
+                          <span className="cue-line-text" title={line.text}>
+                            {line.text}
+                          </span>
+                          <Select
+                            mode="multiple"
+                            size="small"
+                            className="cue-line-speakers"
+                            disabled={busy}
+                            aria-label={t.inspector.lineSpeaker(i + 1)}
+                            placeholder={t.inspector.unassignedShort}
+                            maxTagCount="responsive"
+                            value={line.speakerIds}
+                            options={speakerOptions}
+                            onChange={(speakerIds) =>
+                              changeLines(
+                                draft.lines!.map((l, k) =>
+                                  k === i ? { ...l, speakerIds } : l,
+                                ),
+                              )
+                            }
+                          />
+                          {i > 0 && (
+                            <Button
+                              size="small"
+                              type="text"
+                              disabled={busy}
+                              onClick={() =>
+                                changeLines(joinUp(draft.lines!, i))
+                              }
+                            >
+                              {t.inspector.joinLine}
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <label className="field">
+                      {t.inspector.speaker}
+                      <Select
+                        mode="multiple"
+                        size="small"
+                        disabled={busy}
+                        placeholder={t.inspector.unassigned}
+                        value={draft.speakerIds}
+                        options={speakerOptions}
+                        onChange={(speakerIds) => changeDraft({ speakerIds })}
+                      />
+                    </label>
+                  )}
+                  <div className="assign-row">
+                    <span className="muted small">
+                      {t.inspector.assignSelection}
+                    </span>
+                    <Space size={4} wrap>
+                      {speakers.map((s) => (
+                        <Button
+                          key={s.id}
+                          size="small"
+                          disabled={busy}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => assignSelection(s.id)}
+                        >
+                          <span
+                            className="speaker-dot"
+                            aria-hidden="true"
+                            style={{ background: s.color }}
+                          />
+                          {s.name}
+                        </Button>
+                      ))}
+                      <Button
+                        size="small"
+                        disabled={busy}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => assignSelection()}
+                      >
+                        {t.inspector.unassignedShort}
+                      </Button>
+                    </Space>
+                  </div>
                   <Checkbox
                     disabled={busy}
                     checked={draft.review}
@@ -1304,15 +1456,29 @@ function EditorApp({
                     >
                       {t.inspector.mergePrevious}
                     </Button>
-                    <Tooltip title={t.inspector.splitHint}>
-                      <Button
-                        size="small"
-                        disabled={busy || draftDirty}
-                        onClick={splitCue}
-                      >
-                        {t.inspector.split}
-                      </Button>
-                    </Tooltip>
+                    {cue.lines && cue.lines.length > 1 ? (
+                      <Tooltip title={t.inspector.splitLinesHint}>
+                        <Button
+                          size="small"
+                          disabled={busy || draftDirty}
+                          onClick={() =>
+                            void update(() => Editor.SplitCueLines(cue.id))
+                          }
+                        >
+                          {t.inspector.splitLines(cue.lines.length)}
+                        </Button>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title={t.inspector.splitHint}>
+                        <Button
+                          size="small"
+                          disabled={busy || draftDirty}
+                          onClick={splitCue}
+                        >
+                          {t.inspector.split}
+                        </Button>
+                      </Tooltip>
+                    )}
                     <Button
                       size="small"
                       disabled={busy || draftDirty || !nextCue}

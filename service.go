@@ -270,6 +270,19 @@ func (s *EditorService) SplitCue(id string, at float64, offset int) (Snapshot, e
 	return s.snapshot(), nil
 }
 
+// SplitCueLines turns each speaker's line of a cue into a cue of its own.
+func (s *EditorService) SplitCueLines(id string) (Snapshot, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.requireProject(); err != nil {
+		return Snapshot{}, err
+	}
+	if err := s.project.SplitLines(id); err != nil {
+		return Snapshot{}, err
+	}
+	return s.snapshot(), nil
+}
+
 // MergeCues joins a cue with the one after it.
 func (s *EditorService) MergeCues(id string) (Snapshot, error) {
 	s.mu.Lock()

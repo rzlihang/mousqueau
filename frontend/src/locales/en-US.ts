@@ -167,6 +167,17 @@ export const enUS: Messages = {
     revert: "Revert",
     apply: "Apply Edit",
     split: "Split",
+    lines: "Lines and speakers",
+    lineSpeaker: (n: number) => `Speakers of line ${n}`,
+    unassignedShort: "Unassigned",
+    joinLine: "Join Up",
+    assignSelection: "Move the text selected in the viewer to its own line, spoken by:",
+    assignNeedsSelection: "Select some words in the viewer subtitle first",
+    assignAcrossLines: "Select words within one line",
+    assignSameSpeaker: "These words are already that speaker's",
+    splitLines: (n: number) => `Split into ${n} Subtitles`,
+    splitLinesHint:
+      "Each line becomes a subtitle of its own over the same time, since they were spoken at once.",
     splitHint:
       "Splits at the text cursor. The time splits at the playhead when it is inside this cue, otherwise in proportion to the text.",
     splitNeedsCursor: "Place the text cursor in the viewer subtitle where it should split",

@@ -9,4 +9,19 @@ export interface Cue {
     "text": string;
     "speakerIds": string[] | null;
     "review": boolean;
+
+    /**
+     * Lines, when there are two or more, split the cue between people who
+     * talk at once; Text and SpeakerIDs then follow them.
+     */
+    "lines"?: Line[] | null;
+}
+
+/**
+ * Line is one speaker's part of a cue where several people talk at once.
+ * A cue with lines shows them together, each after a dialogue dash.
+ */
+export interface Line {
+    "text": string;
+    "speakerIds": string[] | null;
 }

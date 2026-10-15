@@ -18,6 +18,9 @@ type Cue struct {
 	Text       string   `json:"text"`
 	SpeakerIDs []string `json:"speakerIds"`
 	Review     bool     `json:"review"`
+	// Lines, when there are two or more, split the cue between people who
+	// talk at once; Text and SpeakerIDs then follow them.
+	Lines []Line `json:"lines,omitempty"`
 }
 
 var rangeSeparator = regexp.MustCompile(`\s*-->\s*`)
@@ -93,6 +96,10 @@ func Parse(input string) ([]Cue, error) {
 			i++
 		}
 		c := Cue{ID: fmt.Sprintf("cue-%d", len(cues)+1), Identifier: id, Start: start, End: end, Text: strings.Join(body, "\n"), SpeakerIDs: []string{}}
+		if lines := SplitDialogue(c.Text); lines != nil {
+			c.Lines = lines
+			c.Text = RenderLines(lines)
+		}
 		if err := Validate(c); err != nil {
 			return nil, err
 		}

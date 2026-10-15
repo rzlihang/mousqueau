@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/rzlihang/mousqueau/main/schema/project.schema.json",
+  "title": "Mousqueau project",
+  "description": "A subtitle project saved by Mousqueau: the imported subtitles, the current edit, and its undo history.",
+  "type": "object",
+  "required": ["version", "videoPath", "subtitlePath", "original", "state", "undo", "redo"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "description": "This schema's URL, so editors can check the file.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Project format version.",
+      "const": 1
+    },
+    "videoPath": {
+      "description": "Media file the subtitles belong to; empty when none was imported.",
+      "type": "string"
+    },
+    "subtitlePath": {
+      "description": "SRT file the subtitles were imported from; empty for other sources.",
+      "type": "string"
+    },
+    "original": {
+      "description": "The subtitles as imported, never changed afterwards.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/cue" }
+    },
+    "state": { "$ref": "#/$defs/state" },
+    "undo": {
+      "description": "Earlier states, oldest first; at most 100.",
+      "type": "array",
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/state" }
+    },
+    "redo": {
+      "description": "States undone since the last edit, most recently undone last.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/state" }
+    }
+  },
+  "$defs": {
+    "state": {
+      "description": "Everything one undo step restores.",
+      "type": "object",
+      "required": ["cues", "speakers", "segments", "suggestions"],
+      "additionalProperties": false,
+      "properties": {
+        "cues": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/cue" }
+        },
+        "speakers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/speaker" }
+        },
+        "segments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/segment" }
+        },
+        "suggestions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/suggestion" }
+        }
+      }
+    },
+    "cue": {
+      "description": "One subtitle. Speakers are kept beside the text and never written into an exported SRT.",
+      "type": "object",
+      "required": ["id", "identifier", "start", "end", "text", "speakerIds", "review"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable ID, unique within the project and its history.",
+          "type": "string",
+          "minLength": 1
+        },
+        "identifier": {
+          "description": "The SRT sequence number.",
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "start": {
+          "description": "Start time in seconds.",
+          "type": "number",
+          "minimum": 0
+        },
+        "end": {
+          "description": "End time in seconds; after start.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "text": {
+          "description": "The subtitle as exported. With lines, it is each line after a dialogue dash (\"- \"), one per row.",
+          "type": "string",
+          "minLength": 1
+        },
+        "speakerIds": {
+          "description": "Speakers of the whole cue; with lines, every line's speakers.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "review": {
+          "description": "Marked for a person to check.",
+          "type": "boolean"
+        },
+        "lines": {
+          "description": "When people talk at once: one entry per speaker's line, shown together in this cue. Absent for an ordinary cue. If the lines no longer match text, Mousqueau keeps the text and drops them.",
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/line" }
+        }
+      }
+    },
+    "line": {
+      "type": "object",
+      "required": ["text", "speakerIds"],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "description": "One row of text, without the dialogue dash.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\r\\n]*$"
+        },
+        "speakerIds": {
+          "description": "Who says this line; empty when unassigned.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "speaker": {
+      "type": "object",
+      "required": ["id", "name", "color"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "color": {
+          "description": "CSS color for the speaker's tags and timeline bars.",
+          "type": "string"
+        }
+      }
+    },
+    "segment": {
+      "description": "A stretch of speech returned by an analysis.",
+      "type": "object",
+      "required": ["id", "speaker", "start", "end", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "speaker": { "type": "string" },
+        "start": { "type": "number", "minimum": 0 },
+        "end": { "type": "number", "minimum": 0 },
+        "text": { "type": "string" }
+      }
+    },
+    "suggestion": {
+      "description": "A proposed correction; it changes nothing until accepted.",
+      "type": "object",
+      "required": ["id", "cueId", "original", "proposed", "speakerIds", "review", "reason", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "cueId": { "type": "string", "minLength": 1 },
+        "original": {
+          "description": "The cue's text when the suggestion was made; accepting fails if it has changed.",
+          "type": "string"
+        },
+        "proposed": { "type": "string" },
+        "speakerIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "review": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "status": { "enum": ["pending", "accepted", "rejected"] },
+        "source": {
+          "description": "Where the suggestion came from; absent means audio.",
+          "enum": ["audio", "dictionary"]
+        }
+      }
+    }
+  }
+}
