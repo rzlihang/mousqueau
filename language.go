@@ -10,6 +10,7 @@ var appleLanguage = map[i18n.Locale]string{
 	i18n.English:     "en",
 	i18n.Chinese:     "zh-Hans",
 	i18n.Traditional: "zh-Hant",
+	i18n.HongKong:    "zh-Hant-HK",
 }
 
 // preferredOrder puts tag first and keeps the rest of the user's languages

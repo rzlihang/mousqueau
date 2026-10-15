@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  LANGUAGE_NAMES,
   type Messages,
   errorText,
   initialLocale,
@@ -32,14 +33,21 @@ function strings(value: unknown): string[] {
 describe("i18n", () => {
   const zh = messagesFor("zh-CN");
   const tw = messagesFor("zh-TW");
+  const hk = messagesFor("zh-HK");
   const en = messagesFor("en-US");
 
   it("translates every entry", () => {
     expect(shape(en)).toEqual(shape(zh));
     expect(shape(tw)).toEqual(shape(zh));
+    expect(shape(hk)).toEqual(shape(zh));
     for (const text of strings(en))
       expect(text, "Chinese left in English").not.toMatch(/[　-鿿＀-￯]/);
-    for (const text of [...strings(zh), ...strings(tw), ...strings(en)])
+    for (const text of [
+      ...strings(zh),
+      ...strings(tw),
+      ...strings(hk),
+      ...strings(en),
+    ])
       expect(text.trim()).not.toBe("");
   });
 
@@ -51,13 +59,25 @@ describe("i18n", () => {
     // Simplified characters that never appear in Traditional text.
     const simplified =
       /[设说话们这时间语录载请删选择关闭开导输应帮显认网络资讯处级态没为经将个与实无发现后边别么换项档锁钥软动态录颜标签图层]/;
-    for (const text of strings(tw)) expect(text).not.toMatch(simplified);
+    for (const text of [...strings(tw), ...strings(hk)])
+      expect(text).not.toMatch(simplified);
+  });
+
+  it("names Taiwan and Hong Kong, and lets Hong Kong use the Taiwan catalog", () => {
+    expect(LANGUAGE_NAMES["zh-TW"]).toBe("台湾正体");
+    expect(LANGUAGE_NAMES["zh-HK"]).toBe("香港繁体");
+    expect(hk).toEqual(tw);
   });
 
   it("matches Go's choice of language", () => {
     expect(matchLocale("zh-Hans-CN")).toBe("zh-CN");
     expect(matchLocale("zh_TW")).toBe("zh-TW");
-    expect(matchLocale("zh-Hant-HK")).toBe("zh-TW");
+    expect(matchLocale("zh-Hant-HK")).toBe("zh-HK");
+    expect(matchLocale("zh-HK")).toBe("zh-HK");
+    expect(matchLocale("zh_HK")).toBe("zh-HK");
+    expect(matchLocale("zh-Hans-HK")).toBe("zh-CN");
+    expect(matchLocale("zh-Hant")).toBe("zh-TW");
+    expect(matchLocale("zh-MO")).toBe("zh-TW");
     expect(matchLocale("zh-Hans-TW")).toBe("zh-CN");
     expect(matchLocale("zh-SG")).toBe("zh-CN");
     expect(matchLocale("zh-TW")).toBe("zh-TW");
@@ -66,6 +86,8 @@ describe("i18n", () => {
     expect(matchLocale(undefined)).toBeNull();
     expect(initialLocale("zh-CN", ["en-US"])).toBe("zh-CN");
     expect(initialLocale("zh-TW", ["en-US"])).toBe("zh-TW");
+    expect(initialLocale("zh-HK", ["en-US"])).toBe("zh-HK");
+    expect(initialLocale(null, ["zh-Hant-HK"])).toBe("zh-HK");
     expect(initialLocale(null, ["ja-JP", "zh-CN"])).toBe("zh-CN");
     expect(initialLocale("klingon", ["fr"])).toBe("en-US");
   });

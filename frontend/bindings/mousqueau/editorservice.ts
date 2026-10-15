@@ -224,7 +224,7 @@ export function SetBeta(enabled: boolean): $CancellablePromise<$models.SettingsV
 
 /**
  * SetLanguage switches every window, the menu and Go's messages at once.
- * choice is "system", "zh-CN", "zh-TW" or "en-US".
+ * choice is "system", "zh-CN", "zh-TW", "zh-HK" or "en-US".
  */
 export function SetLanguage(choice: string): $CancellablePromise<$models.SettingsView> {
     return $Call.ByID(316158850, choice);

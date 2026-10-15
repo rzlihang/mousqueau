@@ -68,6 +68,7 @@ import {
 } from "./workspace";
 import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
+import zhHK from "antd/locale/zh_HK";
 import zhTW from "antd/locale/zh_TW";
 import {
   type Locale,
@@ -1835,7 +1836,12 @@ const RESIZE_EDGE = 8;
 // window managers draw none, so the page draws its own edge.
 const edged = customChrome && !isWindows;
 
-const ANTD_LOCALES = { "zh-CN": zhCN, "zh-TW": zhTW, "en-US": enUS };
+const ANTD_LOCALES = {
+  "zh-CN": zhCN,
+  "zh-TW": zhTW,
+  "zh-HK": zhHK,
+  "en-US": enUS,
+};
 
 // Snapshots arrive as fresh objects; compare what an import would change.
 function sameProject(

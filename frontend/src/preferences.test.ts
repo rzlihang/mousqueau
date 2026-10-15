@@ -33,12 +33,21 @@ describe("preferences", () => {
     expect(themeChoice(null)).toBe("system");
     expect(languageChoice("en-US")).toBe("en-US");
     expect(languageChoice("zh-TW")).toBe("zh-TW");
-    expect(languageChoice("zh-HK")).toBe("system");
+    expect(languageChoice("zh-HK")).toBe("zh-HK");
+    expect(languageChoice("zh-MO")).toBe("system");
     expect(languageOptions(en).map((o) => o.value)).toEqual([
       "system",
       "zh-CN",
       "zh-TW",
+      "zh-HK",
       "en-US",
+    ]);
+    expect(languageOptions(en).map((o) => o.label)).toEqual([
+      "System",
+      "简体中文",
+      "台湾正体",
+      "香港繁体",
+      "English (US)",
     ]);
   });
 

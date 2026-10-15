@@ -25,10 +25,14 @@ func TestResolve(t *testing.T) {
 		{"system", []string{"en-US", "zh-Hans-CN"}, English},
 		{"system", []string{"zh-Hans-CN", "en-US"}, Chinese},
 		{"system", []string{"zh-Hant-TW"}, Traditional},
-		{"system", []string{"zh-Hant-HK"}, Traditional},
+		{"system", []string{"zh-Hant-HK"}, HongKong},
 		{"system", []string{"zh-Hant"}, Traditional},
 		{"system", []string{"zh_TW"}, Traditional},
-		{"system", []string{"zh-HK"}, Traditional},
+		{"system", []string{"zh-HK"}, HongKong},
+		{"system", []string{"zh_HK"}, HongKong},
+		{"system", []string{"zh-Hans-HK"}, Chinese},
+		{"system", []string{"zh-MO"}, Traditional},
+		{"system", []string{"zh-Hant-MO"}, Traditional},
 		{"system", []string{"zh-Hans-TW"}, Chinese},
 		{"system", []string{"zh-SG"}, Chinese},
 		{"system", []string{"zh"}, Chinese},
@@ -38,6 +42,7 @@ func TestResolve(t *testing.T) {
 		{"system", nil, English},
 		{"zh-CN", []string{"en-US"}, Chinese},
 		{"zh-TW", []string{"zh-Hans"}, Traditional},
+		{"zh-HK", []string{"zh-Hant-TW"}, HongKong},
 		{"en-US", []string{"zh-Hans"}, English},
 		{"klingon", []string{"zh-Hans"}, Chinese},
 	} {
@@ -45,13 +50,29 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Resolve(%q, %v) = %s, want %s", c.choice, c.preferred, got, c.want)
 		}
 	}
-	for _, choice := range []string{"system", "zh-CN", "zh-TW", "en-US"} {
+	for _, choice := range []string{"system", "zh-CN", "zh-TW", "zh-HK", "en-US"} {
 		if !ValidChoice(choice) {
 			t.Errorf("%q rejected", choice)
 		}
 	}
-	if ValidChoice("zh-HK") || ValidChoice("") {
+	if ValidChoice("zh-MO") || ValidChoice("") {
 		t.Error("unsupported choice accepted")
+	}
+}
+
+func TestHongKongFallsBackToTaiwan(t *testing.T) {
+	const format = "Quit %[1]s"
+	tw := In(Traditional, format, "Mousqueau")
+	if got := In(HongKong, format, "Mousqueau"); got != tw {
+		t.Fatalf("Hong Kong = %q, Taiwan = %q", got, tw)
+	}
+	zhHK[format] = "離開 %[1]s"
+	t.Cleanup(func() { delete(zhHK, format) })
+	if got := In(HongKong, format, "Mousqueau"); got != "離開 Mousqueau" {
+		t.Fatalf("override = %q", got)
+	}
+	if In(Traditional, format, "Mousqueau") != tw {
+		t.Fatal("override leaked into the Taiwan catalog")
 	}
 }
 
@@ -98,6 +119,10 @@ func TestErrorsFollowTheCurrentLocale(t *testing.T) {
 	if err.Error() != "專案 JSON 無效：找不到 SRT 字幕" {
 		t.Fatalf("Traditional: %q", err)
 	}
+	SetCurrent(HongKong)
+	if err.Error() != "專案 JSON 無效：找不到 SRT 字幕" {
+		t.Fatalf("Hong Kong: %q", err)
+	}
 }
 
 var verb = regexp.MustCompile(`%(\[\d+\])?[-+# 0]*\d*(\.\d+)?[a-zA-Z%]`)
@@ -112,8 +137,9 @@ func verbs(format string) []string {
 	return found
 }
 
-// Every string Go hands to i18n has a translation in every catalog with the
-// same formatting verbs, and no catalog holds anything no longer used.
+// Every string Go hands to i18n resolves in every locale with the same
+// formatting verbs. Hong Kong falls back to Taiwan. No catalog holds
+// anything no longer used.
 func TestCatalogCoversTheSource(t *testing.T) {
 	used := map[string]bool{}
 	root := filepath.Join("..", "..")
@@ -163,15 +189,20 @@ func TestCatalogCoversTheSource(t *testing.T) {
 	if len(used) < 50 {
 		t.Fatalf("found only %d strings; is the scan broken?", len(used))
 	}
-	for l, catalog := range catalogs {
+	for _, l := range locales {
+		if l == English {
+			continue
+		}
 		for s := range used {
-			translated, ok := catalog[s]
+			translated, ok := lookup(l, s)
 			if !ok {
 				t.Errorf("%s: missing %q", l, s)
 			} else if !slices.Equal(verbs(s), verbs(translated)) {
 				t.Errorf("%s: verbs differ: %q → %q", l, s, translated)
 			}
 		}
+	}
+	for l, catalog := range catalogs {
 		for s := range catalog {
 			if !used[s] {
 				t.Errorf("%s: unused translation %q", l, s)

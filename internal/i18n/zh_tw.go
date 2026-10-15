@@ -1,7 +1,7 @@
 package i18n
 
 // zhTW translates the English source strings into Traditional Chinese with
-// Taiwan usage.
+// Taiwan usage. zh-HK uses this catalog except for the overrides in zhHK.
 var zhTW = map[string]string{
 	// Application, windows and dialogs
 	"Correct existing subtitles and identify speakers": "校正現有字幕並辨識說話者",

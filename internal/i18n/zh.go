@@ -2,7 +2,7 @@ package i18n
 
 // zhCN translates the English source strings into Simplified Chinese with
 // mainland usage. A test checks that every string in the source has an entry
-// here and in zhTW, with the same formatting verbs.
+// here and in zhTW, with the same formatting verbs. zh-HK falls back to zhTW.
 var zhCN = map[string]string{
 	// Application, windows and dialogs
 	"Correct existing subtitles and identify speakers": "校正现有字幕并识别说话人",
