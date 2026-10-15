@@ -41,8 +41,9 @@ var customChrome = runtime.GOOS != "darwin"
 
 // windowURL tells the frontend which window it is, whether to draw the
 // window controls, and a theme chosen in Settings to paint before its
-// settings arrive. With "system" the page's own media query is exact.
-func windowURL(name, theme string) string {
+// settings arrive. Seed the system appearance too: a new hidden web view's
+// media query can lag the native appearance.
+func windowURL(name, theme, systemTheme string) string {
 	query := url.Values{}
 	if name != mainWindow {
 		query.Set("window", name)
@@ -50,17 +51,17 @@ func windowURL(name, theme string) string {
 	if customChrome {
 		query.Set("chrome", "custom")
 	}
-	if theme == "dark" || theme == "light" {
+	if theme == "dark" || theme == "light" || theme == "system" {
 		query.Set("theme", theme)
 	}
-	if len(query) == 0 {
-		return "/"
+	if systemTheme == "dark" || systemTheme == "light" {
+		query.Set("systemTheme", systemTheme)
 	}
 	return "/?" + query.Encode()
 }
 
-// ground is a window's native background, the --bg of style.css, so a new
-// window is never white before its page has painted.
+// ground is the theme's --bg (style.css and the inline style in index.html).
+// A new window shows this colour before its page has painted.
 func ground(dark bool) application.RGBA {
 	if dark {
 		return application.NewRGB(0x0f, 0x0f, 0x0f)
@@ -82,11 +83,12 @@ func (s *EditorService) darkTheme() bool {
 	case "light":
 		return false
 	}
-	return s.app != nil && s.app.Env.IsDarkMode()
+	return systemDarkTheme(s.app)
 }
 
-// repaintGrounds keeps open windows' native background in the theme, which
-// shows while a window resizes or reloads.
+// repaintGrounds keeps open windows on the theme colour: the native window,
+// and on macOS the web view, which is what actually shows before the page
+// and while a window resizes.
 func (s *EditorService) repaintGrounds() {
 	if s.app == nil {
 		return
@@ -95,8 +97,62 @@ func (s *EditorService) repaintGrounds() {
 	for _, name := range []string{mainWindow, settingsWindow, welcomeWindow, dictionaryWindow} {
 		if window := s.window(name); window != nil {
 			window.SetBackgroundColour(colour)
+			paintWebViewGround(window, colour)
 		}
 	}
+}
+
+// deferWindowShow keeps a macOS window hidden until its web view has been
+// painted, then shows it when show is true. Other platforms show on their own.
+func (s *EditorService) deferWindowShow(name string, show bool) bool {
+	if s.app == nil || !deferShowForWebViewGround() {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.groundHook {
+		s.groundHook = true
+		// ApplicationStarted is emitted only after Run has created the platform.
+		// The OnCreate poll below waits for that before its first InvokeSync.
+		s.app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+			startupPlatform.mark()
+		})
+		s.app.Window.OnCreate(func(w application.Window) {
+			s.mu.Lock()
+			show, ok := s.showWhenGrounded[w.Name()]
+			if ok {
+				delete(s.showWhenGrounded, w.Name())
+			}
+			s.mu.Unlock()
+			if ok {
+				revealDarwinGround(s, w, show)
+			}
+		})
+	}
+	if s.showWhenGrounded == nil {
+		s.showWhenGrounded = map[string]bool{}
+	}
+	s.showWhenGrounded[name] = show
+	return true
+}
+
+func (s *EditorService) groundColour() application.RGBA {
+	return ground(s.darkTheme())
+}
+
+// macWindow is the hidden-inset title bar, and on macOS the appearance that
+// matches the theme so the web view is not born in the other mode.
+// Backdrop stays MacBackdropNormal: the app is not built with
+// private_mac_apis, and MacBackdropTransparent would clear this colour.
+func macWindow(dark bool) application.MacWindow {
+	mac := application.MacWindow{TitleBar: application.MacTitleBarHiddenInset}
+	if runtime.GOOS == "darwin" {
+		mac.Appearance = application.NSAppearanceNameAqua
+		if dark {
+			mac.Appearance = application.NSAppearanceNameDarkAqua
+		}
+	}
+	return mac
 }
 
 type ToolStatus struct {
@@ -658,14 +714,17 @@ func (s *EditorService) window(name string) application.Window {
 // openPanel shows one of the fixed-size secondary windows, creating it on demand.
 func (s *EditorService) openPanel(name, title string, width, height int, minimise application.ButtonState) {
 	if window := s.window(name); window != nil {
+		paintWebViewGround(window, s.groundColour())
 		window.Show().Focus()
 		return
 	}
+	dark := s.darkTheme()
 	window := s.app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name: name, Title: title, Width: width, Height: height, URL: windowURL(name, s.theme()), BackgroundColour: ground(s.darkTheme()),
+		Name: name, Title: title, Width: width, Height: height, URL: windowURL(name, s.theme(), windowSystemTheme(s.app)),
+		BackgroundColour: ground(dark), Hidden: s.deferWindowShow(name, true),
 		DisableResize: true, Frameless: customChrome, MinimiseButtonState: minimise,
 		MaximiseButtonState: application.ButtonDisabled, FullscreenButtonState: application.ButtonDisabled,
-		Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset},
+		Mac: macWindow(dark),
 	})
 	if name == welcomeWindow {
 		// A hook runs before the window goes away, so the editor is on screen
@@ -738,6 +797,7 @@ func (s *EditorService) setupFinished() {
 		return
 	}
 	if window := s.window(mainWindow); window != nil {
+		paintWebViewGround(window, s.groundColour())
 		window.Show().Focus()
 	}
 	s.notify()
@@ -761,11 +821,18 @@ func (s *EditorService) openWindows() {
 	s.mu.Lock()
 	setupDone := s.settings.SetupDone
 	s.mu.Unlock()
+	dark := s.darkTheme()
+	// On macOS the window stays hidden until the web view is the theme colour;
+	// Wails would otherwise show it on the web view's own white. Evaluate the
+	// deferral on its own: || would skip it on first launch, when the editor
+	// is already hidden, and the web view would stay white until it is shown.
+	deferShow := s.deferWindowShow(mainWindow, setupDone)
 	editor := s.app.Window.NewWithOptions(application.WebviewWindowOptions{Name: mainWindow, Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: 1100, MinHeight: 720,
-		URL: windowURL(mainWindow, s.theme()), BackgroundColour: ground(s.darkTheme()), Hidden: !setupDone,
+		URL: windowURL(mainWindow, s.theme(), windowSystemTheme(s.app)), BackgroundColour: ground(dark),
+		Hidden: !setupDone || deferShow,
 		// The frontend draws the toolbar under the traffic lights, or with its
 		// own window controls elsewhere, and marks it draggable.
-		Frameless: customChrome, Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset}})
+		Frameless: customChrome, Mac: macWindow(dark)})
 	// Closing the editor ends the session, so the secondary windows go with it.
 	editor.RegisterHook(events.Common.WindowClosing, func(*application.WindowEvent) {
 		s.mu.Lock()

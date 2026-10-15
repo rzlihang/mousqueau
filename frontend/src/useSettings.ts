@@ -3,6 +3,7 @@ import { Events } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { SettingsView } from "../bindings/mousqueau/models";
 import type { Messages } from "./i18n";
+import { initialSystemDark } from "./preferences";
 
 export const isMac = /Mac/.test(navigator.userAgent);
 export const isWindows = /Windows/.test(navigator.userAgent);
@@ -53,7 +54,10 @@ export function useSettings(): [
 
 export function useSystemDark(): boolean {
   const [dark, setDark] = useState(
-    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
+    () => initialSystemDark(
+      window.location.search,
+      window.matchMedia("(prefers-color-scheme: dark)").matches,
+    ),
   );
   useEffect(() => {
     const query = window.matchMedia("(prefers-color-scheme: dark)");
