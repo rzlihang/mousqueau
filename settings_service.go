@@ -111,6 +111,11 @@ func (s *EditorService) deferWindowShow(name string, show bool) bool {
 	defer s.mu.Unlock()
 	if !s.groundHook {
 		s.groundHook = true
+		// ApplicationStarted is emitted only after Run has created the platform.
+		// The OnCreate poll below waits for that before its first InvokeSync.
+		s.app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+			startupPlatform.mark()
+		})
 		s.app.Window.OnCreate(func(w application.Window) {
 			s.mu.Lock()
 			show, ok := s.showWhenGrounded[w.Name()]

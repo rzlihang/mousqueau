@@ -4,6 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestGroundedRevealWaitsForPaint(t *testing.T) {
@@ -44,6 +45,43 @@ func TestGroundedRevealOnlyStartsAndShowsOnce(t *testing.T) {
 	reveal()
 	if shows.Load() != 1 {
 		t.Fatalf("showed %d times, want 1", shows.Load())
+	}
+}
+
+func TestPlatformGateHoldsWorkUntilRun(t *testing.T) {
+	var gate platformGate
+	started := make(chan struct{})
+	gate.after(func() { close(started) })
+	select {
+	case <-started:
+		t.Fatal("polling started before the platform was ready")
+	case <-time.After(30 * time.Millisecond):
+	}
+	gate.mark()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("polling did not start after the platform was ready")
+	}
+	// A second mark must not run waiters again.
+	again := make(chan struct{})
+	gate.mark()
+	select {
+	case <-again:
+		t.Fatal("mark ran a waiter that was not registered")
+	case <-time.After(30 * time.Millisecond):
+	}
+}
+
+func TestPlatformGateRunsImmediatelyWhenAlreadyReady(t *testing.T) {
+	var gate platformGate
+	gate.mark()
+	started := make(chan struct{})
+	gate.after(func() { close(started) })
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("polling waited even though the platform was already ready")
 	}
 }
 

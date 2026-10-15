@@ -180,6 +180,8 @@ Still outstanding: compare `bin/startup-check/final-public/mousqueau.app` and `b
 
 Before pushing, integrated remote commit `20f90fd`, preserving its public-only WebView colour path, opaque native background and early native-view paint alongside the frontend-ready handshake. The combined revision passed `go test -race ./...` (84 tests) and native production builds with both `production` and `production,private_mac_apis`. The `final-*` packages and GUI observations above predate this integration; the combined revision's first-frame GUI behavior still needs verification.
 
+`openWindows` runs before `app.Run`. Its `OnCreate` poll used to call `application.InvokeSync` immediately; in beta.28 that dereferences a nil platform and can panic. The poll and the ten-second recovery now wait for `ApplicationStarted`, which is delivered only after `Run` has created the platform. Web-view ground painting is unchanged. Linux check for that gate: `CGO_ENABLED=0 go test -tags server -run 'TestPlatformGate|TestGroundedReveal|TestWindowReady' .`
+
 ## Windows and Linux acceptance checklist (still outstanding)
 
 1. Windows 11: first launch shows only the welcome window, with a native shadow and rounded corners; its close button (red on hover) shows the editor. The editor's minimise, maximise/restore and close buttons work; double-clicking the toolbar's empty space maximises; edges resize; Snap layouts appear when dragging to a screen edge.

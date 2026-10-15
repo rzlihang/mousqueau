@@ -191,7 +191,9 @@ func revealDarwinGround(s *EditorService, window application.Window, show bool) 
 	})
 	// Paint as soon as the web view exists, not only when navigation finishes.
 	// setBackgroundColour has already run by then and did not colour the view.
-	go func() {
+	// OnCreate runs from openWindows before app.Run, so this poll must not
+	// call InvokeSync until ApplicationStarted.
+	startupPlatform.after(func() {
 		deadline := time.Now().Add(2 * time.Second)
 		for time.Now().Before(deadline) {
 			ready := false
@@ -205,7 +207,7 @@ func revealDarwinGround(s *EditorService, window application.Window, show bool) 
 			}
 			time.Sleep(2 * time.Millisecond)
 		}
-	}()
+	})
 	window.OnWindowEvent(events.Mac.WebViewDidFinishNavigation, func(*application.WindowEvent) {
 		paintWebViewGround(window, s.groundColour())
 	})
@@ -219,7 +221,7 @@ func revealDarwinGround(s *EditorService, window application.Window, show bool) 
 		// Navigation can fail. Still paint and show rather than leave a window hidden.
 		// Skip the attempt until the native window exists, so an early Show does not
 		// consume the one-shot before Wails has created it.
-		go func() {
+		startupPlatform.after(func() {
 			time.Sleep(10 * time.Second)
 			application.InvokeSync(func() {
 				web, ok := window.(*application.WebviewWindow)
@@ -228,6 +230,6 @@ func revealDarwinGround(s *EditorService, window application.Window, show bool) 
 				}
 				reveal()
 			})
-		}()
+		})
 	}
 }
