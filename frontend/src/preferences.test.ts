@@ -56,7 +56,7 @@ describe("preferences", () => {
   });
 
   it("builds the subtitle font stack", () => {
-    const ui = 'system-ui, -apple-system, "Noto Sans TC", sans-serif';
+    const ui = "var(--ui-font)";
     expect(fontStack("")).toBe(ui);
     expect(fontStack("  ")).toBe(ui);
     expect(fontStack("PingFang TC")).toBe(`"PingFang TC", ${ui}`);

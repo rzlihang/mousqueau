@@ -17,25 +17,21 @@ body,
   background: var(--bg);
 }
 
+/* The interface fonts; subtitle text falls back to them too (fontStack). */
+:root {
+  --ui-font: system-ui, -apple-system, "Noto Sans TC", sans-serif;
+}
+/* Japanese glyph forms for kanji shared with Chinese. */
+:root:lang(ja) {
+  --ui-font:
+    system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP",
+    sans-serif;
+}
 body {
   position: fixed;
   inset: 0;
   margin: 0;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Noto Sans TC",
-    sans-serif;
-}
-/* Japanese glyph forms for kanji shared with Chinese. */
-:root:lang(ja) body {
-  font-family:
-    system-ui,
-    -apple-system,
-    "Hiragino Sans",
-    "Yu Gothic UI",
-    "Noto Sans JP",
-    sans-serif;
+  font-family: var(--ui-font);
 }
 button,
 input,

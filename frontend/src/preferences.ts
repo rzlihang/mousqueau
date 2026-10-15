@@ -62,7 +62,8 @@ const GENERIC_FAMILIES = new Set([
   "ui-monospace",
   "ui-rounded",
 ]);
-const INTERFACE_FONTS = 'system-ui, -apple-system, "Noto Sans TC", sans-serif';
+// style.css defines the interface fonts per language.
+const INTERFACE_FONTS = "var(--ui-font)";
 
 // The CSS font-family for subtitle text: the chosen family, then the
 // interface fonts for anything it lacks. Go rejects names with quotes or
