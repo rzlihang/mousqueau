@@ -731,6 +731,10 @@ button.side-item {
   align-items: center;
   gap: 6px;
 }
+.assign-row kbd {
+  font-family: var(--mono);
+  font-size: 10px;
+}
 .speaker-dot {
   width: 8px;
   height: 8px;
@@ -1768,4 +1772,43 @@ textarea.subtitle-text,
 .timeline-dock .timeline-toolbar,
 .timeline-dock .zoom-scrollbar {
   flex: none;
+}
+
+/* Keyboard shortcuts dialog */
+.shortcut-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 28px;
+}
+.shortcut-groups section {
+  break-inside: avoid;
+}
+.shortcut-groups h3 {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.shortcut-groups dl {
+  margin: 0;
+}
+.shortcut-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.shortcut-row dt {
+  flex: 1;
+  min-width: 0;
+}
+.shortcut-row dd {
+  margin: 0;
+  flex: none;
+}
+.shortcut-row kbd,
+.tip-with-key kbd {
+  font-family: var(--mono);
+  font-size: 11px;
 }

@@ -853,7 +853,7 @@ func (s *EditorService) menu() *application.Menu {
 	app.AddRole(application.About)
 	app.AddSeparator()
 	app.Add(i18n.T("Settings…")).SetAccelerator("CmdOrCtrl+,").OnClick(func(*application.Context) { s.OpenSettings() })
-	app.Add(i18n.T("Dictionary…")).OnClick(func(*application.Context) { s.OpenDictionary() })
+	app.Add(i18n.T("Dictionary…")).SetAccelerator("CmdOrCtrl+Shift+D").OnClick(func(*application.Context) { s.OpenDictionary() })
 	app.AddSeparator()
 	app.AddRole(application.ServicesMenu)
 	app.AddSeparator()
@@ -862,11 +862,22 @@ func (s *EditorService) menu() *application.Menu {
 	app.AddRole(application.UnHide)
 	app.AddSeparator()
 	app.AddRole(application.Quit)
-	menu.AddRole(application.FileMenu)
+	file := menu.AddSubmenu(i18n.T("File"))
+	s.addCommands(file, fileCommands)
+	file.AddSeparator()
+	file.AddRole(application.CloseWindow)
 	menu.AddRole(application.EditMenu)
-	menu.AddRole(application.ViewMenu)
+	// Wails' View menu also has Reload (⌘R), which would throw away an
+	// unapplied edit and takes the key the editor uses to mark for review.
+	view := menu.AddSubmenu(i18n.T("View"))
+	view.AddRole(application.ResetZoom)
+	view.AddRole(application.ZoomIn)
+	view.AddRole(application.ZoomOut)
+	view.AddSeparator()
+	view.AddRole(application.ToggleFullscreen)
 	menu.AddRole(application.WindowMenu)
-	// No Help menu: Wails' only item there opens wails.io in the editor window.
+	// Not Wails' Help menu, whose only item opens wails.io in the editor.
+	s.addCommands(menu.AddSubmenu(i18n.T("Help")), helpCommands)
 	// Wails labels its standard items in English only.
 	for _, item := range roleLabels {
 		if found := menu.FindByRole(item.role); found != nil {
@@ -874,6 +885,35 @@ func (s *EditorService) menu() *application.Menu {
 		}
 	}
 	return menu
+}
+
+// menuCommand is a menu item the editor carries out: a click sends id, the
+// keymap's command name (frontend/src/keymap.ts), as a "command" event. The
+// editor takes the same keys itself, so they also work without this menu.
+type menuCommand struct {
+	label, accelerator, id string
+}
+
+var fileCommands = []menuCommand{
+	{i18n.N("Open Project…"), "CmdOrCtrl+O", "openProject"},
+	{i18n.N("Save Project"), "CmdOrCtrl+S", "saveProject"},
+	{i18n.N("Import…"), "CmdOrCtrl+I", "import"},
+	{i18n.N("Export SRT…"), "CmdOrCtrl+E", "exportSrt"},
+}
+
+var helpCommands = []menuCommand{
+	{i18n.N("Keyboard Shortcuts"), "CmdOrCtrl+/", "shortcuts"},
+}
+
+func (s *EditorService) addCommands(menu *application.Menu, commands []menuCommand) {
+	for _, c := range commands {
+		menu.Add(i18n.T(c.label)).SetAccelerator(c.accelerator).OnClick(func(*application.Context) {
+			if editor := s.window(mainWindow); editor != nil {
+				editor.Focus()
+			}
+			s.app.Event.Emit("command", c.id)
+		})
+	}
 }
 
 // roleLabel translates a standard menu label, filling in the application

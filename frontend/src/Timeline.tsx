@@ -43,8 +43,11 @@ type Props = {
   onSeek: (time: number) => void;
   onSelectCue: (cue: Cue) => void;
   onRangeChange: (start: number, end: number) => void;
+  // A keyboard zoom; n changes with every request.
+  zoomRequest?: ZoomRequest;
   actions: ReactNode;
 };
+export type ZoomRequest = { kind: "in" | "out" | "cue"; n: number };
 
 const RULER = 26;
 const AUDIO = 150;
@@ -155,6 +158,27 @@ export default function Timeline(props: Props) {
       visible ? offset : 0,
     );
   }
+  useEffect(() => {
+    const el = scroller.current;
+    const request = props.zoomRequest;
+    if (!el || !request) return;
+    if (request.kind === "cue") {
+      if (!selected) return;
+      // The cue fills most of the view, with a little room on each side.
+      const span = Math.max(0.5, selected.end - selected.start);
+      const next = (el.clientWidth * 0.7) / span;
+      zoomAround(next, selected.start, el.clientWidth * 0.15);
+      return;
+    }
+    const factor = request.kind === "in" ? 1.5 : 1 / 1.5;
+    const offset = playhead * pps - el.scrollLeft;
+    const visible = offset >= 0 && offset <= el.clientWidth;
+    zoomAround(
+      pps * factor,
+      visible ? playhead : el.scrollLeft / pps,
+      visible ? offset : 0,
+    );
+  }, [props.zoomRequest]);
   // Ctrl or ⌘ with the wheel, or a trackpad pinch, zooms around the pointer;
   // the plain wheel scrolls sideways. React's wheel listener is passive, so
   // this one is added by hand to be able to stop the page from zooming.
