@@ -1985,9 +1985,8 @@ export default function App() {
         token: {
           colorPrimary: themeColors[dark ? "dark" : "light"].accent,
           colorBgLayout: themeColors[dark ? "dark" : "light"].bg,
-          colorBgElevated: themeColors[dark ? "dark" : "light"].panel,
           borderRadius: 6,
-          colorError: themeColors[dark ? "dark" : "light"]["error-seed"],
+          colorError: themeColors[dark ? "dark" : "light"].error,
           ...(!dark
             ? {
                 green7: themeColors.light["tag-green-text"],
@@ -2002,7 +2001,7 @@ export default function App() {
         <AntApp>
           <div
             data-theme={dark ? "dark" : "light"}
-            className={`bg-bg text-ink ${edged ? "window-edge" : ""}`}
+            className={edged ? "window-edge" : undefined}
             style={
               { "--subtitle-font": fontStack(subtitleFont) } as CSSProperties
             }

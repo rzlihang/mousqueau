@@ -6,10 +6,12 @@ on:
     branches: [main]
     paths-ignore:
       - "**.md"
+      - "docs/**"
       - "LICENSE"
   pull_request:
     paths-ignore:
       - "**.md"
+      - "docs/**"
       - "LICENSE"
   workflow_dispatch:
 # A new push to a pull request cancels its run still in progress.
