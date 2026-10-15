@@ -195,6 +195,7 @@ h3 {
   padding-right: 0;
 }
 .titlebar button,
+.titlebar .icon-hit,
 .titlebar input,
 .titlebar .ant-select {
   --wails-draggable: no-drag;
@@ -237,6 +238,18 @@ h3 {
 }
 .icon-button svg {
   display: block;
+}
+/* A disabled button does not receive hover, so the tooltip lives on this wrap. */
+.icon-hit {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+.icon-hit:has(.ant-btn:disabled) {
+  cursor: not-allowed;
+}
+.icon-hit .ant-btn:disabled {
+  pointer-events: none;
 }
 
 .upper {
