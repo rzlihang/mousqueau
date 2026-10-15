@@ -1050,7 +1050,11 @@ function EditorApp({
                   onTimeUpdate={(e) =>
                     !playing && setPlayhead(e.currentTarget.currentTime)
                   }
-                  onError={() => void message.error(t.viewer.mediaError)}
+                  onError={() => {
+                    // A media error can stop playback without a pause event.
+                    setPlaying(false);
+                    void message.error(t.viewer.mediaError);
+                  }}
                 />
                 {!hasVideo && (
                   <span className="viewer-note">{t.viewer.audioOnly}</span>
