@@ -35,17 +35,20 @@ describe("i18n", () => {
   const tw = messagesFor("zh-TW");
   const hk = messagesFor("zh-HK");
   const en = messagesFor("en-US");
+  const ja = messagesFor("ja-JP");
 
   it("translates every entry", () => {
     expect(shape(en)).toEqual(shape(zh));
     expect(shape(tw)).toEqual(shape(zh));
     expect(shape(hk)).toEqual(shape(zh));
+    expect(shape(ja)).toEqual(shape(zh));
     for (const text of strings(en))
       expect(text, "Chinese left in English").not.toMatch(/[　-鿿＀-￯]/);
     for (const text of [
       ...strings(zh),
       ...strings(tw),
       ...strings(hk),
+      ...strings(ja),
       ...strings(en),
     ])
       expect(text.trim()).not.toBe("");
@@ -69,6 +72,22 @@ describe("i18n", () => {
     expect(hk).toEqual(tw);
   });
 
+  it("writes Japanese in Japanese", () => {
+    // No sentence is left as a copy of the Chinese entry; short words such
+    // as 字幕 or 設定 are the same in both.
+    const [jaText, zhText, twText] = [ja, zh, tw].map(strings);
+    jaText.forEach((text, i) => {
+      if (text.length < 10 || !/[一-鿿]/.test(text)) return;
+      expect(text).not.toBe(zhText[i]);
+      expect(text).not.toBe(twText[i]);
+    });
+    // Simplified characters and Chinese wording Japanese does not use.
+    const chinese =
+      /[们这说话设导载请删选择关闭开应显认网络讯录颜]|說話者|檔案|視頻|音頻|用戶|默認/;
+    for (const text of jaText) expect(text).not.toMatch(chinese);
+    expect(LANGUAGE_NAMES["ja-JP"]).toBe("日本語");
+  });
+
   it("matches Go's choice of language", () => {
     expect(matchLocale("zh-Hans-CN")).toBe("zh-CN");
     expect(matchLocale("zh_TW")).toBe("zh-TW");
@@ -82,13 +101,17 @@ describe("i18n", () => {
     expect(matchLocale("zh-SG")).toBe("zh-CN");
     expect(matchLocale("zh-TW")).toBe("zh-TW");
     expect(matchLocale("en-GB")).toBe("en-US");
-    expect(matchLocale("ja")).toBeNull();
+    expect(matchLocale("ja")).toBe("ja-JP");
+    expect(matchLocale("ja_JP")).toBe("ja-JP");
+    expect(matchLocale("ko-KR")).toBeNull();
     expect(matchLocale(undefined)).toBeNull();
     expect(initialLocale("zh-CN", ["en-US"])).toBe("zh-CN");
     expect(initialLocale("zh-TW", ["en-US"])).toBe("zh-TW");
     expect(initialLocale("zh-HK", ["en-US"])).toBe("zh-HK");
     expect(initialLocale(null, ["zh-Hant-HK"])).toBe("zh-HK");
-    expect(initialLocale(null, ["ja-JP", "zh-CN"])).toBe("zh-CN");
+    expect(initialLocale(null, ["ja-JP", "zh-CN"])).toBe("ja-JP");
+    expect(initialLocale(null, ["ko-KR", "zh-CN"])).toBe("zh-CN");
+    expect(initialLocale("ja-JP", ["en-US"])).toBe("ja-JP");
     expect(initialLocale("klingon", ["fr"])).toBe("en-US");
   });
 
@@ -97,6 +120,7 @@ describe("i18n", () => {
     expect(t.common.cues(1)).toBe("1 cue");
     expect(t.common.cues(3)).toBe("3 cues");
     expect(zh.common.cues(3)).toBe("3 句");
+    expect(ja.common.cues(1)).toBe("1 件");
   });
 
   it("shows only the message of a failed call", () => {

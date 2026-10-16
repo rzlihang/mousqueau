@@ -62,7 +62,7 @@ export interface SettingsView {
     "theme": string;
 
     /**
-     * "system", "zh-CN", "zh-TW", "zh-HK" or "en-US"
+     * "system", "zh-CN", "zh-TW", "zh-HK", "ja-JP" or "en-US"
      */
     "language": string;
 

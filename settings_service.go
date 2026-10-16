@@ -178,7 +178,7 @@ type ProviderView struct {
 // contains an API key, only where one comes from.
 type SettingsView struct {
 	Theme             string         `json:"theme"`
-	Language          string         `json:"language"` // "system", "zh-CN", "zh-TW", "zh-HK" or "en-US"
+	Language          string         `json:"language"` // "system", "zh-CN", "zh-TW", "zh-HK", "ja-JP" or "en-US"
 	Locale            string         `json:"locale"`   // the language in use
 	SubtitleFont      string         `json:"subtitleFont"`
 	OpenLastProject   bool           `json:"openLastProject"`
@@ -414,7 +414,7 @@ func (s *EditorService) SetTheme(theme string) (SettingsView, error) {
 }
 
 // SetLanguage switches every window, the menu and Go's messages at once.
-// choice is "system", "zh-CN", "zh-TW", "zh-HK" or "en-US".
+// choice is "system", "zh-CN", "zh-TW", "zh-HK", "ja-JP" or "en-US".
 func (s *EditorService) SetLanguage(choice string) (SettingsView, error) {
 	view, err := s.change(func(next *settings.Settings) error {
 		if !i18n.ValidChoice(choice) {

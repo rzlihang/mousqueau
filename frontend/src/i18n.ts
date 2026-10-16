@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import { enUS } from "./locales/en-US";
+import { jaJP } from "./locales/ja-JP";
 import { type Messages, zhCN } from "./locales/zh-CN";
 import { zhHK } from "./locales/zh-HK";
 import { zhTW } from "./locales/zh-TW";
@@ -9,7 +10,7 @@ export type { Messages };
 // Go resolves the language (settings, then the system) and reports it with
 // the settings; these dictionaries cover the text the frontend draws.
 // zh-HK reuses the Taiwan dictionary except for keys in zhHKOverrides.
-export const LOCALES = ["zh-CN", "zh-TW", "zh-HK", "en-US"] as const;
+export const LOCALES = ["zh-CN", "zh-TW", "zh-HK", "ja-JP", "en-US"] as const;
 export type Locale = (typeof LOCALES)[number];
 export type LanguageChoice = "system" | Locale;
 
@@ -17,6 +18,7 @@ const MESSAGES: Record<Locale, Messages> = {
   "zh-CN": zhCN,
   "zh-TW": zhTW,
   "zh-HK": zhHK,
+  "ja-JP": jaJP,
   "en-US": enUS,
 };
 
@@ -25,6 +27,7 @@ export const LANGUAGE_NAMES: Record<Locale, string> = {
   "zh-CN": "简体中文",
   "zh-TW": "台湾正体",
   "zh-HK": "香港繁体",
+  "ja-JP": "日本語",
   "en-US": "English (US)",
 };
 
@@ -37,7 +40,8 @@ export function isLocale(value: unknown): value is Locale {
 }
 
 // Mirrors Go's i18n.Match: Simplified script wins, then a Hong Kong region,
-// then Traditional script or a Taiwan or Macau region.
+// then Traditional script or a Taiwan or Macau region. Any Japanese tag
+// means Japanese.
 export function matchLocale(tag: string | null | undefined): Locale | null {
   const t = (tag ?? "").trim().toLowerCase().replace(/_/g, "-");
   if (t === "zh" || t.startsWith("zh-")) {
@@ -49,6 +53,7 @@ export function matchLocale(tag: string | null | undefined): Locale | null {
       : "zh-CN";
   }
   if (t === "en" || t.startsWith("en-")) return "en-US";
+  if (t === "ja" || t.startsWith("ja-")) return "ja-JP";
   return null;
 }
 

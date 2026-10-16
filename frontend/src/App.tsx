@@ -85,6 +85,7 @@ import {
   splitTime,
 } from "./workspace";
 import enUS from "antd/locale/en_US";
+import jaJP from "antd/locale/ja_JP";
 import zhCN from "antd/locale/zh_CN";
 import zhHK from "antd/locale/zh_HK";
 import zhTW from "antd/locale/zh_TW";
@@ -2180,6 +2181,7 @@ const ANTD_LOCALES = {
   "zh-CN": zhCN,
   "zh-TW": zhTW,
   "zh-HK": zhHK,
+  "ja-JP": jaJP,
   "en-US": enUS,
 };
 

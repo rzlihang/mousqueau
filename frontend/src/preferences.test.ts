@@ -34,12 +34,15 @@ describe("preferences", () => {
     expect(languageChoice("en-US")).toBe("en-US");
     expect(languageChoice("zh-TW")).toBe("zh-TW");
     expect(languageChoice("zh-HK")).toBe("zh-HK");
+    expect(languageChoice("ja-JP")).toBe("ja-JP");
+    expect(languageChoice("ja")).toBe("system");
     expect(languageChoice("zh-MO")).toBe("system");
     expect(languageOptions(en).map((o) => o.value)).toEqual([
       "system",
       "zh-CN",
       "zh-TW",
       "zh-HK",
+      "ja-JP",
       "en-US",
     ]);
     expect(languageOptions(en).map((o) => o.label)).toEqual([
@@ -47,12 +50,13 @@ describe("preferences", () => {
       "简体中文",
       "台湾正体",
       "香港繁体",
+      "日本語",
       "English (US)",
     ]);
   });
 
   it("builds the subtitle font stack", () => {
-    const ui = 'system-ui, -apple-system, "Noto Sans TC", sans-serif';
+    const ui = "var(--ui-font)";
     expect(fontStack("")).toBe(ui);
     expect(fontStack("  ")).toBe(ui);
     expect(fontStack("PingFang TC")).toBe(`"PingFang TC", ${ui}`);
@@ -114,6 +118,16 @@ describe("preferences", () => {
     expect(matchSettings("字體").rows.font).toBe(true);
     expect(matchSettings("字体").rows.font).toBe(true);
     expect(matchSettings("金鑰").rows.provList).toBe(true);
+    expect(matchSettings("キーチェーン").rows).toEqual(key.rows);
+    expect(matchSettings("言語").rows.language).toBe(true);
+    expect(matchSettings("日本語").rows.language).toBe(true);
+    expect(matchSettings("フォント").rows.font).toBe(true);
+    expect(matchSettings("アップデート").sections).toEqual({
+      general: false,
+      tools: false,
+      providers: false,
+      updates: true,
+    });
 
     expect(matchSettings("没有这个设置").any).toBe(false);
   });
