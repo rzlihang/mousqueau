@@ -8,6 +8,7 @@
 - Frontend uses pnpm at the version pinned in `frontend/package.json`. Run `go test ./internal/...` at the root, and `pnpm install --frozen-lockfile`, `pnpm run typecheck`, `pnpm test`, and `pnpm run build` in `frontend` as appropriate. Run `node --test scripts/frontend-dependencies.test.mjs` for license tooling changes. Desktop build requires native Wails dependencies.
 - Write docs that distinguish verified tests from macOS GUI checks that still need a real Mac.
 - No databases, full-episode automation, accounts, or cloud synchronization in v0.1.
+- Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
 
 ## Cursor Cloud specific instructions
 
