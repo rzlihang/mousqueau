@@ -117,11 +117,8 @@ export const jaJP: Messages = {
   language: {
     label: "言語",
     system: "システム",
-    current: (name) => `現在は${name}です。`,
-    hint: "メニュー、ウインドウ、メッセージがまとめて切り替わります。",
   },
   editor: {
-    tagline: "Mousqueau · 字幕と話者",
     untitled: "名称未設定のプロジェクト",
     noProject: "プロジェクトが開かれていません",
     edited: "編集済み",
@@ -208,7 +205,6 @@ export const jaJP: Messages = {
     end: "終了",
     stats: (duration, rate) => `長さ ${duration} 秒 · ${rate} 文字/秒`,
     text: "テキスト",
-    textInViewer: "ビューアの字幕をクリックしてテキストを編集します。",
     speaker: "話者",
     unassigned: "Unknown · 話者未指定",
     needsReview: "要確認",
@@ -238,21 +234,15 @@ export const jaJP: Messages = {
     cueSuggestions: "この字幕への提案",
     noCueSuggestions:
       "この字幕への提案はありません。タイムラインで範囲を選択し、アップロードして解析してください。",
-    speakersHint:
-      "解析範囲が異なると話者ラベルは別々に番号付けされます。名前の設定と割り当ては手動で行ってください。",
     rename: "名前を変更",
     speakerId: "話者 ID",
     speakerIdPlaceholder: "話者 ID（A / B / C）",
     displayName: "表示名",
     displayNamePlaceholder: "表示名（例：司会）",
     saveSpeaker: "話者を保存",
-    suggestionsHint:
-      "提案によって字幕が勝手に変わることはありません。採用にはそれぞれクリックが必要で、取り消すこともできます。",
     noSuggestions:
       "オーディオを解析するか、サンプルを読み込むと提案が表示されます",
     analyzeForSuggestions: "オーディオを解析すると提案が表示されます",
-    dictionaryHint:
-      "辞書のチェックはローカルで行われ、アップロードはされません。採用してもテキストが変わるだけで、取り消すこともできます。",
     dictionaryHits: "この字幕での一致",
     dictionaryNone: "この字幕には辞書との一致がありません。",
     dictionaryFix: "修正",
@@ -318,7 +308,6 @@ export const jaJP: Messages = {
       n ? `辞書の提案を ${n} 件作成しました` : "誤表記は見つかりませんでした",
     categoriesLabel: "辞書のカテゴリ",
     entriesLabel: "項目",
-    localOnly: "辞書のチェックはローカルで行われ、何もアップロードされません。",
     noMatch: "一致する項目はありません。",
     nothingSelected:
       "リストから項目を選択するか、＋をクリックして追加してください。",
@@ -326,15 +315,12 @@ export const jaJP: Messages = {
     misspelledAs: (list) => `誤表記：${list}`,
     variantsAre: (list) => `許容する表記：${list}`,
     refersToName: (name) => `${name} を指す`,
-    refersToHint: "この呼び名が指す人物の項目です。",
     pickPerson: "人物を選択",
     tagsPlaceholder: "入力して Return キーを押す",
     canonicalPlaceholder: "例：林志明",
     originalPlaceholder: "例：ピンインや原語の名前",
     caseSensitive: "大文字と小文字を区別",
-    caseSensitiveHint: "英語の名前や略語に便利です。",
     disable: "無効にする",
-    disableHint: "項目は残しますが、チェックの対象から外します。",
     unsaved: "保存していない変更",
     readOnlyStatus: "読み出し専用",
     revert: "元に戻す",
@@ -345,11 +331,9 @@ export const jaJP: Messages = {
   },
   range: {
     label: "範囲",
-    perRun: "1 回あたり 1〜5 分",
     start: "開始（秒）",
     end: "終了（秒）",
     fromPlayhead: "再生位置から開始",
-    hint: "時間ルーラー上をドラッグして選択することもできます。範囲とその音声はご自身で確認してください。",
     adjust: "範囲を調整",
     analyze: "アップロードして解析",
   },
@@ -357,10 +341,6 @@ export const jaJP: Messages = {
     environment: "環境",
     optionalMissing: "未インストール · 任意",
     provider: "解析プロバイダー",
-    addKeyHint:
-      "解析を有効にするには、設定で解析プロバイダーを設定してください。",
-    privacy:
-      "ファイルはこのコンピューターから出ません。選択したオーディオは、解析を確認したときにだけアップロードされます。",
     openSettings: (keys) => `設定を開く（${keys}）`,
     allReady: "準備完了",
     offline: "オフライン編集",
@@ -374,15 +354,9 @@ export const jaJP: Messages = {
     local: "ローカルファイル",
     web: "Web からダウンロード",
     mediaTitle: "メディアファイル",
-    mediaBody:
-      "再生と波形表示のためにビデオまたはオーディオファイルを読み込みます。字幕はそのままです。",
     mediaFormats: "MP4 · MOV · M4V · WebM · MKV · M4A · MP3 · WAV",
     srtTitle: "SRT 字幕",
-    srtBody:
-      "字幕から新しいプロジェクトを始め、現在のプロジェクトを置き換えます。元の字幕が変更されることはありません。",
     chooseFile: "ファイルを選択…",
-    localNote:
-      "ファイルはこのコンピューター上で読み込まれ、アップロードされることはありません。保存したプロジェクトを開くには、ツールバーの「プロジェクトを開く」を使用してください。",
     webIntro:
       "YouTube などのビデオページへのリンクを 1 つ貼り付けてください。一度に 1 本のビデオのみです。対応するサイトは yt-dlp によって異なります。",
     needsYtdlp:
@@ -408,8 +382,6 @@ export const jaJP: Messages = {
       "メディアをダウンロードする前に、編集中の字幕を適用するか元に戻してください。",
     authorized:
       "このビデオのコンテンツをダウンロードする権限があることを確認しました",
-    noUpload:
-      "ファイルはこのコンピューターにダウンロードされるだけで、アップロードされることはありません。解析には別途確認が必要です。",
     import: "読み込む",
   },
   timeline: {
@@ -435,10 +407,6 @@ export const jaJP: Messages = {
     proposed: "提案されたテキスト",
     reviewHint:
       "複数の話者、発話の重なり、または字幕／範囲の境界があります。テキストと時刻を音声と照らし合わせて確認してください。",
-    plainHint:
-      "音声の文字起こしに基づいています。内容が正確か、言葉づかいが適切か確認してください。",
-    dictionaryHint:
-      "ユーザー辞書の誤表記に基づいています。変わるのはテキストだけで、話者は変わりません。",
     acceptReviewed: "確認して採用",
     accept: "採用",
     reject: "却下",
@@ -455,19 +423,11 @@ export const jaJP: Messages = {
       providers: "プロバイダー",
       updates: "アップデート",
     },
-    themeFollows: (os, current) =>
-      `${os} の外観に合わせます。現在は${current}です。`,
-    themeFixed: (current, os) => `${os} の外観に関係なく、常に${current}です。`,
     subtitleFont: "字幕のフォント",
-    subtitleFontHint:
-      "字幕リスト、ビューア、タイムライン、エディタで使用されます。書き出す SRT には影響しません。",
     fontDefault: "UI フォント",
     fontPlaceholder: "フォント名を選択または入力",
-    fontMissing:
-      "インストールされていないフォントは UI フォントで表示されます。",
     openLast: "起動時に前回のプロジェクトを開く",
     setup: "初期設定",
-    setupHint: "外部ツールと OpenAI の設定をもう一度確認します。",
     rerunSetup: "初期設定をもう一度実行",
     toolLocation: (tool) => `${tool} の場所`,
     autoFind: "自動で検索",
@@ -477,8 +437,6 @@ export const jaJP: Messages = {
     ytdlpHint:
       "YouTube からの読み込みにのみ必要です。ダウンロードしたものがアップロードされることはありません。",
     analysisProvider: "解析に使用",
-    analysisProviderHint:
-      "文字起こしの提案と話者の解析は、どちらもここで選んだプロバイダーに送信されます。",
     analysisProviderLabel: "解析に使用するプロバイダー",
     inUse: "使用中",
     keySource: "キーの取得元",
@@ -492,12 +450,9 @@ export const jaJP: Messages = {
       "このプラットフォームではキーを保存できません。環境変数",
       "を設定してください。",
     ],
-    removeHint: "削除後もオフラインでの編集は引き続き可能です。",
     removeConfirm: (store) => `${store}から API キーを削除しますか？`,
     remove: "削除",
     removeKey: "キーを削除",
-    addProviderHint:
-      "プロバイダーを追加すると解析に使用できます。認証情報はシステムの資格情報ストアに保管されます。",
     addProviderPlaceholder: "プロバイダーを選択",
     noProviders:
       "プロバイダーはまだ追加されていません。ローカルでの編集は引き続き可能です。",
@@ -527,8 +482,6 @@ export const jaJP: Messages = {
     removeProviderConfirm: (name) =>
       `${name} と保存されている認証情報を削除しますか？`,
     addProvider: "プロバイダーを追加",
-    uploadNote:
-      "選択したオーディオは、解析を確認したときにだけ、選んだプロバイダーにアップロードされます。",
     currentVersion: "現在のバージョン",
     checking: "確認中…",
     newVersion: (version) => `バージョン ${version} が利用可能`,
@@ -541,8 +494,6 @@ export const jaJP: Messages = {
     autoUpdate: "アップデートを自動で確認",
     beta: "ベータ版を受け取る",
     betaHint: "新機能をいち早く試せますが、不安定な場合があります。",
-    updatesNote:
-      "アップデートの確認では、バージョン情報を得るために GitHub に接続するだけです。字幕やオーディオをアップロードしたり、新しいバージョンを勝手にダウンロードしたりすることはありません。",
   },
   welcome: {
     tagline: "字幕の校正 · 話者の識別",
@@ -559,9 +510,6 @@ export const jaJP: Messages = {
       "選択したオーディオは、解析を確認したときにだけアップロードされます。",
       "OpenAI がなくてもオフラインで編集できます。",
     ],
-    themeFollows: (os, current) =>
-      `${os} の外観に合わせます。現在は${current}です`,
-    changeLater: "あとから設定で変更できます。",
     toolsTitle: "外部ツールの確認",
     toolsSearched: (search) => `${search} を検索しました。`,
     ffmpegMissing: "メディアの読み込みとオーディオの解析に必要です。",
@@ -569,7 +517,6 @@ export const jaJP: Messages = {
     notFoundAt: ["指定した場所", "に実行ファイルが見つかりません。"],
     installWith: "インストール方法：",
     redetect: "もう一度検出",
-    toolsLater: "場所はあとから「設定 › 外部ツール」で変更できます。",
     openaiTitle: "OpenAI の設定（任意）",
     openaiIntro:
       "文字起こしの提案と話者の解析に使います。選択したオーディオは、解析を確認したときにだけ OpenAI にアップロードされます。",

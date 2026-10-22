@@ -117,11 +117,8 @@ export const enUS: Messages = {
   language: {
     label: "Language",
     system: "System",
-    current: (name) => `Currently ${name}.`,
-    hint: "Menus, windows and messages switch together.",
   },
   editor: {
-    tagline: "Mousqueau · Subtitles & speakers",
     untitled: "Untitled project",
     noProject: "No project open",
     edited: "Edited",
@@ -207,7 +204,6 @@ export const enUS: Messages = {
     end: "End",
     stats: (duration, rate) => `Length ${duration} s · ${rate} characters/s`,
     text: "Text",
-    textInViewer: "Click the subtitle in the viewer to edit its text.",
     speaker: "Speakers",
     unassigned: "Unknown · no speaker assigned",
     needsReview: "Needs review",
@@ -236,20 +232,14 @@ export const enUS: Messages = {
     cueSuggestions: "Suggestions for this cue",
     noCueSuggestions:
       "No suggestions for this cue. Select a range on the timeline to upload it for analysis.",
-    speakersHint:
-      "Labels from different analysis ranges are numbered separately; name and assign them by hand.",
     rename: "Rename",
     speakerId: "Speaker ID",
     speakerIdPlaceholder: "Speaker ID (A / B / C)",
     displayName: "Display name",
     displayNamePlaceholder: "Display name, e.g. Host",
     saveSpeaker: "Save Speaker",
-    suggestionsHint:
-      "Suggestions never change subtitles on their own. Each acceptance takes a click and can be undone.",
     noSuggestions: "Analyze audio or load the demo to see suggestions",
     analyzeForSuggestions: "Analyze audio to see suggestions",
-    dictionaryHint:
-      "Dictionary checks run locally and never upload. Accepting only changes text and can be undone.",
     dictionaryHits: "Hits in this cue",
     dictionaryNone: "No dictionary hits in this cue.",
     dictionaryFix: "Fix",
@@ -315,22 +305,18 @@ export const enUS: Messages = {
       n ? `Created ${n} dictionary suggestion(s)` : "No wrong spellings found",
     categoriesLabel: "Dictionary categories",
     entriesLabel: "Entries",
-    localOnly: "Dictionary checks run locally; nothing is uploaded.",
     noMatch: "No matching entries.",
     nothingSelected: "Select an entry in the list, or click + to add one.",
     untitled: "Untitled",
     misspelledAs: (list) => `Wrong: ${list}`,
     variantsAre: (list) => `Variants: ${list}`,
     refersToName: (name) => `Refers to ${name}`,
-    refersToHint: "The person entry this nickname stands for.",
     pickPerson: "Choose a person",
     tagsPlaceholder: "Type, then press Return",
     canonicalPlaceholder: "e.g. Lin Zhiming",
     originalPlaceholder: "e.g. pinyin or the original name",
     caseSensitive: "Match case",
-    caseSensitiveHint: "Useful for English names and abbreviations.",
     disable: "Disable",
-    disableHint: "Keep the entry, but skip it when checking.",
     unsaved: "Unsaved changes",
     readOnlyStatus: "Read-only",
     revert: "Revert",
@@ -341,11 +327,9 @@ export const enUS: Messages = {
   },
   range: {
     label: "Range",
-    perRun: "1–5 min per run",
     start: "Start (s)",
     end: "End (s)",
     fromPlayhead: "Start at Playhead",
-    hint: "You can also drag on the time ruler. Check the range and its audio yourself.",
     adjust: "Adjust Range",
     analyze: "Upload & Analyze",
   },
@@ -353,9 +337,6 @@ export const enUS: Messages = {
     environment: "Environment",
     optionalMissing: "Not installed · optional",
     provider: "Analysis provider",
-    addKeyHint: "Set up an analysis provider in Settings to enable analysis.",
-    privacy:
-      "Files stay on this computer. Selected audio is uploaded only when you confirm an analysis.",
     openSettings: (keys) => `Open Settings (${keys})`,
     allReady: "Ready",
     offline: "Offline editing",
@@ -369,15 +350,9 @@ export const enUS: Messages = {
     local: "Local Files",
     web: "Download from the Web",
     mediaTitle: "Media File",
-    mediaBody:
-      "Load a video or audio file for playback and the waveform. Subtitles stay as they are.",
     mediaFormats: "MP4 · MOV · M4V · WebM · MKV · M4A · MP3 · WAV",
     srtTitle: "SRT Subtitles",
-    srtBody:
-      "Start a new project from the subtitles, replacing the current one. The original subtitles are never changed.",
     chooseFile: "Choose File…",
-    localNote:
-      "Files are read on this computer and never uploaded. To open a saved project, use Open Project in the toolbar.",
     webIntro:
       "Paste the link to one video page, such as YouTube. One video at a time; which sites work depends on your yt-dlp.",
     needsYtdlp:
@@ -399,8 +374,6 @@ export const enUS: Messages = {
       "Download the video with its audio, to watch while you proofread. Larger file.",
     applyFirst: "Apply or revert the subtitle you are editing before downloading media.",
     authorized: "I confirm I am authorized to download this video's content",
-    noUpload:
-      "Files are only downloaded to this computer, never uploaded. Analysis still needs its own confirmation.",
     import: "Import",
   },
   timeline: {
@@ -426,9 +399,6 @@ export const enUS: Messages = {
     proposed: "Proposed text",
     reviewHint:
       "Several speakers, overlap, or a cue/range boundary: check the text and times against the audio.",
-    plainHint: "Based on the audio transcription; check faithfulness and wording.",
-    dictionaryHint:
-      "From user-dictionary wrong spellings; only the text changes, not speakers.",
     acceptReviewed: "Accept After Checking",
     accept: "Accept",
     reject: "Reject",
@@ -445,19 +415,11 @@ export const enUS: Messages = {
       providers: "Providers",
       updates: "Updates",
     },
-    themeFollows: (os, current) =>
-      `Follows the ${os} appearance. Currently ${current}.`,
-    themeFixed: (current, os) =>
-      `Always ${current}, regardless of the ${os} appearance.`,
     subtitleFont: "Subtitle font",
-    subtitleFontHint:
-      "Used in the subtitle list, the viewer, the timeline and the editor; exported SRT is unaffected.",
     fontDefault: "Interface font",
     fontPlaceholder: "Choose or type a font name",
-    fontMissing: "A font that is not installed shows in the interface font.",
     openLast: "Open the last project at launch",
     setup: "Initial setup",
-    setupHint: "Check external tools and OpenAI configuration again.",
     rerunSetup: "Run Setup Again",
     toolLocation: (tool) => `${tool} location`,
     autoFind: "Find automatically",
@@ -467,8 +429,6 @@ export const enUS: Messages = {
     ytdlpHint:
       "Only needed for YouTube import. Downloads are never uploaded anywhere.",
     analysisProvider: "Analyze with",
-    analysisProviderHint:
-      "Transcription suggestions and speaker analysis both go to the provider chosen here.",
     analysisProviderLabel: "Provider used for analysis",
     inUse: "In use",
     keySource: "Key source",
@@ -482,12 +442,9 @@ export const enUS: Messages = {
       "Keys cannot be stored on this platform; set the",
       "environment variable.",
     ],
-    removeHint: "Offline editing still works after removal.",
     removeConfirm: (store) => `Remove the API key from ${store}?`,
     remove: "Remove",
     removeKey: "Remove Key",
-    addProviderHint:
-      "Add a provider to analyze with it. Its credentials are kept in the system credential store.",
     addProviderPlaceholder: "Choose a provider",
     noProviders: "No provider added yet; local editing still works.",
     regionChina: "Mainland China",
@@ -515,8 +472,6 @@ export const enUS: Messages = {
     removeProviderConfirm: (name) =>
       `Remove ${name} and its stored credentials?`,
     addProvider: "Add Provider",
-    uploadNote:
-      "Selected audio is uploaded to the chosen provider only when you confirm an analysis.",
     currentVersion: "Current version",
     checking: "Checking…",
     newVersion: (version) => `Version ${version} available`,
@@ -529,8 +484,6 @@ export const enUS: Messages = {
     autoUpdate: "Check for updates automatically",
     beta: "Receive beta versions",
     betaHint: "Get new features earlier; may be unstable.",
-    updatesNote:
-      "Checking for updates only contacts GitHub for version information. It never uploads subtitles or audio and never downloads new versions on its own.",
   },
   welcome: {
     tagline: "Subtitle correction · Speaker identification",
@@ -547,9 +500,6 @@ export const enUS: Messages = {
       "Selected audio is uploaded only when you confirm an analysis.",
       "Offline editing works without OpenAI.",
     ],
-    themeFollows: (os, current) =>
-      `Follows the ${os} appearance. Currently ${current}`,
-    changeLater: "You can change this later in Settings.",
     toolsTitle: "Check External Tools",
     toolsSearched: (search) => `Searched ${search}.`,
     ffmpegMissing: "Needed to read media and analyze audio. ",
@@ -557,7 +507,6 @@ export const enUS: Messages = {
     notFoundAt: ["No executable found at", "."],
     installWith: "Install with: ",
     redetect: "Detect Again",
-    toolsLater: "You can change locations later in Settings › External Tools.",
     openaiTitle: "Set Up OpenAI (Optional)",
     openaiIntro:
       "Used for transcription suggestions and speaker analysis. Selected audio is uploaded to OpenAI only when you confirm an analysis.",

@@ -311,8 +311,6 @@ export default function DictionaryWindow() {
             </button>
           );
         })}
-        <div className="spacer" />
-        <p className="dict-local">{t.dictionary.localOnly}</p>
       </nav>
 
       <section className="dict-list" aria-label={t.dictionary.entriesLabel}>
@@ -428,12 +426,7 @@ export default function DictionaryWindow() {
                 </div>
                 {draft.category === "nickname" && (
                   <div className="set-row">
-                    <div className="set-label">
-                      <span>{t.dictionary.refersTo}</span>
-                      <span className="set-hint">
-                        {t.dictionary.refersToHint}
-                      </span>
-                    </div>
+                    <span>{t.dictionary.refersTo}</span>
                     <Select
                       size="small"
                       allowClear
@@ -503,12 +496,7 @@ export default function DictionaryWindow() {
 
               <div className="set-card">
                 <div className="set-row">
-                  <div className="set-label">
-                    <span>{t.dictionary.caseSensitive}</span>
-                    <span className="set-hint">
-                      {t.dictionary.caseSensitiveHint}
-                    </span>
-                  </div>
+                  <span>{t.dictionary.caseSensitive}</span>
                   <Switch
                     size="small"
                     aria-label={t.dictionary.caseSensitive}
@@ -518,10 +506,7 @@ export default function DictionaryWindow() {
                   />
                 </div>
                 <div className="set-row">
-                  <div className="set-label">
-                    <span>{t.dictionary.disable}</span>
-                    <span className="set-hint">{t.dictionary.disableHint}</span>
-                  </div>
+                  <span>{t.dictionary.disable}</span>
                   <Switch
                     size="small"
                     aria-label={t.dictionary.disable}
