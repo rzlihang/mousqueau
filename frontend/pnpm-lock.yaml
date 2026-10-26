@@ -170,8 +170,8 @@ importers:
         specifier: ^3.49.0
         version: 3.49.0(react@19.3.0)
       '@wailsio/runtime':
-        specifier: 3.0.0-beta.28
-        version: 3.0.0-beta.28
+        specifier: 3.0.0
+        version: 3.0.0
       antd:
         specifier: ^6.6.5
         version: 6.6.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -837,8 +837,8 @@ packages:
   '@vitest/utils@4.1.11':
     resolution: {integrity: sha512-zTCVGpyFsGWBhllOyKlTw/vnr6D9qxsfSDyfbyZmTyjHw5N/VuvzHpHoQjm2ZJzn4RJgx5w4r7V0er69CmLgPQ==}
 
-  '@wailsio/runtime@3.0.0-beta.28':
-    resolution: {integrity: sha512-IPl7WIsu0uQni9qgYAGm47G1WKNV/YFQannb/1r8orA81+wswJmCt/TS6GNb/U/coIRYyQ3ruO1FNMVwUVDvQQ==}
+  '@wailsio/runtime@3.0.0':
+    resolution: {integrity: sha512-NkFJXYWD/4Y3TcHAqfIeST4oybtwv9dVWTmriZTMFbINYiQ2FB3Wr4MjsQ7o0BNynEj2GslmUisNejnixEmLVQ==}
 
   antd@6.6.5:
     resolution: {integrity: sha512-biJB/aORNU2lvZZCX783S/g8atfE8akrEKRjRrsXVttoMtJbSHLf/Z29niv0blzt6H3BgKvhkQgHoUn5MgCx7w==}
@@ -1873,7 +1873,7 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.2.0
 
-  '@wailsio/runtime@3.0.0-beta.28': {}
+  '@wailsio/runtime@3.0.0': {}
 
   antd@6.6.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:

@@ -1523,7 +1523,7 @@ SOFTWARE.
 
 
 ========================================================================
-@wailsio/runtime 3.0.0-beta.28
+@wailsio/runtime 3.0.0
 
 --- upstream license (see third_party/README.md) ---
 MIT License
@@ -2155,7 +2155,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 
 ========================================================================
-github.com/wailsapp/wails/v3 v3.0.0-beta.28
+github.com/wailsapp/wails/v3 v3.0.0
 
 --- LICENSE ---
 MIT License
@@ -2182,7 +2182,7 @@ SOFTWARE.
 
 
 ========================================================================
-golang.org/x/sys v0.46.0
+golang.org/x/sys v0.48.0
 
 --- LICENSE ---
 Copyright 2009 The Go Authors.

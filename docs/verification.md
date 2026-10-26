@@ -266,3 +266,16 @@ Verified on 2026-10-15 in a Linux cloud environment with Go 1.25.0. Nothing here
 - The interface font stack is the `--ui-font` CSS variable, redefined under `:lang(ja)`, and the subtitle font falls back to it. With the default subtitle font, the computed `font-family` of timeline subtitle text matched the body: the Hiragino Sans / Yu Gothic UI / Noto Sans JP stack under `ja-JP`, and still the `Noto Sans TC` stack under `zh-TW`.
 
 Not verified, and still needs a real Mac: the native menu bar, window titles and file dialogs in Japanese; `preferLanguage("ja")` reaching AppKit; AppKit's own items (Start Dictation, Emoji & Symbols); and whether the interface picks Hiragino Sans for kanji. Windows (Yu Gothic UI) and Linux (Noto Sans JP) font selection were not checked either. See Mac acceptance checklist item 14.
+
+## Wails v3.0.0 (2026-10-26)
+
+Upgraded from v3.0.0-beta.28: the Go module, `@wailsio/runtime` and the `wails3` CLI are pinned to v3.0.0. Wails v3.0.0 requires Go 1.26, so `go.mod` declares `go 1.26.0` and `toolchain go1.26.10`, the release the Wails notes recommend for the `crypto/x509` fix. `@wailsio/runtime` 3.0.0 was published the day it was adopted, so it is listed in `minimumReleaseAgeExclude`. The upgrade also brings the server-mode origin and `Host` checks from beta.31 and the Linux child-frame guard for GHSA-2p5f-2gx8-mh8m. Calling `InvokeSync` before `Run` still dereferences a nil platform, and `Env.IsDarkMode()` still returns false before `Run`, so the `platformGate` and macOS dark-mode workarounds stay.
+
+Verified in a Linux cloud environment with Go 1.26.10 (downloaded by the toolchain directive), Node 22.22.0, pnpm 12.10.1 and FFmpeg. Nothing here ran on a Mac or Windows, and the native Linux window was not launched (GTK4 and WebKitGTK 6 were not installed):
+
+- `go vet ./internal/...`, `go test -race ./internal/...`, `CGO_ENABLED=0 go test -tags server ./...` and the server-mode build.
+- `CGO_ENABLED=0 wails3 generate bindings -ts -i -f '-tags=server'` with the v3.0.0 CLI: existing bindings are byte-identical; the generator now also emits an empty `bindings/events` module.
+- Frontend `pnpm install --frozen-lockfile`, `pnpm run typecheck`, `pnpm test` (45) and `pnpm run build`; `node scripts/colors.mjs --check`, `node --test scripts/frontend-dependencies.test.mjs`, and `node scripts/notices.mjs` (the Wails license text is unchanged).
+- Headless Chromium against the server-mode build on `127.0.0.1:9246`, opened as both `127.0.0.1` and `localhost`: the editor rendered, every `/wails/runtime` call returned 200 and Load Demo opened its four cues, with no page errors.
+
+Not verified, and still needs a real Mac: launching the app, the window-reveal and dark-mode behaviour, menus, dialogs and media playback in the macOS WebView. CI's Linux GUI smoke and the Windows build cover their platforms only once they run on this change.
