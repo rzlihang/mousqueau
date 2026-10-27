@@ -17,7 +17,7 @@ import type {
   SettingsView,
   ToolStatus,
 } from "../bindings/mousqueau/models";
-import { LANGUAGE_NAMES, errorText, matchLocale, useT } from "./i18n";
+import { errorText, useT } from "./i18n";
 import {
   IconApi,
   IconRefresh,
@@ -44,7 +44,6 @@ import {
   isMac,
   keyStore,
   keyStoreName,
-  osName,
   toolSearch,
 } from "./useSettings";
 import WindowControls from "./WindowControls";
@@ -52,8 +51,6 @@ import WindowControls from "./WindowControls";
 type Props = {
   settings: SettingsView;
   onChange: (view: SettingsView) => void;
-  dark: boolean;
-  systemDark: boolean;
 };
 type Apply = (action: () => Promise<SettingsView>) => Promise<boolean>;
 
@@ -308,7 +305,6 @@ function ProviderCard({
         )}
       </div>
       <div className="set-row">
-        <span className="set-hint">{t.settings.removeHint}</span>
         <div className="set-line">
           <Popconfirm
             icon={statusIcon.warning}
@@ -359,7 +355,6 @@ function FontRow({ font, apply }: { font: string; apply: Apply }) {
     <div className="set-row">
       <div className="set-label">
         <span>{t.settings.subtitleFont}</span>
-        <span className="set-hint">{t.settings.subtitleFontHint}</span>
         <span
           className="font-preview"
           style={{ fontFamily: fontStack(draft) }}
@@ -367,7 +362,6 @@ function FontRow({ font, apply }: { font: string; apply: Apply }) {
         >
           {FONT_SAMPLE}
         </span>
-        <span className="set-hint">{t.settings.fontMissing}</span>
       </div>
       <AutoComplete
         size="small"
@@ -403,8 +397,6 @@ const SECTION_ICONS: Record<SectionId, typeof IconSettings> = {
 export default function SettingsWindow({
   settings,
   onChange,
-  dark,
-  systemDark,
 }: Props) {
   const { message, modal } = useAntApp();
   const t = useT();
@@ -417,11 +409,9 @@ export default function SettingsWindow({
   const { rows, sections, any } = matchSettings(query);
   const theme = themeChoice(settings.theme);
   const language = languageChoice(settings.language);
-  const locale = matchLocale(settings.locale);
   const providers = settings.providers ?? [];
   const added = providers.filter((p) => p.added);
   const addable = providers.filter((p) => !p.added);
-  const os = osName;
 
   const apply: Apply = async (action) => {
     try {
@@ -547,20 +537,7 @@ export default function SettingsWindow({
               <div className="set-card">
                 {rows.theme && (
                   <div className="set-row">
-                    <div className="set-label">
-                      <span>{t.theme.label}</span>
-                      <span className="set-hint">
-                        {theme === "system"
-                          ? t.settings.themeFollows(
-                              os,
-                              systemDark ? t.theme.dark : t.theme.light,
-                            )
-                          : t.settings.themeFixed(
-                              dark ? t.theme.dark : t.theme.light,
-                              os,
-                            )}
-                      </span>
-                    </div>
+                    <span>{t.theme.label}</span>
                     <Segmented
                       size="small"
                       options={themeOptions(t)}
@@ -571,14 +548,7 @@ export default function SettingsWindow({
                 )}
                 {rows.language && (
                   <div className="set-row">
-                    <div className="set-label">
-                      <span>{t.language.label}</span>
-                      <span className="set-hint">
-                        {language === "system" && locale
-                          ? t.language.current(LANGUAGE_NAMES[locale])
-                          : t.language.hint}
-                      </span>
-                    </div>
+                    <span>{t.language.label}</span>
                     <Select
                       size="small"
                       aria-label={t.language.label}
@@ -607,10 +577,7 @@ export default function SettingsWindow({
                 )}
                 {rows.setup && (
                   <div className="set-row">
-                    <div className="set-label">
-                      <span>{t.settings.setup}</span>
-                      <span className="set-hint">{t.settings.setupHint}</span>
-                    </div>
+                    <span>{t.settings.setup}</span>
                     <Button
                       size="small"
                       onClick={() => void Editor.OpenWelcome()}
@@ -657,11 +624,11 @@ export default function SettingsWindow({
                   <div className="set-row">
                     <div className="set-label">
                       <span>{t.settings.analysisProvider}</span>
-                      <span className="set-hint">
-                        {added.length
-                          ? t.settings.analysisProviderHint
-                          : t.settings.noProviders}
-                      </span>
+                      {!added.length && (
+                        <span className="set-hint">
+                          {t.settings.noProviders}
+                        </span>
+                      )}
                     </div>
                     <Select
                       size="small"
@@ -691,9 +658,6 @@ export default function SettingsWindow({
               {rows.provAdd && addable.length > 0 && (
                 <div className="set-card dashed">
                   <div className="set-row">
-                    <span className="set-hint">
-                      {t.settings.addProviderHint}
-                    </span>
                     <div className="set-line">
                       <Select
                         size="small"
@@ -721,7 +685,6 @@ export default function SettingsWindow({
                   </div>
                 </div>
               )}
-              <span className="set-hint">{t.settings.uploadNote}</span>
             </section>
           )}
 
@@ -798,7 +761,6 @@ export default function SettingsWindow({
                   />
                 </div>
               </div>
-              <span className="set-hint">{t.settings.updatesNote}</span>
             </section>
           )}
 

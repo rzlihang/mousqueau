@@ -26,7 +26,6 @@ import {
   isMac,
   keyStore,
   keyStoreName,
-  osName,
   toolSearch,
 } from "./useSettings";
 import WindowControls from "./WindowControls";
@@ -35,7 +34,6 @@ import { showSampleImport } from "./sampleImport";
 type Props = {
   settings: SettingsView;
   onChange: (view: SettingsView) => void;
-  systemDark: boolean;
 };
 type Apply = (action: () => Promise<SettingsView>) => Promise<boolean>;
 type KeyChoice = "env" | "key" | "none";
@@ -114,7 +112,6 @@ function ToolRow({
 export default function WelcomeWindow({
   settings,
   onChange,
-  systemDark,
 }: Props) {
   const { message } = useAntApp();
   const t = useT();
@@ -231,14 +228,7 @@ export default function WelcomeWindow({
                 ))}
               </div>
               <div className="welcome-theme">
-                <div className="set-label">
-                  <strong>{t.language.label}</strong>
-                  <span className="set-hint">
-                    {language === "system" && locale
-                      ? t.language.current(LANGUAGE_NAMES[locale])
-                      : t.welcome.changeLater}
-                  </span>
-                </div>
+                <strong>{t.language.label}</strong>
                 <Select
                   size="small"
                   aria-label={t.language.label}
@@ -249,17 +239,7 @@ export default function WelcomeWindow({
                 />
               </div>
               <div className="welcome-theme">
-                <div className="set-label">
-                  <strong>{t.theme.label}</strong>
-                  <span className="set-hint">
-                    {theme === "system"
-                      ? t.welcome.themeFollows(
-                          osName,
-                          systemDark ? t.theme.dark : t.theme.light,
-                        )
-                      : t.welcome.changeLater}
-                  </span>
-                </div>
+                <strong>{t.theme.label}</strong>
                 <Segmented
                   size="small"
                   options={themeOptions(t)}
@@ -294,7 +274,6 @@ export default function WelcomeWindow({
                   apply={apply}
                 />
               </div>
-              <p className="set-hint">{t.welcome.toolsLater}</p>
             </>
           )}
 

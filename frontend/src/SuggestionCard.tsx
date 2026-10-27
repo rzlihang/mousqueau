@@ -111,13 +111,9 @@ export default function SuggestionCard({
           <SpeakerTags ids={s.speakerIds} speakers={speakers} />
         </div>
       )}
-      <p className="muted">
-        {s.source === "dictionary"
-          ? t.suggestion.dictionaryHint
-          : s.review
-            ? t.suggestion.reviewHint
-            : t.suggestion.plainHint}
-      </p>
+      {s.review && s.source !== "dictionary" && (
+        <p className="muted">{t.suggestion.reviewHint}</p>
+      )}
       <Space wrap>
         <Button
           size="small"

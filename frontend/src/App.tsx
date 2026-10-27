@@ -1021,11 +1021,11 @@ function EditorApp({
         )}
         <div className="project-title">
           <strong>{projectName}</strong>
-          <span>
-            {p
-              ? `${dirty || draftDirty ? t.editor.edited : t.editor.unchanged} · ${t.common.cues(cues.length)} · ${t.editor.speakerCount(speakers.length)}`
-              : t.editor.tagline}
-          </span>
+          {p && (
+            <span>
+              {`${dirty || draftDirty ? t.editor.edited : t.editor.unchanged} · ${t.common.cues(cues.length)} · ${t.editor.speakerCount(speakers.length)}`}
+            </span>
+          )}
         </div>
         <div className="toolbar-group">
           <IconButton
@@ -1452,7 +1452,6 @@ function EditorApp({
                       ).toFixed(1),
                     )}
                   </span>
-                  <span className="muted">{t.inspector.textInViewer}</span>
                   {!!draftMatches.length && (
                     <p className="dict-preview muted small">
                       <HighlightedText
@@ -1636,7 +1635,6 @@ function EditorApp({
                   </div>
                   <div className="rule" />
                   <h3>{t.inspector.dictionary}</h3>
-                  <span className="muted">{t.inspector.dictionaryHint}</span>
                   <strong>{t.inspector.dictionaryHits}</strong>
                   {!draftMatches.length && (
                     <span className="muted">{t.inspector.dictionaryNone}</span>
@@ -1752,7 +1750,6 @@ function EditorApp({
 
             {tab === "speakers" && (
               <div className="stack">
-                <span className="muted">{t.inspector.speakersHint}</span>
                 <div>
                   {speakers.map((s) => (
                     <div key={s.id} className="speaker-row">
@@ -1832,7 +1829,6 @@ function EditorApp({
 
             {tab === "suggestions" && (
               <div className="stack">
-                <span className="muted">{t.inspector.suggestionsHint}</span>
                 {!suggestions.length && (
                   <Empty
                     description={
@@ -1903,7 +1899,6 @@ function EditorApp({
                 </span>{" "}
                 · {t.common.seconds(rangeSeconds)}
               </span>
-              <span className="muted">{t.range.perRun}</span>
               <Popover
                 trigger="click"
                 title={t.range.label}
@@ -1940,7 +1935,6 @@ function EditorApp({
                     >
                       {t.range.fromPlayhead}
                     </Button>
-                    <p className="muted">{t.range.hint}</p>
                   </div>
                 }
               >
@@ -1994,11 +1988,6 @@ function EditorApp({
                   {status?.ytdlp ? t.common.ready : t.status.optionalMissing}
                 </Tag>
               </div>
-              {!status?.apiConfigured && (
-                <p className="muted">{t.status.addKeyHint}</p>
-              )}
-              <div className="rule" />
-              <p className="muted">{t.status.privacy}</p>
               <Button
                 type="link"
                 size="small"
@@ -2308,8 +2297,6 @@ export default function App() {
                 <SettingsWindow
                   settings={settings}
                   onChange={setSettings}
-                  dark={dark}
-                  systemDark={systemDark}
                 />
               )
             ) : windowKind === "welcome" ? (
@@ -2317,7 +2304,6 @@ export default function App() {
                 <WelcomeWindow
                   settings={settings}
                   onChange={setSettings}
-                  systemDark={systemDark}
                 />
               )
             ) : windowKind === "dictionary" ? (

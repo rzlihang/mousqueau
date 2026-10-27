@@ -121,7 +121,6 @@ export default function ImportDialog(props: Props) {
             </span>
             <div className="import-text">
               <strong>{t.importer.mediaTitle}</strong>
-              <span className="muted">{t.importer.mediaBody}</span>
               <span className="muted mono">{t.importer.mediaFormats}</span>
             </div>
             <Button
@@ -142,7 +141,6 @@ export default function ImportDialog(props: Props) {
             </span>
             <div className="import-text">
               <strong>{t.importer.srtTitle}</strong>
-              <span className="muted">{t.importer.srtBody}</span>
               <span className="muted mono">SRT</span>
             </div>
             <Button
@@ -157,7 +155,6 @@ export default function ImportDialog(props: Props) {
               {t.importer.chooseFile}
             </Button>
           </div>
-          <p className="muted">{t.importer.localNote}</p>
         </div>
       ) : (
         <div className="import-body">
@@ -276,7 +273,6 @@ export default function ImportDialog(props: Props) {
             </div>
           )}
           <div className="import-foot">
-            <span className="muted">{t.importer.noUpload}</span>
             <Button
               type="primary"
               disabled={importOff}
