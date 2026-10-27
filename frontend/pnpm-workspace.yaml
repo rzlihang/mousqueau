@@ -1,4 +1,6 @@
 # Preserve the Rolldown versions already verified in the imported npm lockfile.
+# Exempt the Wails runtime so it matches the Go module's v3.0.0, released the
+# same day it was adopted.
 # Keep pnpm's default release-age policy for every other package/version.
 minimumReleaseAgeExclude:
   - rolldown@1.2.13
@@ -17,3 +19,4 @@ minimumReleaseAgeExclude:
   - '@rolldown/binding-openharmony-arm64@1.2.13'
   - '@rolldown/binding-win32-arm64-msvc@1.2.13'
   - '@rolldown/binding-win32-x64-msvc@1.2.13'
+  - '@wailsio/runtime@3.0.0'

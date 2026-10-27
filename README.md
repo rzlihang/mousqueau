@@ -2,13 +2,13 @@
 
 English | [简体中文](README_zh.md)
 
-A Wails v3 desktop application for correcting **existing SRT subtitles** and reviewing speaker identities in conversations. Go + React/TypeScript + Vite + Ant Design v6, bootstrapped from the official Wails v3 React template and pinned to `v3.0.0-beta.28`. It runs on macOS, Windows, and Linux. macOS is the primary target and the only platform with hand-tested GUI behaviour; the Linux desktop build is exercised automatically under Xvfb, and Windows is compiled and unit-tested in CI only.
+A Wails v3 desktop application for correcting **existing SRT subtitles** and reviewing speaker identities in conversations. Go + React/TypeScript + Vite + Ant Design v6, bootstrapped from the official Wails v3 React template and pinned to `v3.0.0`. It runs on macOS, Windows, and Linux. macOS is the primary target and the only platform with hand-tested GUI behaviour; the Linux desktop build is exercised automatically under Xvfb, and Windows is compiled and unit-tested in CI only.
 
 ![Mousqueau editor with mock Traditional Chinese diarization](docs/editor-preview.png)
 
 ## Develop on macOS
 
-Requirements: Go **1.25+**, Node **24 LTS**, pnpm **12.10.1** (pinned in `frontend/package.json`), Xcode Command Line Tools, and optionally FFmpeg / yt-dlp. No API key is required for editing.
+Requirements: Go **1.26+**, Node **24 LTS**, pnpm **12.10.1** (pinned in `frontend/package.json`), Xcode Command Line Tools, and optionally FFmpeg / yt-dlp. No API key is required for editing.
 
 If Vite+ manages your environment, it reads the pnpm pin in `frontend/package.json`; run `vp install --frozen-lockfile` from `frontend`. A global Vite+ installation is optional: the Wails tasks and CI invoke pnpm directly. To install the pinned pnpm with Node/npm, run `npm install --global pnpm@12.10.1`.
 
@@ -18,7 +18,7 @@ brew install go node ffmpeg
 # Optional: downloads from video pages (install independently of Mousqueau)
 brew install yt-dlp
 
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
 # Ensure $(go env GOPATH)/bin is on PATH.
 cd frontend
 pnpm install --frozen-lockfile
@@ -60,10 +60,10 @@ On both, the windows have no native frame: the toolbar is the title bar (drag it
 
 ### Build a Windows test executable from WSL
 
-Install Go 1.25+ and the pinned pnpm in WSL, then run from the repository root:
+Install Go 1.26+ and the pinned pnpm in WSL, then run from the repository root:
 
 ```sh
-CGO_ENABLED=0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+CGO_ENABLED=0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
 export PATH="$(go env GOPATH)/bin:$PATH"
 wails3 build GOOS=windows ARCH=amd64 CGO_ENABLED=0
 wslpath -w "$PWD/bin/mousqueau.exe"

@@ -3,7 +3,7 @@ package main
 import "sync"
 
 // platformGate holds work that calls application.InvokeSync until App.Run has
-// created Wails' platform. beta.28 panics if that runs earlier: dispatchOnMainThread
+// created Wails' platform. v3.0.0 still panics if that runs earlier: dispatchOnMainThread
 // dereferences the still-nil implementation. openWindows starts before Run.
 type platformGate struct {
 	mu      sync.Mutex
