@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Window } from "@wailsio/runtime";
 import { useT } from "./i18n";
+import { desktopControls } from "./useSettings";
 
 // Glyphs drawn on a 10 px grid with 1 px strokes, like native caption buttons.
 function Glyph({ d, crisp = true }: { d: string; crisp?: boolean }) {
@@ -22,15 +23,20 @@ function Glyph({ d, crisp = true }: { d: string; crisp?: boolean }) {
 }
 
 // The minimise, maximise and close buttons of a frameless window, drawn at
-// the right of its title bar outside macOS.
+// the right of its title bar outside macOS. The desktop's title bar layout can
+// drop minimise and maximise; close always stays.
 export default function WindowControls({
-  minimise = true,
-  maximise = false,
+  minimise: offerMinimise = true,
+  maximise: offerMaximise = false,
 }: {
   minimise?: boolean;
   maximise?: boolean;
 }) {
   const t = useT();
+  const minimise =
+    offerMinimise && (desktopControls?.includes("minimise") ?? true);
+  const maximise =
+    offerMaximise && (desktopControls?.includes("maximise") ?? true);
   const [maximised, setMaximised] = useState(false);
   useEffect(() => {
     if (!maximise) return;

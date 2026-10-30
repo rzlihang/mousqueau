@@ -25,6 +25,11 @@ export function installCommand(name: string): string {
 // Outside macOS, Go opens frameless windows and asks for drawn window controls.
 export const customChrome =
   new URLSearchParams(window.location.search).get("chrome") === "custom";
+// The controls besides close that the desktop's title bar layout keeps, or
+// null to draw every one a window offers.
+const controls = new URLSearchParams(window.location.search).get("controls");
+export const desktopControls =
+  controls === null ? null : controls.split(",").filter(Boolean);
 
 // Settings live in Go; every window reloads them when any window changes one.
 export function useSettings(): [

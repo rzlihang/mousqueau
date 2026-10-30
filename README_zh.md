@@ -58,7 +58,7 @@ Go、Node 和 pnpm 的版本要求相同，另外同样需要安装 `wails3`。�
 - **Windows**：需要 WebView2 运行时（Windows 10/11 已预装）。FFmpeg 和 yt-dlp 可以用 `winget install Gyan.FFmpeg` 和 `winget install yt-dlp.yt-dlp` 安装。
 - **Linux**：需要 GTK4 和 WebKitGTK 6 开发包，以及用于媒体播放的 GStreamer 插件。在 Ubuntu 24.04 上：`sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev gstreamer1.0-plugins-good gstreamer1.0-libav ffmpeg libsecret-tools`。yt-dlp 请从其官方发布页或用 `pipx install yt-dlp` 安装，因为发行版的软件包往往跟不上 YouTube 的变化。WebKitGTK 在 bubblewrap 沙箱中运行网页内容；如果系统禁止非特权用户命名空间（GitHub 的 Ubuntu 24.04 runner 就通过 AppArmor 禁止了），应用会在启动时退出，并输出 `bwrap: setting up uid map: Permission denied`。
 
-在这两个平台上，窗口没有原生边框：工具栏就是标题栏（拖动可移动窗口，双击可最大化），最小化、最大化和关闭按钮位于其右侧，而 macOS 的红绿灯在左侧。无边框窗口可以从边缘调整大小。项目标题左侧的三横线按钮打开应用菜单，其中包括设置（也可用 Ctrl+,）和用户词典。所有窗口和弹出层中的滚动条都跟随应用的浅色或深色主题。
+在这两个平台上，窗口没有原生边框：工具栏就是标题栏（拖动可移动窗口，双击可最大化），最小化、最大化和关闭按钮位于其右侧，而 macOS 的红绿灯在左侧。在 Linux 上，这些按钮跟随桌面的标题栏按钮布局（`org.gnome.desktop.wm.preferences button-layout`，经设置门户读取），因此只保留关闭按钮的桌面（例如 Hyprland 上的 Omarchy）只显示关闭按钮。无边框窗口可以从边缘调整大小。项目标题左侧的三横线按钮打开应用菜单，其中包括设置（也可用 Ctrl+,）和用户词典。所有窗口和弹出层中的滚动条都跟随应用的浅色或深色主题。
 
 ### 在 WSL 中构建 Windows 测试版可执行文件
 

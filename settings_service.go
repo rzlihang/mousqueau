@@ -40,7 +40,7 @@ const (
 var customChrome = runtime.GOOS != "darwin"
 
 // windowURL tells the frontend which window it is, whether to draw the
-// window controls, and a theme chosen in Settings to paint before its
+// window controls and which, and a theme chosen in Settings to paint before its
 // settings arrive. Seed the system appearance too: a new hidden web view's
 // media query can lag the native appearance.
 func windowURL(name, theme, systemTheme string) string {
@@ -50,6 +50,9 @@ func windowURL(name, theme, systemTheme string) string {
 	}
 	if customChrome {
 		query.Set("chrome", "custom")
+		if controls, ok := windowControls(desktopButtonLayout()); ok {
+			query.Set("controls", controls)
+		}
 	}
 	if theme == "dark" || theme == "light" || theme == "system" {
 		query.Set("theme", theme)

@@ -468,8 +468,9 @@ func TestSettingsReportTheDeveloperBuild(t *testing.T) {
 }
 
 func TestWindowURLNamesTheWindowAndItsChrome(t *testing.T) {
-	saved := customChrome
-	defer func() { customChrome = saved }()
+	saved, savedLayout := customChrome, desktopButtonLayout
+	defer func() { customChrome, desktopButtonLayout = saved, savedLayout }()
+	desktopButtonLayout = func() string { return "" }
 	customChrome = false
 	if got := windowURL(mainWindow, "system", "dark"); got != "/?systemTheme=dark&theme=system" {
 		t.Fatalf("main window URL %q", got)
@@ -486,6 +487,10 @@ func TestWindowURLNamesTheWindowAndItsChrome(t *testing.T) {
 	}
 	if got := windowURL(mainWindow, "system", ""); got != "/?chrome=custom&theme=system" {
 		t.Fatalf("window without native system appearance URL %q", got)
+	}
+	desktopButtonLayout = func() string { return "appmenu:close" }
+	if got := windowURL(mainWindow, "system", ""); got != "/?chrome=custom&controls=&theme=system" {
+		t.Fatalf("window on a close-only desktop URL %q", got)
 	}
 }
 
