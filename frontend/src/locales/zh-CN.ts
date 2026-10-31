@@ -69,6 +69,7 @@ export const zhCN = {
       mergeNext: "与下一句合并",
       mergePrevious: "与上一句合并",
       toggleReview: "标记需要复核",
+      shiftCues: "整体偏移字幕",
       zoomIn: "放大",
       zoomOut: "缩小",
       zoomToCue: "缩放到当前句",
@@ -149,6 +150,13 @@ export const zhCN = {
     waveNeedsFfmpeg: "需要 FFmpeg 才能显示波形",
     waveFailed: "无法生成波形；字幕仍可编辑",
     waveLoading: "正在本地生成波形…",
+  },
+  shift: {
+    title: "整体偏移字幕",
+    menu: "整体偏移字幕…",
+    align: "选中字幕对齐播放头",
+    ok: "偏移",
+    unit: "秒",
   },
   cueList: {
     label: "字幕列表",

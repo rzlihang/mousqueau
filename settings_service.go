@@ -902,6 +902,7 @@ var fileCommands = []menuCommand{
 	{i18n.N("Save Project"), "CmdOrCtrl+S", "saveProject"},
 	{i18n.N("Import…"), "CmdOrCtrl+I", "import"},
 	{i18n.N("Export SRT…"), "CmdOrCtrl+E", "exportSrt"},
+	{i18n.N("Shift All Subtitles…"), "CmdOrCtrl+Shift+T", "shiftCues"},
 }
 
 var helpCommands = []menuCommand{

@@ -73,6 +73,7 @@ export const COMMANDS = [
     group: "cues",
   },
   { id: "toggleReview", keys: ["$mod+KeyR"], scope: "global", group: "cues" },
+  { id: "shiftCues", keys: ["$mod+Shift+KeyT"], scope: "global", group: "cues" },
   // Speakers: n is the speaker's place in the speakers tab; 0 is none.
   ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => ({
     id: `speaker${n}` as const,
@@ -100,6 +101,7 @@ export const MENU_COMMANDS: readonly CommandId[] = [
   "saveProject",
   "import",
   "exportSrt",
+  "shiftCues",
   "settings",
   "dictionary",
   "shortcuts",

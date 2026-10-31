@@ -295,6 +295,19 @@ func (s *EditorService) MergeCues(id string) (Snapshot, error) {
 	}
 	return s.snapshot(), nil
 }
+
+// ShiftCues moves every cue by the same number of seconds.
+func (s *EditorService) ShiftCues(seconds float64) (Snapshot, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.requireProject(); err != nil {
+		return Snapshot{}, err
+	}
+	if err := s.project.Shift(seconds); err != nil {
+		return Snapshot{}, err
+	}
+	return s.snapshot(), nil
+}
 func (s *EditorService) Undo() (Snapshot, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

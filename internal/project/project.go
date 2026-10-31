@@ -198,6 +198,34 @@ func (p *Project) Merge(id string) error {
 	return p.commitStructure(next)
 }
 
+// Shift moves every cue by the same number of seconds, rounded to whole
+// milliseconds, to fix subtitles that run early or late throughout. Analysis
+// segments keep their times, since they follow the audio.
+func (p *Project) Shift(seconds float64) error {
+	if math.IsNaN(seconds) || math.IsInf(seconds, 0) {
+		return i18n.Errorf("invalid time offset")
+	}
+	offset := int64(math.Round(seconds * 1000))
+	if offset == 0 {
+		return i18n.Errorf("the offset must not be zero")
+	}
+	ms := func(t float64) int64 { return int64(math.Round(t * 1000)) }
+	next := clone(p.State)
+	for i, c := range next.Cues {
+		start := ms(c.Start) + offset
+		if start < 0 {
+			return i18n.Errorf("subtitle %s would start before 00:00:00,000", c.Identifier)
+		}
+		next.Cues[i].Start = float64(start) / 1000
+		next.Cues[i].End = float64(ms(c.End)+offset) / 1000
+	}
+	if _, err := subtitle.Render(next.Cues); err != nil {
+		return err
+	}
+	p.commit(next)
+	return nil
+}
+
 // commitStructure renumbers SRT identifiers after cues were added or removed,
 // so the exported file stays sequential, then validates and commits.
 func (p *Project) commitStructure(next State) error {

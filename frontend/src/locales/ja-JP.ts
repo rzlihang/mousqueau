@@ -73,6 +73,7 @@ export const jaJP: Messages = {
       mergeNext: "次と結合",
       mergePrevious: "前と結合",
       toggleReview: "要確認にする",
+      shiftCues: "字幕全体をずらす",
       zoomIn: "拡大",
       zoomOut: "縮小",
       zoomToCue: "字幕に合わせて拡大",
@@ -160,6 +161,13 @@ export const jaJP: Messages = {
     waveNeedsFfmpeg: "波形の表示には FFmpeg が必要です",
     waveFailed: "波形を描画できませんでした。字幕の編集は引き続き可能です",
     waveLoading: "波形をローカルで描画しています…",
+  },
+  shift: {
+    title: "字幕全体をずらす",
+    menu: "字幕全体をずらす…",
+    align: "選択中の字幕を再生位置に合わせる",
+    ok: "ずらす",
+    unit: "秒",
   },
   cueList: {
     label: "字幕リスト",
