@@ -71,6 +71,7 @@ export const zhTW: Messages = {
       mergeNext: "與下一句合併",
       mergePrevious: "與上一句合併",
       toggleReview: "標記需要複核",
+      shiftCues: "整體位移字幕",
       zoomIn: "放大",
       zoomOut: "縮小",
       zoomToCue: "縮放到本句",
@@ -151,6 +152,13 @@ export const zhTW: Messages = {
     waveNeedsFfmpeg: "需要 FFmpeg 才能顯示波形",
     waveFailed: "無法產生波形；字幕仍可編輯",
     waveLoading: "正在本機產生波形⋯",
+  },
+  shift: {
+    title: "整體位移字幕",
+    menu: "整體位移字幕…",
+    align: "選取字幕對齊播放頭",
+    ok: "位移",
+    unit: "秒",
   },
   cueList: {
     label: "字幕列表",

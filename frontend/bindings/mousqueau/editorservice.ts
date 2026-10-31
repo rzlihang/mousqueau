@@ -282,6 +282,13 @@ export function SetToolPath(name: string, path: string): $CancellablePromise<$mo
 }
 
 /**
+ * ShiftCues moves every cue by the same number of seconds.
+ */
+export function ShiftCues(seconds: number): $CancellablePromise<$models.Snapshot> {
+    return $Call.ByID(2094139484, seconds);
+}
+
+/**
  * SplitCue divides a cue at a time and a text offset in Unicode code points.
  */
 export function SplitCue(id: string, at: number, offset: number): $CancellablePromise<$models.Snapshot> {

@@ -73,6 +73,7 @@ export const enUS: Messages = {
       mergeNext: "Merge with next",
       mergePrevious: "Merge with previous",
       toggleReview: "Mark for review",
+      shiftCues: "Shift All Subtitles",
       zoomIn: "Zoom in",
       zoomOut: "Zoom out",
       zoomToCue: "Zoom to the subtitle",
@@ -159,6 +160,13 @@ export const enUS: Messages = {
     waveNeedsFfmpeg: "FFmpeg is needed to show the waveform",
     waveFailed: "Could not draw the waveform; subtitles can still be edited",
     waveLoading: "Drawing the waveform locally…",
+  },
+  shift: {
+    title: "Shift All Subtitles",
+    menu: "Shift All Subtitles…",
+    align: "Align Selected to Playhead",
+    ok: "Shift",
+    unit: "s",
   },
   cueList: {
     label: "Subtitle list",

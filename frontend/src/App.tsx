@@ -73,6 +73,7 @@ import {
   type Handlers,
   shortcutOf,
 } from "./keymap";
+import ShiftDialog from "./ShiftDialog";
 import ShortcutsDialog from "./ShortcutsDialog";
 import type { ZoomRequest } from "./Timeline";
 import {
@@ -209,6 +210,7 @@ function EditorApp({
   const [menuOpen, setMenuOpen] = useState(false);
   const [overlayEditing, setOverlayEditing] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [shiftOpen, setShiftOpen] = useState(false);
   const [zoomRequest, setZoomRequest] = useState<ZoomRequest>();
   const [layout, setLayout] = useState<Layout>(loadLayout);
   const upperRef = useRef<HTMLDivElement>(null);
@@ -757,6 +759,7 @@ function EditorApp({
   }, [message, t]);
   const canUndo = !busy && !draftDirty && !!p?.undo?.length;
   const canRedo = !busy && !draftDirty && !!p?.redo?.length;
+  const canShift = !busy && !draftDirty && !!cues.length;
   // Keyboard shortcuts (keymap.ts). A handler returning false did nothing,
   // so the key keeps its usual effect.
   const keyHandlers = useRef<Handlers>({});
@@ -765,6 +768,7 @@ function EditorApp({
     saveProject: () => !busy && !!p && void save(false),
     import: () => !busy && void setImportTab("local"),
     exportSrt: () => !busy && !!p && void save(true),
+    shiftCues: () => canShift && setShiftOpen(true),
     settings: () => void Editor.OpenSettings(),
     dictionary: () => void Editor.OpenDictionary(),
     shortcuts: () => setShortcutsOpen(true),
@@ -953,6 +957,15 @@ function EditorApp({
                       label: t.editor.withShortcut(t.editor.redo, shortcutOf("redo")),
                       disabled: !canRedo,
                       onClick: () => void update(Editor.Redo),
+                    },
+                    {
+                      key: "shift",
+                      label: t.editor.withShortcut(
+                        t.shift.menu,
+                        shortcutOf("shiftCues"),
+                      ),
+                      disabled: !canShift,
+                      onClick: () => setShiftOpen(true),
                     },
                     {
                       key: "settings",
@@ -2038,6 +2051,14 @@ function EditorApp({
         open={shortcutsOpen}
         speakers={speakers}
         onClose={() => setShortcutsOpen(false)}
+      />
+      <ShiftDialog
+        open={shiftOpen}
+        busy={busy}
+        reference={cue ?? cues[0]}
+        playhead={cue && mediaUrl ? playhead : undefined}
+        onClose={() => setShiftOpen(false)}
+        onShift={async (seconds) => !!(await update(() => Editor.ShiftCues(seconds)))}
       />
       <ImportDialog
         open={importTab !== null}

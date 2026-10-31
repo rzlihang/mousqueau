@@ -2,6 +2,7 @@ package project
 
 import (
 	"encoding/json"
+	"math"
 	"mousqueau/internal/analysis"
 	"mousqueau/internal/subtitle"
 	"slices"
@@ -349,5 +350,42 @@ func TestMergeJoinsLinesOfTheSameSpeaker(t *testing.T) {
 			}
 			seen[s] = true
 		}
+	}
+}
+
+func TestShiftMovesEveryCueAndIsUndoable(t *testing.T) {
+	p := New([]subtitle.Cue{
+		{ID: "c1", Identifier: "1", Start: 1, End: 2.5, Text: "一", SpeakerIDs: []string{}},
+		{ID: "c2", Identifier: "2", Start: 3.2, End: 4, Text: "二", SpeakerIDs: []string{}},
+	}, "original.srt")
+	p.State.Segments = []analysis.Segment{{Start: 1, End: 2}}
+	if err := p.Shift(-0.7504); err != nil {
+		t.Fatal(err)
+	}
+	got := p.State.Cues
+	if got[0].Start != 0.25 || got[0].End != 1.75 || got[1].Start != 2.45 || got[1].End != 3.25 {
+		t.Fatalf("shifted cues: %+v", got)
+	}
+	if p.State.Segments[0].Start != 1 || p.Original[0].Start != 1 {
+		t.Fatal("segments or originals moved")
+	}
+	p.UndoEdit()
+	if p.State.Cues[0].Start != 1 || p.State.Cues[1].End != 4 {
+		t.Fatal("undo")
+	}
+}
+
+func TestShiftRejectsInvalidOffsets(t *testing.T) {
+	p := initial()
+	for _, offset := range []float64{0, 0.0004, -1.001, math.NaN(), math.Inf(1)} {
+		if err := p.Shift(offset); err == nil {
+			t.Fatalf("offset %v accepted", offset)
+		}
+	}
+	if len(p.Undo) != 0 || p.State.Cues[0].Start != 1 {
+		t.Fatal("rejected shift changed the project")
+	}
+	if err := p.Shift(-1); err != nil || p.State.Cues[0].Start != 0 {
+		t.Fatalf("shift to zero: %v", err)
 	}
 }
