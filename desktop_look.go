@@ -71,7 +71,9 @@ func (s *EditorService) followDesktopLook(ctx context.Context) {
 }
 
 // desktopMode is Omarchy's light or dark mode, which the System theme follows
-// there, or "" when the desktop does not say.
+// there, or "" when the desktop does not say. It colours the native window
+// only: the web view gets the mode with the look, and keeps its own media
+// query for when following is turned off.
 func (s *EditorService) desktopMode() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -79,12 +81,4 @@ func (s *EditorService) desktopMode() string {
 		return look.Mode
 	}
 	return ""
-}
-
-// systemThemeHint seeds a new window with the system appearance.
-func (s *EditorService) systemThemeHint() string {
-	if mode := s.desktopMode(); mode != "" {
-		return mode
-	}
-	return windowSystemTheme(s.app)
 }

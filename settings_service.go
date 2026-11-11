@@ -731,7 +731,7 @@ func (s *EditorService) openPanel(name, title string, width, height int, minimis
 	}
 	dark := s.darkTheme()
 	window := s.app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name: name, Title: title, Width: width, Height: height, URL: windowURL(name, s.theme(), s.systemThemeHint()),
+		Name: name, Title: title, Width: width, Height: height, URL: windowURL(name, s.theme(), windowSystemTheme(s.app)),
 		BackgroundColour: ground(dark), Hidden: s.deferWindowShow(name, true),
 		DisableResize: true, Frameless: customChrome, MinimiseButtonState: minimise,
 		MaximiseButtonState: application.ButtonDisabled, FullscreenButtonState: application.ButtonDisabled,
@@ -839,7 +839,7 @@ func (s *EditorService) openWindows() {
 	// is already hidden, and the web view would stay white until it is shown.
 	deferShow := s.deferWindowShow(mainWindow, setupDone)
 	editor := s.app.Window.NewWithOptions(application.WebviewWindowOptions{Name: mainWindow, Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: 1100, MinHeight: 720,
-		URL: windowURL(mainWindow, s.theme(), s.systemThemeHint()), BackgroundColour: ground(dark),
+		URL: windowURL(mainWindow, s.theme(), windowSystemTheme(s.app)), BackgroundColour: ground(dark),
 		Hidden: !setupDone || deferShow,
 		// The frontend draws the toolbar under the traffic lights, or with its
 		// own window controls elsewhere, and marks it draggable.

@@ -182,9 +182,11 @@ function loadLayout(): Layout {
 
 function EditorApp({
   dark,
+  accent,
   showSample,
 }: {
   dark: boolean;
+  accent: string;
   showSample: boolean;
 }) {
   const { message, modal } = useAntApp();
@@ -1901,6 +1903,7 @@ function EditorApp({
           waveform={wave && "peaks" in wave ? wave : null}
           waveformNote={waveformNote}
           dark={dark}
+          accent={accent}
           busy={busy}
           onSeek={seek}
           onSelectCue={selectCue}
@@ -2366,6 +2369,7 @@ export default function App() {
             ) : (
               <EditorApp
                 dark={dark}
+                accent={accent}
                 showSample={showSampleImport(settings?.developer)}
               />
             )}

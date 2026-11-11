@@ -39,6 +39,8 @@ type Props = {
   waveform: { peaks: number[]; rate: number } | null;
   waveformNote: string;
   dark: boolean;
+  // The accent the waveform is tinted with; a change repaints the canvas.
+  accent: string;
   busy: boolean;
   onSeek: (time: number) => void;
   onSelectCue: (cue: Cue) => void;
@@ -82,6 +84,7 @@ export default function Timeline(props: Props) {
     range,
     waveform,
     dark,
+    accent,
     busy,
   } = props;
   const t = useT();
@@ -247,6 +250,7 @@ export default function Timeline(props: Props) {
     selected?.start,
     selected?.end,
     dark,
+    accent,
     duration,
   ]);
 
