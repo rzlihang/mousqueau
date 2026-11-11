@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -55,6 +56,11 @@ func TestReadKeepsLookWhenHyprlandIsAbsent(t *testing.T) {
 }
 
 func TestWatchFollowsThemeSwitch(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// Omarchy is Linux only, and Windows cannot rename a directory link
+		// over another the way a theme switch does.
+		t.Skip("theme switches replace symlinks, which Windows cannot")
+	}
 	root := t.TempDir()
 	write := func(name, accent string) string {
 		dir := filepath.Join(root, name)
