@@ -546,6 +546,19 @@ export default function SettingsWindow({
                     />
                   </div>
                 )}
+                {rows.desktopTheme && settings.desktopThemeAvailable && (
+                  <div className="set-row">
+                    <span>{t.settings.desktopTheme}</span>
+                    <Switch
+                      size="small"
+                      aria-label={t.settings.desktopTheme}
+                      checked={settings.desktopTheme}
+                      onChange={(v) =>
+                        void apply(() => Editor.SetDesktopTheme(v))
+                      }
+                    />
+                  </div>
+                )}
                 {rows.language && (
                   <div className="set-row">
                     <span>{t.language.label}</span>

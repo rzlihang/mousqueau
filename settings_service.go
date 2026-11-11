@@ -77,6 +77,9 @@ func (s *EditorService) darkTheme() bool {
 	case "light":
 		return false
 	}
+	if mode := s.desktopMode(); mode != "" {
+		return mode == "dark"
+	}
 	return systemDarkTheme(s.app)
 }
 
@@ -180,22 +183,25 @@ type ProviderView struct {
 // SettingsView is what the settings and welcome windows show. It never
 // contains an API key, only where one comes from.
 type SettingsView struct {
-	Theme             string         `json:"theme"`
-	Language          string         `json:"language"` // "system", "zh-CN", "zh-TW", "zh-HK", "ja-JP" or "en-US"
-	Locale            string         `json:"locale"`   // the language in use
-	SubtitleFont      string         `json:"subtitleFont"`
-	OpenLastProject   bool           `json:"openLastProject"`
-	SetupDone         bool           `json:"setupDone"`
-	FFmpeg            ToolStatus     `json:"ffmpeg"`
-	YTDLP             ToolStatus     `json:"ytdlp"`
-	Provider          string         `json:"provider"` // in use; "" when none is added
-	Providers         []ProviderView `json:"providers"`
-	KeychainAvailable bool           `json:"keychainAvailable"`
-	AutoUpdate        bool           `json:"autoUpdate"`
-	Beta              bool           `json:"beta"`
-	Version           string         `json:"version"`
-	LastUpdateCheck   string         `json:"lastUpdateCheck"`
-	UpdateVersion     string         `json:"updateVersion"`
+	Theme           string `json:"theme"`
+	Language        string `json:"language"` // "system", "zh-CN", "zh-TW", "zh-HK", "ja-JP" or "en-US"
+	Locale          string `json:"locale"`   // the language in use
+	SubtitleFont    string `json:"subtitleFont"`
+	OpenLastProject bool   `json:"openLastProject"`
+	DesktopTheme    bool   `json:"desktopTheme"`
+	// DesktopThemeAvailable is true on Omarchy, where DesktopTheme applies.
+	DesktopThemeAvailable bool           `json:"desktopThemeAvailable"`
+	SetupDone             bool           `json:"setupDone"`
+	FFmpeg                ToolStatus     `json:"ffmpeg"`
+	YTDLP                 ToolStatus     `json:"ytdlp"`
+	Provider              string         `json:"provider"` // in use; "" when none is added
+	Providers             []ProviderView `json:"providers"`
+	KeychainAvailable     bool           `json:"keychainAvailable"`
+	AutoUpdate            bool           `json:"autoUpdate"`
+	Beta                  bool           `json:"beta"`
+	Version               string         `json:"version"`
+	LastUpdateCheck       string         `json:"lastUpdateCheck"`
+	UpdateVersion         string         `json:"updateVersion"`
 	// Developer is true for wails3 dev and other builds without -tags production.
 	// Sample-import controls are shown only then.
 	Developer bool `json:"developer"`
@@ -308,6 +314,7 @@ func (s *EditorService) providerViews() []ProviderView {
 func (s *EditorService) settingsView() SettingsView {
 	view := SettingsView{
 		Theme: s.settings.Theme, Language: s.settings.Language, Locale: string(i18n.Current()), SubtitleFont: s.settings.SubtitleFont, OpenLastProject: s.settings.OpenLastProject, SetupDone: s.settings.SetupDone,
+		DesktopTheme: s.settings.DesktopTheme, DesktopThemeAvailable: s.look.Present,
 		FFmpeg: toolStatus("ffmpeg", s.settings.FFmpegPath), YTDLP: toolStatus("yt-dlp", s.settings.YTDLPPath),
 		Provider: s.settings.Provider, Providers: s.providerViews(), KeychainAvailable: s.keyStore().Available(),
 		AutoUpdate: s.settings.AutoUpdate, Beta: s.settings.Beta,
@@ -446,6 +453,16 @@ func (s *EditorService) SetSubtitleFont(name string) (SettingsView, error) {
 }
 func (s *EditorService) SetOpenLastProject(enabled bool) (SettingsView, error) {
 	return s.change(func(next *settings.Settings) error { next.OpenLastProject = enabled; return nil })
+}
+
+// SetDesktopTheme turns following the Omarchy theme on or off; every window
+// switches at once.
+func (s *EditorService) SetDesktopTheme(enabled bool) (SettingsView, error) {
+	view, err := s.change(func(next *settings.Settings) error { next.DesktopTheme = enabled; return nil })
+	if err == nil {
+		s.lookChanged()
+	}
+	return view, err
 }
 func (s *EditorService) SetAutoUpdate(enabled bool) (SettingsView, error) {
 	return s.change(func(next *settings.Settings) error { next.AutoUpdate = enabled; return nil })

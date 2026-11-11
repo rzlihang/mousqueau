@@ -435,6 +435,7 @@ export const jaJP: Messages = {
     fontDefault: "UI フォント",
     fontPlaceholder: "フォント名を選択または入力",
     openLast: "起動時に前回のプロジェクトを開く",
+    desktopTheme: "Omarchy のテーマに合わせる",
     setup: "初期設定",
     rerunSetup: "初期設定をもう一度実行",
     toolLocation: (tool) => `${tool} の場所`,

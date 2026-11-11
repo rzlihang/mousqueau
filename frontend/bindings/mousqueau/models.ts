@@ -72,6 +72,12 @@ export interface SettingsView {
     "locale": string;
     "subtitleFont": string;
     "openLastProject": boolean;
+    "desktopTheme": boolean;
+
+    /**
+     * DesktopThemeAvailable is true on Omarchy, where DesktopTheme applies.
+     */
+    "desktopThemeAvailable": boolean;
     "setupDone": boolean;
     "ffmpeg": ToolStatus;
     "ytdlp": ToolStatus;

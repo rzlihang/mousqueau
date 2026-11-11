@@ -427,6 +427,7 @@ export const enUS: Messages = {
     fontDefault: "Interface font",
     fontPlaceholder: "Choose or type a font name",
     openLast: "Open the last project at launch",
+    desktopTheme: "Follow Omarchy theme",
     setup: "Initial setup",
     rerunSetup: "Run Setup Again",
     toolLocation: (tool) => `${tool} location`,

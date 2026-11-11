@@ -102,7 +102,9 @@ import {
 import {
   fontStack,
   providerCaution,
+  mixHex,
   resolveDark,
+  textOnAccent,
   themeChoice,
 } from "./preferences";
 import SettingsWindow from "./SettingsWindow";
@@ -116,6 +118,7 @@ import {
   customChrome,
   isMac,
   isWindows,
+  useDesktopLook,
   useSettings,
   useSystemDark,
 } from "./useSettings";
@@ -179,9 +182,11 @@ function loadLayout(): Layout {
 
 function EditorApp({
   dark,
+  accent,
   showSample,
 }: {
   dark: boolean;
+  accent: string;
   showSample: boolean;
 }) {
   const { message, modal } = useAntApp();
@@ -1898,6 +1903,7 @@ function EditorApp({
           waveform={wave && "peaks" in wave ? wave : null}
           waveformNote={waveformNote}
           dark={dark}
+          accent={accent}
           busy={busy}
           onSeek={seek}
           onSelectCue={selectCue}
@@ -2210,7 +2216,10 @@ function sameProject(
 
 export default function App() {
   const [settings, setSettings] = useSettings();
-  const systemDark = useSystemDark();
+  const mediaDark = useSystemDark();
+  const look = useDesktopLook();
+  // On Omarchy the System theme follows the desktop theme's own mode.
+  const systemDark = look.mode ? look.mode === "dark" : mediaDark;
   // Like the theme, the last language is cached for the first paint.
   const [cachedLocale] = useState(() =>
     initialLocale(
@@ -2236,6 +2245,8 @@ export default function App() {
     settings ? themeChoice(settings.theme) : cached,
     systemDark,
   );
+  const accent = look.accent || themeColors[dark ? "dark" : "light"].accent;
+  const radius = look.present ? look.radius : 6;
   useEffect(() => {
     if (!settings) return;
     localStorage.setItem("mousqueau-theme", settings.theme);
@@ -2280,6 +2291,27 @@ export default function App() {
         /* The native recovery timeout still permits a failed page to open. */
       });
   }, [settings, dark]);
+  // A desktop accent also tints selections and the waveform, which are
+  // otherwise shades of the app's own blue.
+  const lookVars = {
+    "--accent": accent,
+    "--radius": `${radius}px`,
+    ...(look.accent
+      ? {
+          "--wave-sel": accent,
+          "--wave": mixHex(accent, themeColors[dark ? "dark" : "light"].panel, 0.45),
+          "--select": mixHex(accent, themeColors[dark ? "dark" : "light"].panel, 0.16),
+        }
+      : {}),
+  };
+  useLayoutEffect(() => {
+    // Popups are portalled outside the themed root, so they read the root's.
+    const root = document.documentElement.style;
+    for (const name of ["--wave-sel", "--wave", "--select"])
+      root.removeProperty(name);
+    for (const [name, value] of Object.entries(lookVars))
+      root.setProperty(name, value);
+  }, [accent, radius, look.accent, dark]);
   return (
     <ConfigProvider
       {...antdIconConfig}
@@ -2290,9 +2322,11 @@ export default function App() {
       theme={{
         algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
-          colorPrimary: themeColors[dark ? "dark" : "light"].accent,
+          colorPrimary: accent,
+          colorTextLightSolid: textOnAccent(accent),
           colorBgLayout: themeColors[dark ? "dark" : "light"].bg,
-          borderRadius: 6,
+          // Corners match the windows around it: square on Omarchy's default.
+          borderRadius: radius,
           colorError: themeColors[dark ? "dark" : "light"].error,
           ...(!dark
             ? {
@@ -2310,7 +2344,10 @@ export default function App() {
             data-theme={dark ? "dark" : "light"}
             className={edged ? "window-edge" : undefined}
             style={
-              { "--subtitle-font": fontStack(subtitleFont) } as CSSProperties
+              {
+                "--subtitle-font": fontStack(subtitleFont),
+                ...lookVars,
+              } as CSSProperties
             }
           >
             {windowKind === "settings" ? (
@@ -2332,6 +2369,7 @@ export default function App() {
             ) : (
               <EditorApp
                 dark={dark}
+                accent={accent}
                 showSample={showSampleImport(settings?.developer)}
               />
             )}

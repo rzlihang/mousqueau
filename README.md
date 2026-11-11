@@ -58,6 +58,8 @@ The same Go, Node and pnpm versions apply, plus `wails3` as above. See the [Wail
 
 On both, the windows have no native frame: the toolbar is the title bar (drag it to move the window, double-click to maximise) and the minimise, maximise and close buttons sit at its right, where macOS keeps its traffic lights on the left. On Linux they follow the desktop's title bar button layout (`org.gnome.desktop.wm.preferences button-layout`, read through the settings portal), so a desktop that keeps only close, such as Omarchy on Hyprland, shows only close. Frameless windows resize from their edges. The three-line button to the left of the project title opens the application menu, including Settings (also Ctrl+,) and the user dictionary. Scrollbars in every window and popup follow the light or dark application theme.
 
+On [Omarchy](https://omarchy.org), every window follows the current Omarchy theme: its accent colour, its light or dark mode (for the System theme), and Hyprland's window rounding (`decoration:rounding`, square by default), and switches within a second of a theme change. **Settings › General › Follow Omarchy theme** turns this off; the switch only appears on Omarchy. To install Mousqueau as an Arch package so it appears in the application launcher, run `wails3 task install:arch` (it builds, runs `makepkg` on `build/linux/arch/PKGBUILD`, then `sudo pacman -U`). The window's Wayland app id is `com.rzlihang.mousqueau`, matching the installed `.desktop` file.
+
 ### Build a Windows test executable from WSL
 
 Install Go 1.26+ and the pinned pnpm in WSL, then run from the repository root:

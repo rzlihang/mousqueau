@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"log"
@@ -19,12 +20,18 @@ func main() {
 	if first, _ := i18n.Match(firstOf(service.languages)); first != i18n.Current() {
 		preferLanguage(appleLanguage[i18n.Current()], service.languages)
 	}
+	lookCtx, stopLook := context.WithCancel(context.Background())
+	defer stopLook()
+	service.followDesktopLook(lookCtx)
 	app := application.New(application.Options{
 		Name: "Mousqueau", Description: i18n.T("Correct existing subtitles and identify speakers"),
 		Services: []application.Service{application.NewService(service)},
 		Assets:   application.AssetOptions{Handler: application.AssetFileServerFS(assets), Middleware: service.mediaMiddleware},
 		Mac:      application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
 		Windows:  application.WindowsOptions{WndProcInterceptor: wndProcInterceptor},
+		// GTK names the Wayland window after this id, so the launcher entry
+		// com.rzlihang.mousqueau.desktop owns the window and gives it its icon.
+		Linux: application.LinuxOptions{ApplicationID: "com.rzlihang.mousqueau"},
 	})
 	service.app = app
 	service.openWindows()

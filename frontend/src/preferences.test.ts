@@ -7,8 +7,12 @@ import {
   languageOptions,
   initialSystemDark,
   matchSettings,
+  mixHex,
+  noDesktopLook,
+  parseDesktopLook,
   providerCaution,
   resolveDark,
+  textOnAccent,
   themeChoice,
   toolLabel,
 } from "./preferences";
@@ -142,5 +146,30 @@ describe("preferences", () => {
     expect(formatChecked(local.toISOString(), en)).toBe(
       "Last checked: 2026-10-08 09:05",
     );
+  });
+});
+
+describe("desktop look", () => {
+  it("keeps only what Omarchy reports and is valid", () => {
+    expect(parseDesktopLook(null)).toEqual(noDesktopLook);
+    expect(parseDesktopLook({ present: false, accent: "#ffffff" })).toEqual(
+      noDesktopLook,
+    );
+    expect(
+      parseDesktopLook({ present: true, accent: "pink", mode: "dim", radius: -1 }),
+    ).toEqual({ present: true, accent: "", mode: "", radius: 0 });
+    expect(
+      parseDesktopLook({ present: true, accent: "#F48FB8", mode: "dark", radius: 8 }),
+    ).toEqual({ present: true, accent: "#F48FB8", mode: "dark", radius: 8 });
+  });
+
+  it("blends an accent into a panel", () => {
+    expect(mixHex("#ffffff", "#000", 0.5)).toBe("#808080");
+    expect(mixHex("#f48fb8", "#1a1a1a", 1)).toBe("#f48fb8");
+  });
+
+  it("puts dark text on a light accent", () => {
+    expect(textOnAccent("#ffd60a")).toBe("#000000");
+    expect(textOnAccent("#2867c7")).toBe("#ffffff");
   });
 });

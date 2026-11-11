@@ -411,6 +411,7 @@ export const zhTW: Messages = {
     fontDefault: "介面字體",
     fontPlaceholder: "選擇或輸入字體名稱",
     openLast: "啟動時開啟上次的專案",
+    desktopTheme: "跟隨 Omarchy 主題",
     setup: "初始設定",
     rerunSetup: "重新執行初始設定",
     toolLocation: (tool) => `${tool} 位置`,
