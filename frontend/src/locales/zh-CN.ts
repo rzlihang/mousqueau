@@ -410,6 +410,7 @@ export const zhCN = {
     fontDefault: "界面字体",
     fontPlaceholder: "选择或输入字体名称",
     openLast: "启动时打开上次的项目",
+    desktopTheme: "跟随 Omarchy 主题",
     setup: "初始设置",
     rerunSetup: "重新运行初始设置",
     toolLocation: (tool: string) => `${tool} 位置`,

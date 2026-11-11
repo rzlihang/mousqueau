@@ -322,7 +322,7 @@ h3 {
 }
 .dict-known {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border-radius: 2px;
+  border-radius: min(2px, var(--radius, 2px));
 }
 [data-theme="dark"] .dict-misspelled {
   text-decoration-color: #ff7875;
@@ -332,7 +332,7 @@ h3 {
   padding: 6px 8px;
   background: var(--block);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius, 6px);
   white-space: pre-wrap;
 }
 .dict-hit-row {
@@ -414,7 +414,7 @@ button.side-item {
   gap: 3px;
   padding: 8px 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius, 6px);
   background: transparent;
   color: var(--ink);
   font: inherit;
@@ -707,7 +707,7 @@ button.side-item {
   width: 3px;
   align-self: stretch;
   flex: none;
-  border-radius: 2px;
+  border-radius: min(2px, var(--radius, 2px));
 }
 .cue-line-text {
   flex: 1;
@@ -745,7 +745,7 @@ button.side-item {
 /* Suggestions */
 .suggestion {
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--radius, 7px);
   padding: 12px;
 }
 .suggestion .section-heading {
@@ -896,7 +896,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   top: 2px;
   bottom: 2px;
   min-width: 24px;
-  border-radius: 5px;
+  border-radius: min(5px, var(--radius, 5px));
   background: var(--scroll-thumb);
 }
 .zoom-thumb:hover,
@@ -917,7 +917,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   bottom: 2px;
   left: 3px;
   width: 2px;
-  border-radius: 1px;
+  border-radius: min(1px, var(--radius, 1px));
   background: var(--panel);
   opacity: 0.8;
 }
@@ -975,7 +975,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   position: absolute;
   bottom: 0;
   height: 3px;
-  background: rgba(40, 103, 199, 0.7);
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
 }
 .waveform {
   position: absolute;
@@ -996,7 +996,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   position: absolute;
   top: 7px;
   height: 40px;
-  border-radius: 6px;
+  border-radius: var(--radius, 6px);
   border: 1px solid var(--line);
   background: var(--block);
   padding: 4px 7px;
@@ -1035,7 +1035,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
 }
 .speaker-bar {
   position: absolute;
-  border-radius: 4px;
+  border-radius: min(4px, var(--radius, 4px));
   color: #fff;
   font-size: 10px;
   padding: 0 6px;
@@ -1068,7 +1068,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   top: 0;
   width: 11px;
   height: 14px;
-  border-radius: 0 0 3px 3px;
+  border-radius: 0 0 min(3px, var(--radius, 3px)) min(3px, var(--radius, 3px));
   background: var(--ink);
 }
 
@@ -1091,7 +1091,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   height: 20px;
   padding: 0 6px;
   border: 0;
-  border-radius: 4px;
+  border-radius: min(4px, var(--radius, 4px));
   background: transparent;
   color: var(--muted);
   font-size: 11px;
@@ -1110,7 +1110,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   background: #52c41a;
 }
 .dot.partial {
-  background: #1677ff;
+  background: var(--accent);
 }
 .dot.warn {
   background: #d46b08;
@@ -1192,7 +1192,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
 }
 .set-card {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius, 8px);
   background: var(--panel);
 }
 .set-row > .ant-alert {
@@ -1267,7 +1267,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   align-items: center;
   gap: 10px;
   padding: 0 10px;
-  border-radius: 6px;
+  border-radius: var(--radius, 6px);
   color: var(--muted);
   text-decoration: none;
   cursor: default;
@@ -1400,7 +1400,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: var(--radius, 6px);
   background: var(--accent);
   color: #fff;
   font-size: 17px;
@@ -1439,7 +1439,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   gap: 10px;
   padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius, 8px);
   background: var(--bg);
 }
 .welcome-facts > div {
@@ -1502,7 +1502,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   gap: 14px;
   padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius, 8px);
 }
 .import-glyph {
   width: 36px;
@@ -1511,7 +1511,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: var(--radius, 8px);
   background: var(--select);
   /* The selected-waveform blue: the accent, lightened in dark mode so the
      glyph keeps 3:1 against the selection fill. */
@@ -1538,7 +1538,7 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
 }
 .import-result {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius, 8px);
 }
 .import-result-head {
   display: flex;
@@ -1695,7 +1695,7 @@ textarea.subtitle-text,
   white-space: pre-wrap;
   background: transparent;
   border: 1px dashed transparent;
-  border-radius: 6px;
+  border-radius: var(--radius, 6px);
   cursor: text;
   transition:
     background-color 0.15s,

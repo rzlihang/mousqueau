@@ -17,10 +17,13 @@ import (
 )
 
 type Settings struct {
-	Theme           string    `json:"theme"`
-	Language        string    `json:"language"`               // "system" or an i18n locale
-	SubtitleFont    string    `json:"subtitleFont,omitempty"` // a font family; empty is the interface font
-	OpenLastProject bool      `json:"openLastProject"`
+	Theme           string `json:"theme"`
+	Language        string `json:"language"`               // "system" or an i18n locale
+	SubtitleFont    string `json:"subtitleFont,omitempty"` // a font family; empty is the interface font
+	OpenLastProject bool   `json:"openLastProject"`
+	// DesktopTheme follows the Omarchy theme's accent, mode and corners
+	// where Omarchy runs; on by default.
+	DesktopTheme    bool      `json:"desktopTheme"`
 	LastProject     string    `json:"lastProject,omitempty"`
 	SetupDone       bool      `json:"setupDone"`
 	FFmpegPath      string    `json:"ffmpegPath,omitempty"`
@@ -53,7 +56,7 @@ func (s Settings) Find(id string) int {
 }
 
 func Default() Settings {
-	return Settings{Theme: "system", Language: i18n.System, OpenLastProject: true, AutoUpdate: true,
+	return Settings{Theme: "system", Language: i18n.System, OpenLastProject: true, DesktopTheme: true, AutoUpdate: true,
 		Provider: "openai", Providers: []ProviderConfig{{ID: "openai"}}}
 }
 

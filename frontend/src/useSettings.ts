@@ -3,7 +3,12 @@ import { Events } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { SettingsView } from "../bindings/mousqueau/models";
 import type { Messages } from "./i18n";
-import { initialSystemDark } from "./preferences";
+import {
+  type DesktopLook,
+  initialSystemDark,
+  noDesktopLook,
+  parseDesktopLook,
+} from "./preferences";
 
 export const isMac = /Mac/.test(navigator.userAgent);
 export const isWindows = /Windows/.test(navigator.userAgent);
@@ -71,4 +76,33 @@ export function useSystemDark(): boolean {
     return () => query.removeEventListener("change", update);
   }, []);
   return dark;
+}
+
+// The desktop's accent, mode and corners, live. The last look is cached so a
+// new window paints in it before Go answers.
+export function useDesktopLook(): DesktopLook {
+  const [look, setLook] = useState<DesktopLook>(() => {
+    try {
+      return parseDesktopLook(
+        JSON.parse(localStorage.getItem("mousqueau-desktop-look") ?? "null"),
+      );
+    } catch {
+      return noDesktopLook;
+    }
+  });
+  useEffect(() => {
+    const take = (value: unknown) => {
+      const next = parseDesktopLook(value);
+      setLook(next);
+      localStorage.setItem("mousqueau-desktop-look", JSON.stringify(next));
+    };
+    const off = Events.On("desktop-look", (e) => take(e.data));
+    Editor.DesktopLook()
+      .then(take)
+      .catch(() => {
+        /* Without an answer the app keeps its own look. */
+      });
+    return off;
+  }, []);
+  return look;
 }

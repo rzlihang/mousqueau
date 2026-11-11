@@ -152,3 +152,6 @@ vite.config.ts.timestamp-*
 /bin/
 /build/bin/
 /build/darwin/DerivedData/
+/build/linux/arch/pkg/
+/build/linux/arch/src/
+/build/linux/arch/*.pkg.tar.*

@@ -37,6 +37,15 @@ tasks:
     cmds:
       - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
 
+  install:arch:
+    summary: Builds the application and installs it as an Arch package, so it appears in the launcher
+    dir: build/linux/arch
+    cmds:
+      - task: build
+      - makepkg -f --cleanbuild
+      - '{{.SUDO | default "sudo"}} pacman -U --noconfirm mousqueau-*.pkg.tar.zst'
+      - rm -f mousqueau-*.pkg.tar.zst
+
   install:msix:tools:
     summary: Installs tools required for Windows MSIX packaging
     cmds:

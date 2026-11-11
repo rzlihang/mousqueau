@@ -1,0 +1,29 @@
+# Installs the Mousqueau binary already built in bin/ by `wails3 build`, so
+# it appears in the desktop's application launcher. Run through
+# `wails3 task install:arch` from the repository root.
+pkgname=mousqueau
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Correct existing subtitles and identify speakers"
+arch=('x86_64' 'aarch64')
+url="https://github.com/rzlihang/mousqueau"
+license=('MIT')
+depends=('gtk4' 'webkitgtk-6.0' 'gst-plugins-base' 'gst-plugins-good' 'gst-libav')
+optdepends=('ffmpeg: waveforms and audio for analysis'
+            'yt-dlp: downloads from video pages'
+            'libsecret: keep API keys in the keyring')
+options=('!strip' '!debug')
+
+_root="$(realpath "$startdir/../../..")"
+
+pkgver() {
+  printf '0.1.0.r%s.g%s' "$(git -C "$_root" rev-list --count HEAD)" "$(git -C "$_root" rev-parse --short HEAD)"
+}
+
+package() {
+  install -Dm755 "$_root/bin/mousqueau" "$pkgdir/usr/bin/mousqueau"
+  install -Dm644 "$startdir/com.rzlihang.mousqueau.desktop" "$pkgdir/usr/share/applications/com.rzlihang.mousqueau.desktop"
+  install -Dm644 "$_root/build/appicon.png" "$pkgdir/usr/share/pixmaps/mousqueau.png"
+  install -Dm644 "$_root/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$_root/THIRD_PARTY_NOTICES.txt" "$pkgdir/usr/share/licenses/$pkgname/THIRD_PARTY_NOTICES.txt"
+}

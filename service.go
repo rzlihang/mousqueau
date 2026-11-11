@@ -10,6 +10,7 @@ import (
 	"mousqueau/internal/dictionary"
 	"mousqueau/internal/i18n"
 	"mousqueau/internal/media"
+	"mousqueau/internal/omarchy"
 	"mousqueau/internal/project"
 	"mousqueau/internal/settings"
 	"mousqueau/internal/subtitle"
@@ -72,6 +73,7 @@ type EditorService struct {
 	updateCancel   context.CancelFunc
 	pendingAction  string
 	closing        bool
+	look           omarchy.Look // the desktop's accent and corners
 
 	// Darwin keeps a new window hidden until its web view is painted; the
 	// map says which of those windows should then be shown. Unused elsewhere.

@@ -16,6 +16,9 @@ import * as dictionary$0 from "./internal/dictionary/models.js";
 import * as media$0 from "./internal/media/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as omarchy$0 from "./internal/omarchy/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as subtitle$0 from "./internal/subtitle/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -67,6 +70,15 @@ export function DecideSuggestion(id: string, decision: string): $CancellableProm
 
 export function DeleteDictionaryEntry(id: string): $CancellablePromise<$models.DictionaryView> {
     return $Call.ByID(2294366933, id);
+}
+
+/**
+ * DesktopLook is the desktop's accent, mode and window rounding, so the
+ * interface matches the windows around it. Present is false off Omarchy, or
+ * when following its theme is turned off in Settings.
+ */
+export function DesktopLook(): $CancellablePromise<omarchy$0.Look> {
+    return $Call.ByID(2717544115);
 }
 
 export function DiscoverWeb(raw: string): $CancellablePromise<media$0.WebInfo> {
@@ -228,6 +240,14 @@ export function SetAutoUpdate(enabled: boolean): $CancellablePromise<$models.Set
 
 export function SetBeta(enabled: boolean): $CancellablePromise<$models.SettingsView> {
     return $Call.ByID(1197282714, enabled);
+}
+
+/**
+ * SetDesktopTheme turns following the Omarchy theme on or off; every window
+ * switches at once.
+ */
+export function SetDesktopTheme(enabled: boolean): $CancellablePromise<$models.SettingsView> {
+    return $Call.ByID(1708949653, enabled);
 }
 
 /**

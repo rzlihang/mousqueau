@@ -108,6 +108,8 @@ export type SectionId = (typeof SECTIONS)[number];
 const KEYWORDS = {
   theme:
     "テーマ 外観 ダーク ライト システム 主题 外观 深色 浅色 跟随系统 主題 外觀 淺色 跟隨系統 theme appearance dark light system",
+  desktopTheme:
+    "テーマ アクセント 角 Omarchy Hyprland 主题 强调色 圆角 跟随 主題 強調色 圓角 跟隨 omarchy hyprland theme accent corners follow desktop",
   language:
     "语言 中文 简体 繁体 英文 英语 語言 簡體 繁體 英語 台灣 香港 台湾正体 香港繁体 日本語 言語 language chinese traditional english japanese system",
   font: "フォント 書体 字幕 字体 字體 字型 预览 預覽 subtitle font typeface",
@@ -131,7 +133,7 @@ const KEYWORDS = {
 export type SettingRow = keyof typeof KEYWORDS;
 
 const ROWS: Record<SectionId, SettingRow[]> = {
-  general: ["theme", "language", "font", "startup", "setup"],
+  general: ["theme", "desktopTheme", "language", "font", "startup", "setup"],
   tools: ["ffmpeg", "ytdlp"],
   providers: ["provDefault", "provList", "provAdd"],
   updates: ["updates"],
@@ -170,4 +172,65 @@ export function providerCaution(
   return provider.region === "china"
     ? t.settings.cautionChina
     : t.settings.cautionCustom;
+}
+
+// The desktop's look as Go reports it: Omarchy's accent and mode, and the
+// window rounding of Hyprland. Absent elsewhere.
+export type DesktopLook = {
+  present: boolean;
+  accent: string;
+  mode: string;
+  radius: number;
+};
+
+export const noDesktopLook: DesktopLook = {
+  present: false,
+  accent: "",
+  mode: "",
+  radius: 0,
+};
+
+export function parseDesktopLook(value: unknown): DesktopLook {
+  if (!value || typeof value !== "object") return noDesktopLook;
+  const v = value as Partial<DesktopLook>;
+  if (v.present !== true) return noDesktopLook;
+  return {
+    present: true,
+    accent:
+      typeof v.accent === "string" && /^#[0-9a-f]{6}$/i.test(v.accent)
+        ? v.accent
+        : "",
+    mode: v.mode === "dark" || v.mode === "light" ? v.mode : "",
+    radius:
+      typeof v.radius === "number" && v.radius >= 0 ? Math.round(v.radius) : 0,
+  };
+}
+
+// Text on an accent fill: dark on a light accent such as Omarchy's yellow,
+// white otherwise, by the accent's relative luminance.
+export function textOnAccent(hex: string): string {
+  const channel = (i: number) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance =
+    0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+  return luminance > 0.4 ? "#000000" : "#ffffff";
+}
+
+// mixHex blends weight of colour a into b, both #rgb or #rrggbb, for places
+// such as the waveform canvas that cannot take CSS color-mix().
+export function mixHex(a: string, b: string, weight: number): string {
+  const rgb = (hex: string) => {
+    const h = hex.length === 4 ? hex.replace(/[0-9a-f]/gi, "$&$&") : hex;
+    return [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  };
+  const [x, y] = [rgb(a), rgb(b)];
+  return (
+    "#" +
+    x
+      .map((c, i) => Math.round(c * weight + y[i] * (1 - weight)))
+      .map((c) => c.toString(16).padStart(2, "0"))
+      .join("")
+  );
 }

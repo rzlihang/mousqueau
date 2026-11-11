@@ -60,6 +60,8 @@ Go、Node 和 pnpm 的版本要求相同，另外同样需要安装 `wails3`。�
 
 在这两个平台上，窗口没有原生边框：工具栏就是标题栏（拖动可移动窗口，双击可最大化），最小化、最大化和关闭按钮位于其右侧，而 macOS 的红绿灯在左侧。在 Linux 上，这些按钮跟随桌面的标题栏按钮布局（`org.gnome.desktop.wm.preferences button-layout`，经设置门户读取），因此只保留关闭按钮的桌面（例如 Hyprland 上的 Omarchy）只显示关闭按钮。无边框窗口可以从边缘调整大小。项目标题左侧的三横线按钮打开应用菜单，其中包括设置（也可用 Ctrl+,）和用户词典。所有窗口和弹出层中的滚动条都跟随应用的浅色或深色主题。
 
+在 [Omarchy](https://omarchy.org) 上，所有窗口跟随当前 Omarchy 主题：强调色、浅色或深色模式（用于“跟随系统”主题），以及 Hyprland 的窗口圆角（`decoration:rounding`，默认为直角）；切换主题后一秒内生效。**设置 › 通用 › 跟随 Omarchy 主题**可关闭此行为，该开关只在 Omarchy 上显示。运行 `wails3 task install:arch` 可将 Mousqueau 安装为 Arch 软件包并出现在应用启动器中（依次构建、对 `build/linux/arch/PKGBUILD` 运行 `makepkg`、执行 `sudo pacman -U`）。窗口的 Wayland app id 为 `com.rzlihang.mousqueau`，与安装的 `.desktop` 文件一致。
+
 ### 在 WSL 中构建 Windows 测试版可执行文件
 
 在 WSL 中安装 Go 1.26+ 和锁定版本的 pnpm，然后在仓库根目录运行：

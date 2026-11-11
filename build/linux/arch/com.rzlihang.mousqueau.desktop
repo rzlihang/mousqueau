@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Mousqueau
+Comment=Correct existing subtitles and identify speakers
+Comment[zh_CN]=校正现有字幕并识别说话人
+Comment[zh_TW]=校正現有字幕並辨識說話者
+Comment[zh_HK]=校正現有字幕並辨識說話者
+Comment[ja]=既存の字幕を校正し、話者を識別
+Exec=mousqueau
+Icon=mousqueau
+Terminal=false
+Categories=AudioVideo;Video;
+StartupWMClass=com.rzlihang.mousqueau
