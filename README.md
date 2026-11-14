@@ -2,7 +2,7 @@
 
 English | [简体中文](README_zh.md)
 
-A Wails v3 desktop application for correcting **existing SRT subtitles** and reviewing speaker identities in conversations. Go + React/TypeScript + Vite + Ant Design v6, bootstrapped from the official Wails v3 React template and pinned to `v3.0.0`. It runs on macOS, Windows, and Linux. macOS is the primary target and the only platform with hand-tested GUI behaviour; the Linux desktop build is exercised automatically under Xvfb, and Windows is compiled and unit-tested in CI only.
+A Wails v3 desktop application for correcting **existing SRT subtitles** and reviewing speaker identities in conversations. Go + React/TypeScript + Vite + Ant Design v6, bootstrapped from the official Wails v3 React template and pinned to `v3.1.0`. It runs on macOS, Windows, and Linux. macOS is the primary target and the only platform with hand-tested GUI behaviour; the Linux desktop build is exercised automatically under Xvfb, and Windows is compiled and unit-tested in CI only.
 
 ![Mousqueau editor with mock Traditional Chinese diarization](docs/editor-preview.png)
 
@@ -18,7 +18,7 @@ brew install go node ffmpeg
 # Optional: downloads from video pages (install independently of Mousqueau)
 brew install yt-dlp
 
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
 # Ensure $(go env GOPATH)/bin is on PATH.
 cd frontend
 pnpm install --frozen-lockfile
@@ -65,7 +65,7 @@ On [Omarchy](https://omarchy.org), every window follows the current Omarchy them
 Install Go 1.26+ and the pinned pnpm in WSL, then run from the repository root:
 
 ```sh
-CGO_ENABLED=0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+CGO_ENABLED=0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
 export PATH="$(go env GOPATH)/bin:$PATH"
 wails3 build GOOS=windows ARCH=amd64 CGO_ENABLED=0
 wslpath -w "$PWD/bin/mousqueau.exe"

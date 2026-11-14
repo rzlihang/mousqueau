@@ -2,7 +2,7 @@
 
 [English](README.md) | 简体中文
 
-一款 Wails v3 桌面应用，用于校正**已有的 SRT 字幕**，并核对对话中的说话人身份。技术栈为 Go + React/TypeScript + Vite + Ant Design v6，基于官方 Wails v3 React 模板创建，锁定在 `v3.0.0`。支持 macOS、Windows 和 Linux。macOS 是主要目标平台，也是唯一经过人工 GUI 测试的平台；Linux 桌面版在 Xvfb 下自动测试，Windows 只在 CI 中编译并跑单元测试。
+一款 Wails v3 桌面应用，用于校正**已有的 SRT 字幕**，并核对对话中的说话人身份。技术栈为 Go + React/TypeScript + Vite + Ant Design v6，基于官方 Wails v3 React 模板创建，锁定在 `v3.1.0`。支持 macOS、Windows 和 Linux。macOS 是主要目标平台，也是唯一经过人工 GUI 测试的平台；Linux 桌面版在 Xvfb 下自动测试，Windows 只在 CI 中编译并跑单元测试。
 
 ![Mousqueau 编辑器，含模拟的繁体中文说话人分离结果](docs/editor-preview.png)
 
@@ -18,7 +18,7 @@ brew install go node ffmpeg
 # 可选：从视频页面下载（独立于 Mousqueau 安装）
 brew install yt-dlp
 
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
 # 确保 $(go env GOPATH)/bin 在 PATH 中。
 cd frontend
 pnpm install --frozen-lockfile
@@ -67,7 +67,7 @@ Go、Node 和 pnpm 的版本要求相同，另外同样需要安装 `wails3`。�
 在 WSL 中安装 Go 1.26+ 和锁定版本的 pnpm，然后在仓库根目录运行：
 
 ```sh
-CGO_ENABLED=0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+CGO_ENABLED=0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
 export PATH="$(go env GOPATH)/bin:$PATH"
 wails3 build GOOS=windows ARCH=amd64 CGO_ENABLED=0
 wslpath -w "$PWD/bin/mousqueau.exe"
