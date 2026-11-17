@@ -573,22 +573,24 @@ function EditorApp({
     if (next === undefined) return false;
     setSpeed(next);
   }
-  // Puts the text cursor in the viewer subtitle of the selected cue.
+  // Puts the text cursor in the selected cue's text: the viewer subtitle, or
+  // the inspector's field while the viewer is hidden.
   function editText() {
+    if (!paneShown("viewer")) {
+      if (!cue) return;
+      setLayout((l) =>
+        l.hidden?.includes("inspector") ? togglePane(l, "inspector") : l,
+      );
+      setListOpen(false);
+      setTab("edit");
+      setTimeout(() => textArea.current?.focus({ cursor: "end" }));
+      return;
+    }
     const el = textArea.current?.resizableTextArea?.textArea;
     if (el) {
-      const focus = () => {
-        el.focus();
-        el.setSelectionRange(el.value.length, el.value.length);
-      };
-      // The text field is the viewer's subtitle, so a hidden viewer returns.
-      if (paneShown("viewer")) focus();
-      else {
-        setLayout((l) => togglePane(l, "viewer"));
-        setTimeout(focus);
-      }
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
     } else if (cue) {
-      if (!paneShown("viewer")) setLayout((l) => togglePane(l, "viewer"));
       focusOverlay.current = true;
       setTab("edit");
       seek(cue.start);
@@ -826,6 +828,34 @@ function EditorApp({
   const canShift = !busy && !draftDirty && !!cues.length;
   // Keyboard shortcuts (keymap.ts). A handler returning false did nothing,
   // so the key keeps its usual effect.
+  // The selected cue's text field. It lives in the viewer, as the subtitle
+  // itself, and moves to the inspector while the viewer is hidden; there is
+  // only ever one, so the cursor commands always read the same field.
+  const textField = (inspector: boolean) => (
+    <Input.TextArea
+      ref={textArea}
+      className={inspector ? "subtitle-text" : "subtitle-text subtitle-edit"}
+      variant={inspector ? "outlined" : "borderless"}
+      disabled={busy}
+      autoSize={inspector ? { minRows: 2 } : true}
+      aria-label={t.inspector.text}
+      title={inspector ? undefined : t.viewer.clickToEdit}
+      placeholder={t.viewer.textPlaceholder}
+      value={draft.text}
+      onFocus={() => {
+        video.current?.pause();
+        setTab("edit");
+        setOverlayEditing(true);
+      }}
+      onBlur={() => setOverlayEditing(false)}
+      onKeyDown={(e) => {
+        // Esc leaves the text, keeping the draft, so the
+        // single-key shortcuts work again.
+        if (e.key === "Escape") e.currentTarget.blur();
+      }}
+      onChange={(e) => changeDraft({ text: e.target.value })}
+    />
+  );
   const inspectorTabs = [
     { label: t.inspector.edit, value: "edit" },
     { label: t.inspector.speakers, value: "speakers" },
@@ -1421,29 +1451,7 @@ function EditorApp({
             {overlayCue && (
               <div className="subtitle-overlay">
                 {overlayCue.id === cue?.id ? (
-                  <Input.TextArea
-                    ref={textArea}
-                    className="subtitle-text subtitle-edit"
-                    variant="borderless"
-                    disabled={busy}
-                    autoSize
-                    aria-label={t.inspector.text}
-                    title={t.viewer.clickToEdit}
-                    placeholder={t.viewer.textPlaceholder}
-                    value={draft.text}
-                    onFocus={() => {
-                      video.current?.pause();
-                      setTab("edit");
-                      setOverlayEditing(true);
-                    }}
-                    onBlur={() => setOverlayEditing(false)}
-                    onKeyDown={(e) => {
-                      // Esc leaves the text, keeping the draft, so the
-                      // single-key shortcuts work again.
-                      if (e.key === "Escape") e.currentTarget.blur();
-                    }}
-                    onChange={(e) => changeDraft({ text: e.target.value })}
-                  />
+                  paneShown("viewer") && textField(false)
                 ) : (
                   <button
                     type="button"
@@ -1585,6 +1593,12 @@ function EditorApp({
                       readingRate(cue.text, cue.start, cue.end).toFixed(1),
                     )}
                   </span>
+                  {!paneShown("viewer") && (
+                    <label>
+                      {t.inspector.text}
+                      {textField(true)}
+                    </label>
+                  )}
                   {issuesByCue.get(cue.id)?.map((issue) => (
                     <span key={issue} className="quality-issue">
                       {issue === "overlap"

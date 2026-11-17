@@ -301,3 +301,9 @@ Not verified, and still needs a real Mac: launching the app, the window-reveal a
   - Stored viewer sizes larger than the window (`compactViewer` 670 at 480×420, `columnViewer` 700 at 600×620 and 950×1040) left the work area 260px wide and 120px tall, with nothing past the window. At 480×420 the viewer divider stopped at 200px.
   - At 480×420 the viewer was 220px wide (200px after its divider was moved) and the transport wrapped to two rows with every control inside the viewer; at 630×1040 and 1440×900 it stayed on one row.
 - Not checked: dragging the dividers with a pointer, playback continuing while the viewer is hidden (no media was loaded), the native window under Hyprland tiling, macOS and Windows GUI, and the Chinese and Japanese interface on screen.
+
+## Text field in the inspector
+
+- Frontend `pnpm run typecheck` and `pnpm test` (64 tests) passed.
+- Headless Chromium against the server-mode build with the demo loaded: with the viewer hidden, Enter on a cue focused the text field in the inspector's Edit tab, typing and Ctrl+Enter applied the edit to the cue list; with the viewer and the inspector both hidden in the column arrangement, Enter showed the inspector on its Edit tab with the field focused.
+- Not checked: splitting at the cursor, moving selected words to a speaker's line and adding the selection to the dictionary from the inspector field (they read the same field, but were not exercised), and native GUI on any platform.
