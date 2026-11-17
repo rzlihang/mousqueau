@@ -112,6 +112,7 @@ import DictionaryWindow from "./DictionaryWindow";
 import CueRows from "./CueRows";
 import { HighlightedText } from "./dictionaryHighlight";
 import SuggestionCard, { SpeakerTag } from "./SuggestionCard";
+import { issueLimit, qualityIssues, readingRate } from "./quality";
 import Splitter from "./Splitter";
 import Timeline from "./Timeline";
 import {
@@ -262,9 +263,11 @@ function EditorApp({
       ),
     [matchesByCue],
   );
+  const issuesByCue = useMemo(() => qualityIssues(cues), [cues]);
   const shown = useMemo(
-    () => filterCues(cues, suggestions, query, filter, dictIssueIds),
-    [cues, suggestions, query, filter, dictIssueIds],
+    () =>
+      filterCues(cues, suggestions, query, filter, dictIssueIds, issuesByCue),
+    [cues, suggestions, query, filter, dictIssueIds, issuesByCue],
   );
   const duration = Math.max(
     60,
@@ -1192,6 +1195,7 @@ function EditorApp({
                   value: "dictionary",
                   label: t.cueList.dictionaryFilter,
                 },
+                { value: "quality", label: t.quality.filter },
               ]}
             />
           </div>
@@ -1208,6 +1212,7 @@ function EditorApp({
             speakers={speakers}
             suggestions={suggestions}
             matchesByCue={matchesByCue}
+            issuesByCue={issuesByCue}
             selectedId={selected}
             activeId={active?.id ?? ""}
             busy={busy}
@@ -1464,11 +1469,16 @@ function EditorApp({
                   <span className="muted">
                     {t.inspector.stats(
                       (cue.end - cue.start).toFixed(3),
-                      (
-                        cue.text.length / Math.max(0.001, cue.end - cue.start)
-                      ).toFixed(1),
+                      readingRate(cue.text, cue.start, cue.end).toFixed(1),
                     )}
                   </span>
+                  {issuesByCue.get(cue.id)?.map((issue) => (
+                    <span key={issue} className="quality-issue">
+                      {issue === "overlap"
+                        ? t.quality.details.overlap
+                        : t.quality.details[issue](issueLimit(issue, cue.text))}
+                    </span>
+                  ))}
                   {!!draftMatches.length && (
                     <p className="dict-preview muted small">
                       <HighlightedText
