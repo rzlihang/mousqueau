@@ -310,6 +310,19 @@ func (s *EditorService) ShiftCues(seconds float64) (Snapshot, error) {
 	}
 	return s.snapshot(), nil
 }
+
+// ReplaceText replaces every occurrence of find in the subtitle text.
+func (s *EditorService) ReplaceText(find, replacement string, matchCase bool) (Snapshot, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.requireProject(); err != nil {
+		return Snapshot{}, err
+	}
+	if _, err := s.project.Replace(find, replacement, matchCase); err != nil {
+		return Snapshot{}, err
+	}
+	return s.snapshot(), nil
+}
 func (s *EditorService) Undo() (Snapshot, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

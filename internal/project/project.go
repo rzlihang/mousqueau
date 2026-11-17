@@ -8,6 +8,7 @@ import (
 	"mousqueau/internal/analysis"
 	"mousqueau/internal/i18n"
 	"mousqueau/internal/subtitle"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -224,6 +225,65 @@ func (p *Project) Shift(seconds float64) error {
 	}
 	p.commit(next)
 	return nil
+}
+
+// Replace swaps every occurrence of find in the subtitle text for replacement,
+// as one history operation, and returns how many it replaced. A cue with
+// several speakers is searched line by line, so the dialogue dashes and each
+// line's speakers stay. Pending suggestions keep the text they were made for.
+func (p *Project) Replace(find, replacement string, matchCase bool) (int, error) {
+	if find == "" {
+		return 0, i18n.Errorf("enter the text to find")
+	}
+	if strings.ContainsAny(find+replacement, "\r\n") {
+		return 0, i18n.Errorf("the text to find and its replacement must each be one line")
+	}
+	expr := regexp.QuoteMeta(find)
+	if !matchCase {
+		expr = "(?i)" + expr
+	}
+	pattern, err := regexp.Compile(expr)
+	if err != nil {
+		return 0, err
+	}
+	total := 0
+	swap := func(text string) string {
+		total += len(pattern.FindAllStringIndex(text, -1))
+		return pattern.ReplaceAllLiteralString(text, replacement)
+	}
+	next := clone(p.State)
+	for i, c := range next.Cues {
+		before := total
+		if len(c.Lines) > 1 {
+			for j, l := range c.Lines {
+				c.Lines[j].Text = swap(l.Text)
+			}
+		} else {
+			c.Text = swap(c.Text)
+		}
+		if total == before {
+			continue
+		}
+		empty := strings.TrimSpace(c.Text) == ""
+		for _, l := range c.Lines {
+			empty = empty || strings.TrimSpace(l.Text) == ""
+		}
+		if empty {
+			return 0, i18n.Errorf("subtitle %s would be left without text", c.Identifier)
+		}
+		if c, err = subtitle.Normalize(c); err != nil {
+			return 0, err
+		}
+		next.Cues[i] = c
+	}
+	if total == 0 {
+		return 0, i18n.Errorf("no subtitle contains %q", find)
+	}
+	if _, err := subtitle.Render(next.Cues); err != nil {
+		return 0, err
+	}
+	p.commit(next)
+	return total, nil
 }
 
 // commitStructure renumbers SRT identifiers after cues were added or removed,

@@ -279,3 +279,11 @@ Verified in a Linux cloud environment with Go 1.26.10 (downloaded by the toolcha
 - Headless Chromium against the server-mode build on `127.0.0.1:9246`, opened as both `127.0.0.1` and `localhost`: the editor rendered, every `/wails/runtime` call returned 200 and Load Demo opened its four cues, with no page errors.
 
 Not verified, and still needs a real Mac: launching the app, the window-reveal and dark-mode behaviour, menus, dialogs and media playback in the macOS WebView. CI's Linux GUI smoke and the Windows build cover their platforms only once they run on this change.
+
+## Find and replace
+
+- `go test ./internal/...` passed: `Replace` changes every match as one undo step, searches a cue with several speakers line by line, treats the text and its replacement literally, and refuses an empty search, no match, a line break, and a replacement that would leave a subtitle or a speaker's line without text.
+- `CGO_ENABLED=0 go test -tags server .` passed, including the test that keeps the macOS menu and `keymap.ts` in step. Bindings were regenerated with `wails3 generate bindings`.
+- Frontend `pnpm run typecheck` and `pnpm test` (51 tests) passed.
+- Headless Chromium against the server-mode build with the demo loaded, English interface: Ctrl+Shift+F opened the dialog, "字幕" showed "2 matches in 2 subtitles", Replace All changed both cues and reported "Replaced 2 matches", and Undo restored them.
+- Not checked: the macOS menu item and ⇧⌘F on a real Mac, and the Chinese and Japanese interface on screen.
