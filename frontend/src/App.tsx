@@ -12,12 +12,9 @@ import {
 import {
   Alert,
   App as AntApp,
-  Button,
   ConfigProvider,
   Input,
-  InputNumber,
   Modal,
-  Popover,
   Segmented,
   Select,
   Space,
@@ -26,7 +23,6 @@ import {
 import ImportDialog, { type ImportTab } from "./ImportDialog";
 import {
   antdIconConfig,
-  numberControls,
   statusIcon,
   useAntApp,
 } from "./icons";
@@ -59,7 +55,6 @@ import {
   cueStatus,
   dictionaryIssueIds,
   filterCues,
-  formatSeconds,
   splitTime,
 } from "./workspace";
 import enUS from "antd/locale/en_US";
@@ -86,7 +81,6 @@ import {
 } from "./preferences";
 import SettingsWindow from "./SettingsWindow";
 import DictionaryWindow from "./DictionaryWindow";
-import { timelineSize } from "./layout";
 import { qualityIssues } from "./quality";
 import { type Draft, EMPTY_DRAFT, type Tab, draftOf } from "./draft";
 import CueList from "./CueList";
@@ -95,7 +89,7 @@ import SpeakersTab from "./SpeakersTab";
 import SuggestionsTab from "./SuggestionsTab";
 import Splitter from "./Splitter";
 import StatusBar from "./StatusBar";
-import Timeline from "./Timeline";
+import TimelineDock from "./TimelineDock";
 import TitleBar from "./TitleBar";
 import Viewer from "./Viewer";
 import { usePaneLayout } from "./usePaneLayout";
@@ -157,7 +151,6 @@ function EditorApp({
   const [speakerName, setSpeakerName] = useState("");
   const panes = usePaneLayout();
   const {
-    layout,
     mode,
     stacked,
     paneShown,
@@ -167,9 +160,8 @@ function EditorApp({
     inspectorOpen,
     widthOf,
     resizeColumn,
-    resizeTimeline,
   } = panes;
-  const { upperRef, cueGridRef, inspectorRef, dockRef } = panes.refs;
+  const { upperRef, cueGridRef, inspectorRef } = panes.refs;
   const resetLayout = panes.reset;
   const [matchesByCue, setMatchesByCue] = useState<Record<string, Match[]>>(
     {},
@@ -806,8 +798,6 @@ function EditorApp({
     : p
       ? t.editor.untitled
       : t.editor.noProject;
-  const rangeSeconds = rangeEnd - rangeStart;
-  const rangeValid = rangeSeconds >= 60 && rangeSeconds <= 300;
   const waveformNote = !mediaUrl
     ? t.editor.waveNoMedia
     : status && !status.ffmpeg
@@ -999,112 +989,31 @@ function EditorApp({
         </aside>
       </div>
 
-      <div
-        className="timeline-dock"
-        ref={dockRef}
-        style={
-          layout[timelineSize(mode)]
-            ? { height: layout[timelineSize(mode)] }
-            : undefined
-        }
-      >
-        <Splitter
-          axis="y"
-          sign={-1}
-          label={t.common.resizeHeight}
-          start={() => dockRef.current?.getBoundingClientRect().height ?? 0}
-          onResize={resizeTimeline}
-          onReset={() => resetLayout(timelineSize(mode))}
-        />
-        <Timeline
-          duration={duration}
-          cues={cues}
-          speakers={speakers}
-          suggestions={suggestions}
-          selectedId={selected}
-          activeId={active?.id ?? ""}
-          playhead={playhead}
-          playing={playing}
-          range={[rangeStart, rangeEnd]}
-          waveform={wave && "peaks" in wave ? wave : null}
-          waveformNote={waveformNote}
-          dark={dark}
-          accent={accent}
-          busy={busy}
-          onSeek={seek}
-          onSelectCue={selectCue}
-          onRangeChange={setRange}
-          zoomRequest={zoomRequest}
-          actions={
-            <>
-              <span className={rangeValid ? "" : "range-invalid"}>
-                {t.range.label}{" "}
-                <span className="mono">
-                  {formatSeconds(rangeStart)} — {formatSeconds(rangeEnd)}
-                </span>{" "}
-                · {t.common.seconds(rangeSeconds)}
-              </span>
-              <Popover
-                trigger="click"
-                title={t.range.label}
-                content={
-                  <div className="range-form">
-                    <label>
-                      {t.range.start}
-                      <InputNumber
-                        size="small"
-                        controls={numberControls}
-                        min={0}
-                        value={rangeStart}
-                        disabled={busy}
-                        onChange={(v) => setRangeStart(v ?? 0)}
-                      />
-                    </label>
-                    <label>
-                      {t.range.end}
-                      <InputNumber
-                        size="small"
-                        controls={numberControls}
-                        min={0}
-                        value={rangeEnd}
-                        disabled={busy}
-                        onChange={(v) => setRangeEnd(v ?? 60)}
-                      />
-                    </label>
-                    <Button
-                      size="small"
-                      disabled={busy}
-                      onClick={() =>
-                        setRange(Math.floor(playhead), Math.floor(playhead) + 60)
-                      }
-                    >
-                      {t.range.fromPlayhead}
-                    </Button>
-                  </div>
-                }
-              >
-                <Button size="small" disabled={busy}>
-                  {t.range.adjust}
-                </Button>
-              </Popover>
-              <Button
-                size="small"
-                type="primary"
-                disabled={
-                  busy ||
-                  !p ||
-                  !mediaUrl ||
-                  !status?.apiConfigured ||
-                  !status?.ffmpeg
-                }
-                onClick={analyze}
-              >
-                {t.range.analyze}
-              </Button>
-            </>
-          }
-        />
-      </div>
+      <TimelineDock
+        panes={panes}
+        duration={duration}
+        cues={cues}
+        speakers={speakers}
+        suggestions={suggestions}
+        selectedId={selected}
+        activeId={active?.id ?? ""}
+        playhead={playhead}
+        playing={playing}
+        range={[rangeStart, rangeEnd]}
+        waveform={wave && "peaks" in wave ? wave : null}
+        waveformNote={waveformNote}
+        dark={dark}
+        accent={accent}
+        busy={busy}
+        onSeek={seek}
+        onSelectCue={selectCue}
+        onRangeChange={setRange}
+        zoomRequest={zoomRequest}
+        canAnalyze={!!p && !!mediaUrl && !!status?.apiConfigured && !!status?.ffmpeg}
+        onAnalyze={analyze}
+        onRangeStartChange={setRangeStart}
+        onRangeEndChange={setRangeEnd}
+      />
 
       <StatusBar
         status={status}
