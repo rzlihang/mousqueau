@@ -12,11 +12,9 @@ import {
 import {
   Alert,
   App as AntApp,
-  Badge,
   Button,
   Checkbox,
   ConfigProvider,
-  Dropdown,
   Empty,
   Input,
   InputNumber,
@@ -25,26 +23,16 @@ import {
   Segmented,
   Select,
   Space,
-  Spin,
   Tag,
   Tooltip,
   theme,
 } from "antd";
 import {
-  IconArrowBackUp,
-  IconArrowForwardUp,
-  IconDeviceFloppy,
-  IconFileImport,
-  IconFolderOpen,
-  IconMenu2,
   IconPencil,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerSkipBack,
   IconPlayerSkipForward,
-  IconLayoutBottombar,
-  IconLayoutSidebarRight,
-  IconMovie,
 } from "@tabler/icons-react";
 import IconButton from "./IconButton";
 import ImportDialog, { type ImportTab } from "./ImportDialog";
@@ -55,7 +43,7 @@ import {
   statusIcon,
   useAntApp,
 } from "./icons";
-import { Events, Window } from "@wailsio/runtime";
+import { Events } from "@wailsio/runtime";
 import * as Editor from "../bindings/mousqueau/editorservice";
 import type { Snapshot, Status } from "../bindings/mousqueau/models";
 import type { Cue } from "../bindings/mousqueau/internal/subtitle/models";
@@ -116,20 +104,13 @@ import DictionaryWindow from "./DictionaryWindow";
 import CueRows from "./CueRows";
 import { HighlightedText } from "./dictionaryHighlight";
 import SuggestionCard, { SpeakerTag } from "./SuggestionCard";
-import {
-  type Layout,
-  type Pane,
-  PANES,
-  clamp,
-  layoutMode,
-  loadLayout,
-  timelineSize,
-  togglePane,
-  viewerSize,
-} from "./layout";
+import { timelineSize, viewerSize } from "./layout";
 import { issueLimit, qualityIssues, readingRate } from "./quality";
 import Splitter from "./Splitter";
+import StatusBar from "./StatusBar";
 import Timeline from "./Timeline";
+import TitleBar from "./TitleBar";
+import { usePaneLayout } from "./usePaneLayout";
 import {
   customChrome,
   isMac,
@@ -138,7 +119,6 @@ import {
   useSettings,
   useSystemDark,
 } from "./useSettings";
-import WindowControls from "./WindowControls";
 import WelcomeWindow from "./WelcomeWindow";
 import { showSampleImport } from "./sampleImport";
 import type { Entry, Match } from "../bindings/mousqueau/internal/dictionary/models";
@@ -180,24 +160,8 @@ type Wave =
   | { url: string; error: string }
   | null;
 const colors = ["#1677ff", "#52c41a", "#d46b08"];
-const settingsShortcut = shortcutOf("settings");
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-const LAYOUT_KEY = "mousqueau-layout";
-const VIEWER_MIN = 320;
-function storedLayout(): Layout {
-  try {
-    return loadLayout(localStorage.getItem(LAYOUT_KEY));
-  } catch {
-    return {};
-  }
-}
-const PANE_ICONS = {
-  viewer: IconMovie,
-  inspector: IconLayoutSidebarRight,
-  timeline: IconLayoutBottombar,
-};
-const windowMode = () => layoutMode(window.innerWidth, window.innerHeight);
 
 function EditorApp({
   dark,
@@ -231,31 +195,28 @@ function EditorApp({
   const [speakerId, setSpeakerId] = useState("A");
   const [speakerName, setSpeakerName] = useState("");
   const [importTab, setImportTab] = useState<ImportTab | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [overlayEditing, setOverlayEditing] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [shiftOpen, setShiftOpen] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [zoomRequest, setZoomRequest] = useState<ZoomRequest>();
-  const [layout, setLayout] = useState<Layout>(storedLayout);
-  const [mode, setMode] = useState(windowMode);
-  useEffect(() => {
-    const resized = () => setMode(windowMode());
-    window.addEventListener("resize", resized);
-    return () => window.removeEventListener("resize", resized);
-  }, []);
-  const paneShown = (pane: Pane) => !layout.hidden?.includes(pane);
-  // Outside the wide arrangement the cue list and the inspector share one
-  // area: the list, or one of the inspector's tabs.
-  const stacked = mode !== "wide";
-  const [listOpen, setListOpen] = useState(true);
-  const inspectorOpen = paneShown("inspector") && !(stacked && listOpen);
-  const listShown = !stacked || listOpen || !paneShown("inspector");
-  const upperRef = useRef<HTMLDivElement>(null);
-  const cueGridRef = useRef<HTMLElement>(null);
-  const viewerRef = useRef<HTMLElement>(null);
-  const inspectorRef = useRef<HTMLElement>(null);
-  const dockRef = useRef<HTMLDivElement>(null);
+  const panes = usePaneLayout();
+  const {
+    layout,
+    mode,
+    stacked,
+    paneShown,
+    listOpen,
+    setListOpen,
+    listShown,
+    inspectorOpen,
+    widthOf,
+    resizeColumn,
+    resizeViewer,
+    resizeTimeline,
+  } = panes;
+  const { upperRef, cueGridRef, viewerRef, inspectorRef, dockRef } = panes.refs;
+  const resetLayout = panes.reset;
   const [matchesByCue, setMatchesByCue] = useState<Record<string, Match[]>>(
     {},
   );
@@ -370,13 +331,6 @@ function EditorApp({
     setDraft(cue ? draftOf(cue) : EMPTY_DRAFT);
     setDraftDirty(false);
   }, [cue]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
-    } catch {
-      /* pane sizes are only a convenience */
-    }
-  }, [layout]);
   // Focus waits until the viewer shows the selected cue's text field, which
   // may take a seek after the selection itself.
   useEffect(() => {
@@ -615,9 +569,7 @@ function EditorApp({
   function editText() {
     if (!paneShown("viewer")) {
       if (!cue) return;
-      setLayout((l) =>
-        l.hidden?.includes("inspector") ? togglePane(l, "inspector") : l,
-      );
+      panes.reveal("inspector");
       setListOpen(false);
       setTab("edit");
       setTimeout(() => textArea.current?.focus({ cursor: "end" }));
@@ -685,49 +637,6 @@ function EditorApp({
   // Merging with the previous cue keeps the previous cue's ID, so select it.
   async function mergeCues(first: Cue) {
     if (await update(() => Editor.MergeCues(first.id))) setSelected(first.id);
-  }
-  const widthOf = (el: HTMLElement | null) =>
-    el?.getBoundingClientRect().width ?? 0;
-  function resizeColumn(side: "left" | "right", size: number) {
-    const width = widthOf(upperRef.current);
-    // The cue list keeps 240px when it is the only other column.
-    const max =
-      side === "left"
-        ? width - widthOf(inspectorRef.current) - VIEWER_MIN
-        : width -
-          (paneShown("viewer")
-            ? widthOf(cueGridRef.current) + VIEWER_MIN
-            : 240);
-    const min = side === "left" ? 240 : 260;
-    setLayout((l) => ({ ...l, [side]: clamp(size, min, max) }));
-  }
-  // The viewer's width beside the work area, or its height above it.
-  function resizeViewer(size: number) {
-    if (mode === "wide") return;
-    const box = upperRef.current?.getBoundingClientRect();
-    // The work area keeps 280px of width or 160px of height. In a window
-    // too small for the viewer's usual minimum as well, the viewer gives way.
-    const [least, max] =
-      mode === "compact"
-        ? [240, (box?.width ?? 0) - 280]
-        : [100, (box?.height ?? 0) - 160];
-    const min = Math.max(0, Math.min(least, max));
-    setLayout((l) => ({ ...l, [viewerSize(mode)]: clamp(size, min, max) }));
-  }
-  // The timeline can shrink, with its tracks scrolling, but never grow past
-  // its content.
-  function resizeTimeline(size: number) {
-    const section = dockRef.current?.querySelector<HTMLElement>(".timeline");
-    let natural = 0;
-    for (const child of Array.from(section?.children ?? []) as HTMLElement[])
-      natural += child.classList.contains("timeline-body")
-        ? child.scrollHeight
-        : child.offsetHeight;
-    const max = Math.min(natural || Infinity, window.innerHeight - 340);
-    setLayout((l) => ({ ...l, [timelineSize(mode)]: clamp(size, 80, max) }));
-  }
-  function resetLayout(key: keyof Layout) {
-    setLayout((l) => ({ ...l, [key]: undefined }));
   }
   function changeDraft(patch: Partial<Draft>) {
     setDraft((d) => {
@@ -983,7 +892,6 @@ function EditorApp({
     : p
       ? t.editor.untitled
       : t.editor.noProject;
-  const ready = !!status?.ffmpeg && !!status?.apiConfigured;
   const rangeSeconds = rangeEnd - rangeStart;
   const rangeValid = rangeSeconds >= 60 && rangeSeconds <= 300;
   const waveformNote = !mediaUrl
@@ -998,317 +906,37 @@ function EditorApp({
     <div
       className={`shell${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
       data-layout={mode}
-      data-hide={layout.hidden?.join(" ")}
+      data-hide={panes.hidden.join(" ")}
     >
-      <header
-        className="titlebar"
-        onDoubleClick={(e) => {
-          // Wails acts on title bar double-clicks only on macOS.
-          if (
-            customChrome &&
-            e.target instanceof Element &&
-            !e.target.closest("button, input, textarea, a, .ant-select")
-          )
-            void Window.ToggleMaximise();
-        }}
-      >
-        {!isMac && (
-          <Dropdown
-            trigger={["click"]}
-            open={menuOpen}
-            onOpenChange={setMenuOpen}
-            menu={{
-              onClick: () => setMenuOpen(false),
-              items: [
-                {
-                  type: "group",
-                  key: "file",
-                  label: t.menu.file,
-                  children: [
-                    {
-                      key: "open",
-                      label: t.editor.withShortcut(
-                        t.editor.openProject,
-                        shortcutOf("openProject"),
-                      ),
-                      disabled: busy,
-                      onClick: () => replaceProject(Editor.OpenProject),
-                    },
-                    {
-                      key: "save",
-                      label: t.editor.withShortcut(
-                        t.editor.saveProject,
-                        shortcutOf("saveProject"),
-                      ),
-                      disabled: busy || !p,
-                      onClick: () => void save(false),
-                    },
-                    {
-                      key: "export",
-                      label: t.editor.withShortcut(
-                        t.editor.exportSrt,
-                        shortcutOf("exportSrt"),
-                      ),
-                      disabled: busy || !p,
-                      onClick: () => void save(true),
-                    },
-                    {
-                      key: "media",
-                      label: t.common.importMedia,
-                      disabled: busy || draftDirty,
-                      onClick: () => void update(Editor.ImportVideo),
-                    },
-                    {
-                      key: "srt",
-                      label: t.common.importSrt,
-                      disabled: busy,
-                      onClick: () => replaceProject(Editor.ImportSRT),
-                    },
-                    {
-                      key: "web",
-                      label: t.editor.importWeb,
-                      disabled: busy,
-                      onClick: () => setImportTab("web"),
-                    },
-                    ...(showSample
-                      ? [
-                          {
-                            key: "demo",
-                            label: t.common.loadDemo,
-                            disabled: busy,
-                            onClick: () => replaceProject(Editor.LoadDemo),
-                          },
-                        ]
-                      : []),
-                  ],
-                },
-                { type: "divider" },
-                {
-                  type: "group",
-                  key: "edit",
-                  label: t.menu.edit,
-                  children: [
-                    {
-                      key: "undo",
-                      label: t.editor.withShortcut(t.editor.undo, shortcutOf("undo")),
-                      disabled: !canUndo,
-                      onClick: () => void update(Editor.Undo),
-                    },
-                    {
-                      key: "redo",
-                      label: t.editor.withShortcut(t.editor.redo, shortcutOf("redo")),
-                      disabled: !canRedo,
-                      onClick: () => void update(Editor.Redo),
-                    },
-                    {
-                      key: "shift",
-                      label: t.editor.withShortcut(
-                        t.shift.menu,
-                        shortcutOf("shiftCues"),
-                      ),
-                      disabled: !canShift,
-                      onClick: () => setShiftOpen(true),
-                    },
-                    {
-                      key: "replace",
-                      label: t.editor.withShortcut(
-                        t.replace.menu,
-                        shortcutOf("findReplace"),
-                      ),
-                      disabled: !canShift,
-                      onClick: () => setReplaceOpen(true),
-                    },
-                    {
-                      key: "settings",
-                      label: t.editor.withShortcut(t.settings.title, settingsShortcut),
-                      onClick: () => void run(Editor.OpenSettings),
-                    },
-                    {
-                      key: "dictionary",
-                      label: t.editor.withShortcut(
-                        t.inspector.dictionaryOpen,
-                        shortcutOf("dictionary"),
-                      ),
-                      onClick: () => void run(Editor.OpenDictionary),
-                    },
-                    {
-                      key: "shortcuts",
-                      label: t.editor.withShortcut(
-                        t.shortcuts.title,
-                        shortcutOf("shortcuts"),
-                      ),
-                      onClick: () => setShortcutsOpen(true),
-                    },
-                  ],
-                },
-                ...(customChrome
-                  ? [
-                      { type: "divider" as const },
-                      {
-                        type: "group" as const,
-                        key: "window",
-                        label: t.menu.window,
-                        children: [
-                          {
-                            key: "minimise",
-                            label: t.window.minimise,
-                            onClick: () => void Window.Minimise(),
-                          },
-                          {
-                            key: "maximise",
-                            label: t.menu.toggleMaximise,
-                            onClick: () => void Window.ToggleMaximise(),
-                          },
-                          {
-                            key: "close",
-                            label: t.window.close,
-                            onClick: () => void Window.Close(),
-                          },
-                        ],
-                      },
-                    ]
-                  : []),
-              ],
-            }}
-          >
-            <Button
-              type="text"
-              size="small"
-              className="icon-button"
-              aria-label={t.menu.title}
-              title={t.menu.title}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              icon={<IconMenu2 size={16} {...decorative} />}
-            />
-          </Dropdown>
-        )}
-        <div className="project-title">
-          <strong>{projectName}</strong>
-          {p && (
-            <span>
-              {`${dirty || draftDirty ? t.editor.edited : t.editor.unchanged} · ${t.common.cues(cues.length)} · ${t.editor.speakerCount(speakers.length)}`}
-            </span>
-          )}
-        </div>
-        <div className="toolbar-group">
-          <IconButton
-            type="text"
-            size="small"
-            className="icon-button"
-            placement="bottom"
-            label={t.editor.undo}
-            tooltip={t.editor.withShortcut(t.editor.undo, shortcutOf("undo"))}
-            disabled={!canUndo}
-            onClick={() => void update(Editor.Undo)}
-            icon={<IconArrowBackUp size={16} {...decorative} />}
-          />
-          <IconButton
-            type="text"
-            size="small"
-            className="icon-button"
-            placement="bottom"
-            label={t.editor.redo}
-            tooltip={t.editor.withShortcut(t.editor.redo, shortcutOf("redo"))}
-            disabled={!canRedo}
-            onClick={() => void update(Editor.Redo)}
-            icon={<IconArrowForwardUp size={16} {...decorative} />}
-          />
-        </div>
-        <div className="toolbar-divider" />
-        <div className="toolbar-group">
-          <IconButton
-            type="text"
-            size="small"
-            className="icon-button"
-            placement="bottom"
-            label={t.importer.title}
-            tooltip={t.editor.withShortcut(t.importer.title, shortcutOf("import"))}
-            onClick={() => setImportTab("local")}
-            icon={<IconFileImport size={16} {...decorative} />}
-          />
-          {showSample && (
-            <Button
-              size="small"
-              type="text"
-              disabled={busy}
-              onClick={() => replaceProject(Editor.LoadDemo)}
-            >
-              {t.common.loadDemo}
-            </Button>
-          )}
-        </div>
-        <div className="spacer" />
-        <div className="toolbar-group">
-          <IconButton
-            type="text"
-            size="small"
-            className="icon-button"
-            placement="bottom"
-            label={t.editor.openProject}
-            tooltip={t.editor.withShortcut(
-              t.editor.openProject,
-              shortcutOf("openProject"),
-            )}
-            disabled={busy}
-            onClick={() => replaceProject(Editor.OpenProject)}
-            icon={<IconFolderOpen size={16} {...decorative} />}
-          />
-          <IconButton
-            type="text"
-            size="small"
-            className="icon-button"
-            placement="bottom"
-            label={t.editor.saveProject}
-            tooltip={t.editor.withShortcut(
-              t.editor.saveProject,
-              shortcutOf("saveProject"),
-            )}
-            disabled={busy || !p}
-            onClick={() => void save(false)}
-            icon={
-              <Badge
-                dot={dirty || draftDirty}
-                color="var(--accent)"
-                offset={[-1, 2]}
-              >
-                <IconDeviceFloppy size={16} {...decorative} />
-              </Badge>
-            }
-          />
-          <Tooltip
-            title={t.editor.withShortcut(t.editor.exportHint, shortcutOf("exportSrt"))}
-          >
-            <Button
-              size="small"
-              type="primary"
-              disabled={busy || !p}
-              onClick={() => void save(true)}
-            >
-              {t.editor.exportSrt}
-            </Button>
-          </Tooltip>
-        </div>
-        {customChrome && <WindowControls maximise />}
-      </header>
+      <TitleBar
+        name={projectName}
+        summary={
+          p
+            ? `${dirty || draftDirty ? t.editor.edited : t.editor.unchanged} · ${t.common.cues(cues.length)} · ${t.editor.speakerCount(speakers.length)}`
+            : undefined
+        }
+        unsaved={dirty || draftDirty}
+        hasProject={!!p}
+        busy={busy}
+        draftDirty={draftDirty}
+        showSample={showSample}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        canShift={canShift}
+        replaceProject={replaceProject}
+        save={save}
+        update={update}
+        run={run}
+        setImportTab={setImportTab}
+        setShiftOpen={setShiftOpen}
+        setReplaceOpen={setReplaceOpen}
+        setShortcutsOpen={setShortcutsOpen}
+      />
 
       <div
         className="upper"
         ref={upperRef}
-        // The stylesheet arranges the panes by data-layout and data-hide;
-        // these are the sizes the user dragged in this arrangement.
-        style={
-          {
-            "--left": layout.left && `minmax(240px, ${layout.left}px)`,
-            "--right": layout.right && `minmax(260px, ${layout.right}px)`,
-            "--viewer":
-              mode !== "wide" && layout[viewerSize(mode)]
-                ? // No minimum: a size dragged in a larger window must not
-                  // push the work area out of a smaller one.
-                  `minmax(0, ${layout[viewerSize(mode)]}px)`
-                : undefined,
-          } as CSSProperties
-        }
+        style={panes.upperStyle}
       >
         {stacked && paneShown("inspector") && (
           <div className="work-tabs">
@@ -2157,103 +1785,13 @@ function EditorApp({
         />
       </div>
 
-      <footer className="statusbar">
-        <Popover
-          trigger={["hover", "click"]}
-          placement="topLeft"
-          title={t.status.environment}
-          content={
-            <div className="env">
-              <div>
-                <span>FFmpeg</span>
-                <Tag color={status?.ffmpeg ? "green" : "orange"}>
-                  {status?.ffmpeg ? t.common.ready : t.common.notInstalled}
-                </Tag>
-              </div>
-              <div>
-                <span>{status?.provider || t.status.provider}</span>
-                <Tag color={status?.apiConfigured ? "green" : "default"}>
-                  {status?.apiConfigured
-                    ? t.common.configured
-                    : t.common.offlineOnly}
-                </Tag>
-              </div>
-              <div>
-                <span>yt-dlp</span>
-                <Tag color={status?.ytdlp ? "green" : "default"}>
-                  {status?.ytdlp ? t.common.ready : t.status.optionalMissing}
-                </Tag>
-              </div>
-              <Button
-                type="link"
-                size="small"
-                className="env-link"
-                onClick={() => void Editor.OpenSettings()}
-              >
-                {t.status.openSettings(settingsShortcut)}
-              </Button>
-            </div>
-          }
-        >
-          <button type="button" className="env-button">
-            <span
-              className={`dot ${ready ? "ok" : status?.ffmpeg ? "partial" : "warn"}`}
-              aria-hidden="true"
-            />
-            {ready
-              ? t.status.allReady
-              : status?.ffmpeg
-                ? t.status.offline
-                : t.status.noFfmpeg}
-          </button>
-        </Popover>
-        {busy && (
-          <Space size={6}>
-            <Spin size="small" />
-            <span>{status?.phase || t.status.working}</span>
-            <Button
-              danger
-              size="small"
-              type="text"
-              onClick={() => void Editor.Cancel()}
-            >
-              {t.status.cancel}
-            </Button>
-          </Space>
-        )}
-        <div className="spacer" />
-        <div className="pane-toggles">
-          {PANES.map((pane) => {
-            const Glyph = PANE_ICONS[pane];
-            const name = {
-              viewer: t.viewer.label,
-              inspector: t.inspector.label,
-              timeline: t.timeline.label,
-            }[pane];
-            const label = paneShown(pane)
-              ? t.layout.hide(name)
-              : t.layout.show(name);
-            return (
-              <Tooltip key={pane} title={label}>
-                <button
-                  type="button"
-                  aria-label={label}
-                  aria-pressed={paneShown(pane)}
-                  onClick={() => setLayout((l) => togglePane(l, pane))}
-                >
-                  <Glyph size={14} {...decorative} />
-                </button>
-              </Tooltip>
-            );
-          })}
-        </div>
-        {cue && (
-          <span className="mono selected-info">
-            {t.status.selected(cue.identifier)} · {formatTime(cue.start)} →{" "}
-            {formatTime(cue.end)}
-          </span>
-        )}
-      </footer>
+      <StatusBar
+        status={status}
+        busy={busy}
+        cue={cue}
+        hidden={panes.hidden}
+        onTogglePane={panes.toggle}
+      />
 
       <ShortcutsDialog
         open={shortcutsOpen}

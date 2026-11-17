@@ -321,3 +321,9 @@ Not verified, and still needs a real Mac: launching the app, the window-reveal a
 - `node scripts/editor-smoke.mjs <server-mode binary>` passed locally, 32 checks, against Google Chrome in headless mode: the arrangement at seven window sizes with nothing cut off, the work-area tabs, the dividers with a size per arrangement, the transport inside a 200px viewer, hiding the timeline and the viewer, editing text in the inspector with the viewer hidden, and no page errors. CI runs it in the `verify` job.
 - Its first run found a cue-list header cell 2px past a 260px-wide list at 480×420; the list now drops its length and speaker columns below 400px.
 - It is a browser check: the native window, pointer dragging, and playback are not covered.
+
+## Title bar, status bar and layout hook split out of `App.tsx`
+
+- No behaviour change intended. `pnpm run typecheck`, `pnpm test` (64 tests), `CGO_ENABLED=0 go test -tags server .` and `node scripts/editor-smoke.mjs` (32 checks) passed.
+- Headless Chromium against the server-mode build, English: the project title and summary, every item of the application menu, Find and Replace opened from the menu, Undo and Redo enabling after a rejected suggestion, the status bar's selected cue and the environment popover.
+- Not checked: the macOS title bar (no application menu, traffic-light inset), window dragging and double-click to maximise, and the toolbar's Import, Open, Save and Export buttons, which open native dialogs.
