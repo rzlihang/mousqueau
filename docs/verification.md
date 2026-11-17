@@ -327,3 +327,9 @@ Not verified, and still needs a real Mac: launching the app, the window-reveal a
 - No behaviour change intended. `pnpm run typecheck`, `pnpm test` (64 tests), `CGO_ENABLED=0 go test -tags server .` and `node scripts/editor-smoke.mjs` (32 checks) passed.
 - Headless Chromium against the server-mode build, English: the project title and summary, every item of the application menu, Find and Replace opened from the menu, Undo and Redo enabling after a rejected suggestion, the status bar's selected cue and the environment popover.
 - Not checked: the macOS title bar (no application menu, traffic-light inset), window dragging and double-click to maximise, and the toolbar's Import, Open, Save and Export buttons, which open native dialogs.
+
+## Cue list and inspector tabs split out of `App.tsx`
+
+- No behaviour change intended. `pnpm run typecheck`, `pnpm test` (64 tests) and `node scripts/editor-smoke.mjs` (32 checks) passed.
+- Headless Chromium against the server-mode build, English: the cue list's count and search; in the Edit tab, changing End and applying, accepting the cue's suggestion, Merge Next, Undo and Merge Previous; the Speakers tab's counts; the Fixes tab's four cards.
+- Not checked: Split, moving selected words to a speaker's line, the dictionary actions, renaming or adding a speaker, the cue list's filter menu, and native GUI.
