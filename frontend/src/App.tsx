@@ -13,9 +13,7 @@ import {
   Alert,
   App as AntApp,
   Button,
-  Checkbox,
   ConfigProvider,
-  Empty,
   Input,
   InputNumber,
   Modal,
@@ -23,12 +21,9 @@ import {
   Segmented,
   Select,
   Space,
-  Tag,
-  Tooltip,
   theme,
 } from "antd";
 import {
-  IconPencil,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerSkipBack,
@@ -51,7 +46,6 @@ import { activeCue, formatTime, parseTime } from "./editor";
 import {
   type CueLine,
   extract,
-  joinUp,
   lineSpeakers,
   relines,
   renderLines,
@@ -101,11 +95,13 @@ import {
 } from "./preferences";
 import SettingsWindow from "./SettingsWindow";
 import DictionaryWindow from "./DictionaryWindow";
-import CueRows from "./CueRows";
-import { HighlightedText } from "./dictionaryHighlight";
-import SuggestionCard, { SpeakerTag } from "./SuggestionCard";
 import { timelineSize, viewerSize } from "./layout";
-import { issueLimit, qualityIssues, readingRate } from "./quality";
+import { qualityIssues } from "./quality";
+import { type Draft, EMPTY_DRAFT, type Tab, draftOf } from "./draft";
+import CueList from "./CueList";
+import EditTab from "./EditTab";
+import SpeakersTab from "./SpeakersTab";
+import SuggestionsTab from "./SuggestionsTab";
 import Splitter from "./Splitter";
 import StatusBar from "./StatusBar";
 import Timeline from "./Timeline";
@@ -124,42 +120,10 @@ import { showSampleImport } from "./sampleImport";
 import type { Entry, Match } from "../bindings/mousqueau/internal/dictionary/models";
 import "./style.css";
 
-type Draft = {
-  text: string;
-  start: string;
-  end: string;
-  speakerIds: string[];
-  review: boolean;
-  // Overlapping speech: one line per row of text, each with its speakers.
-  lines: CueLine[] | null;
-};
-const EMPTY_DRAFT: Draft = {
-  text: "",
-  start: "",
-  end: "",
-  speakerIds: [],
-  review: false,
-  lines: null,
-};
-function draftOf(cue: Cue): Draft {
-  return {
-    text: cue.text,
-    start: formatTime(cue.start),
-    end: formatTime(cue.end),
-    speakerIds: cue.speakerIds ?? [],
-    review: cue.review,
-    lines:
-      cue.lines && cue.lines.length > 1
-        ? cue.lines.map((l) => ({ text: l.text, speakerIds: l.speakerIds ?? [] }))
-        : null,
-  };
-}
-type Tab = "edit" | "speakers" | "suggestions";
 type Wave =
   | { url: string; peaks: number[]; rate: number }
   | { url: string; error: string }
   | null;
-const colors = ["#1677ff", "#52c41a", "#d46b08"];
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 
@@ -192,14 +156,14 @@ function EditorApp({
   const [tab, setTab] = useState<Tab>("edit");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<CueFilter>("all");
-  const [speakerId, setSpeakerId] = useState("A");
-  const [speakerName, setSpeakerName] = useState("");
   const [importTab, setImportTab] = useState<ImportTab | null>(null);
   const [overlayEditing, setOverlayEditing] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [shiftOpen, setShiftOpen] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [zoomRequest, setZoomRequest] = useState<ZoomRequest>();
+  const [speakerId, setSpeakerId] = useState("A");
+  const [speakerName, setSpeakerName] = useState("");
   const panes = usePaneLayout();
   const {
     layout,
@@ -955,92 +919,27 @@ function EditorApp({
             />
           </div>
         )}
-        <section
-          className={`cue-grid${listShown ? "" : " off"}`}
-          ref={cueGridRef}
-          aria-label={t.cueList.label}
-        >
-          <div className="pane-toolbar">
-            <h2>{t.cueList.title}</h2>
-            <span className="muted">
-              {t.common.cues(cues.length)}
-              {todoCount ? t.cueList.todo(todoCount) : ""}
-            </span>
-            <div className="spacer" />
-            <Input
-              size="small"
-              allowClear
-              placeholder={t.cueList.search}
-              aria-label={t.cueList.search}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <Select
-              size="small"
-              aria-label={t.cueList.filter}
-              value={filter}
-              onChange={setFilter}
-              style={{ width: 128 }}
-              options={[
-                { value: "all", label: t.cueList.all },
-                { value: "todo", label: t.cueList.todoFilter },
-                { value: "unknown", label: t.common.unknownSpeaker },
-                {
-                  value: "dictionary",
-                  label: t.cueList.dictionaryFilter,
-                },
-                { value: "quality", label: t.quality.filter },
-              ]}
-            />
-          </div>
-          <div className="grid-head cue-columns" aria-hidden="true">
-            <span>#</span>
-            <span>{t.cueList.columns.start}</span>
-            <span>{t.cueList.columns.duration}</span>
-            <span>{t.cueList.columns.speakers}</span>
-            <span>{t.cueList.columns.text}</span>
-            <span>{t.cueList.columns.status}</span>
-          </div>
-          <CueRows
-            cues={shown}
-            speakers={speakers}
-            suggestions={suggestions}
-            matchesByCue={matchesByCue}
-            issuesByCue={issuesByCue}
-            selectedId={selected}
-            activeId={active?.id ?? ""}
-            busy={busy}
-            onSelect={selectCue}
-          >
-            {!cues.length && (
-              <Empty
-                description={
-                  showSample ? t.common.emptyProject : t.common.startImport
-                }
-              >
-                <Space>
-                  <Button
-                    disabled={busy}
-                    onClick={() => replaceProject(Editor.ImportSRT)}
-                  >
-                    {t.common.importSrt}
-                  </Button>
-                  {showSample && (
-                    <Button
-                      disabled={busy}
-                      onClick={() => replaceProject(Editor.LoadDemo)}
-                    >
-                      {t.common.loadDemo}
-                    </Button>
-                  )}
-                </Space>
-              </Empty>
-            )}
-            {!!cues.length && !shown.length && (
-              <p className="muted grid-empty">{t.cueList.noMatch}</p>
-            )}
-          </CueRows>
-        </section>
+        <CueList
+          active={active}
+          busy={busy}
+          cueGridRef={cueGridRef}
+          cues={cues}
+          filter={filter}
+          issuesByCue={issuesByCue}
+          listShown={listShown}
+          matchesByCue={matchesByCue}
+          query={query}
+          replaceProject={replaceProject}
+          selectCue={selectCue}
+          selected={selected}
+          setFilter={setFilter}
+          setQuery={setQuery}
+          showSample={showSample}
+          shown={shown}
+          speakers={speakers}
+          suggestions={suggestions}
+          todoCount={todoCount}
+        />
 
         <section className="viewer" ref={viewerRef} aria-label={t.viewer.label}>
           {mode === "wide" ? (
@@ -1221,459 +1120,64 @@ function EditorApp({
             </>
           )}
           <div className="inspector-body" key={tab}>
-            {tab === "edit" &&
-              (cue ? (
-                <div className="stack">
-                  <div className="section-heading">
-                    <h3>{t.inspector.editing(cue.identifier)}</h3>
-                    <span className="mono muted tiny">
-                      {formatTime(cue.start)} → {formatTime(cue.end)}
-                    </span>
-                  </div>
-                  <div className="time-fields">
-                    <label>
-                      {t.inspector.start}
-                      <Input
-                        size="small"
-                        className="mono-input"
-                        disabled={busy}
-                        value={draft.start}
-                        onChange={(e) => changeDraft({ start: e.target.value })}
-                      />
-                    </label>
-                    <label>
-                      {t.inspector.end}
-                      <Input
-                        size="small"
-                        className="mono-input"
-                        disabled={busy}
-                        value={draft.end}
-                        onChange={(e) => changeDraft({ end: e.target.value })}
-                      />
-                    </label>
-                  </div>
-                  <span className="muted">
-                    {t.inspector.stats(
-                      (cue.end - cue.start).toFixed(3),
-                      readingRate(cue.text, cue.start, cue.end).toFixed(1),
-                    )}
-                  </span>
-                  {!paneShown("viewer") && (
-                    <label>
-                      {t.inspector.text}
-                      {textField(true)}
-                    </label>
-                  )}
-                  {issuesByCue.get(cue.id)?.map((issue) => (
-                    <span key={issue} className="quality-issue">
-                      {issue === "overlap"
-                        ? t.quality.details.overlap
-                        : t.quality.details[issue](issueLimit(issue, cue.text))}
-                    </span>
-                  ))}
-                  {!!draftMatches.length && (
-                    <p className="dict-preview muted small">
-                      <HighlightedText
-                        text={draft.text}
-                        matches={draftMatches}
-                      />
-                    </p>
-                  )}
-                  {draft.lines ? (
-                    <div className="field">
-                      {t.inspector.lines}
-                      {draft.lines.map((line, i) => (
-                        <div key={i} className="cue-line">
-                          <span
-                            className="cue-line-mark"
-                            aria-hidden="true"
-                            style={{
-                              background:
-                                speakers.find(
-                                  (s) => s.id === line.speakerIds[0],
-                                )?.color ?? "var(--line)",
-                            }}
-                          />
-                          <span className="cue-line-text" title={line.text}>
-                            {line.text}
-                          </span>
-                          <Select
-                            mode="multiple"
-                            size="small"
-                            className="cue-line-speakers"
-                            disabled={busy}
-                            aria-label={t.inspector.lineSpeaker(i + 1)}
-                            placeholder={t.inspector.unassignedShort}
-                            maxTagCount="responsive"
-                            value={line.speakerIds}
-                            options={speakerOptions}
-                            onChange={(speakerIds) =>
-                              changeLines(
-                                draft.lines!.map((l, k) =>
-                                  k === i ? { ...l, speakerIds } : l,
-                                ),
-                              )
-                            }
-                          />
-                          {i > 0 && (
-                            <Button
-                              size="small"
-                              type="text"
-                              disabled={busy}
-                              onClick={() =>
-                                changeLines(joinUp(draft.lines!, i))
-                              }
-                            >
-                              {t.inspector.joinLine}
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <label className="field">
-                      {t.inspector.speaker}
-                      <Select
-                        mode="multiple"
-                        size="small"
-                        disabled={busy}
-                        placeholder={t.inspector.unassigned}
-                        value={draft.speakerIds}
-                        options={speakerOptions}
-                        onChange={(speakerIds) => changeDraft({ speakerIds })}
-                      />
-                    </label>
-                  )}
-                  <div className="assign-row">
-                    <span className="muted small">
-                      {t.inspector.assignSelection}
-                    </span>
-                    <Space size={4} wrap>
-                      {speakers.map((s, i) => (
-                        <Button
-                          key={s.id}
-                          size="small"
-                          disabled={busy}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => assignSelection(s.id)}
-                        >
-                          <span
-                            className="speaker-dot"
-                            aria-hidden="true"
-                            style={{ background: s.color }}
-                          />
-                          {s.name}
-                          {i < 9 && (
-                            <kbd className="muted">
-                              {shortcutOf(`speaker${i + 1}` as CommandId)}
-                            </kbd>
-                          )}
-                        </Button>
-                      ))}
-                      <Button
-                        size="small"
-                        disabled={busy}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => assignSelection()}
-                      >
-                        {t.inspector.unassignedShort}
-                        <kbd className="muted">{shortcutOf("speaker0")}</kbd>
-                      </Button>
-                    </Space>
-                  </div>
-                  <Checkbox
-                    disabled={busy}
-                    checked={draft.review}
-                    onChange={(e) => changeDraft({ review: e.target.checked })}
-                  >
-                    {t.inspector.needsReview}
-                  </Checkbox>
-                  <div className="apply-row">
-                    {draftDirty ? (
-                      <Tag color="gold">{t.inspector.unapplied}</Tag>
-                    ) : (
-                      <span className="muted">
-                        {t.inspector.nothingUnapplied}
-                      </span>
-                    )}
-                    <div className="spacer" />
-                    <Button
-                      size="small"
-                      disabled={busy || !draftDirty}
-                      onClick={discardDraft}
-                    >
-                      {t.inspector.revert}
-                    </Button>
-                    <Button
-                      size="small"
-                      type="primary"
-                      disabled={busy || !draftDirty}
-                      onClick={() => void applyDraft()}
-                    >
-                      {t.inspector.apply}
-                    </Button>
-                  </div>
-                  <div className="structure-row">
-                    <Button
-                      size="small"
-                      disabled={busy || draftDirty || !previousCue}
-                      onClick={() => previousCue && void mergeCues(previousCue)}
-                    >
-                      {t.inspector.mergePrevious}
-                    </Button>
-                    {cue.lines && cue.lines.length > 1 ? (
-                      <Tooltip title={t.inspector.splitLinesHint}>
-                        <Button
-                          size="small"
-                          disabled={busy || draftDirty}
-                          onClick={() =>
-                            void update(() => Editor.SplitCueLines(cue.id))
-                          }
-                        >
-                          {t.inspector.splitLines(cue.lines.length)}
-                        </Button>
-                      </Tooltip>
-                    ) : (
-                      <Tooltip title={t.inspector.splitHint}>
-                        <Button
-                          size="small"
-                          disabled={busy || draftDirty}
-                          onClick={splitCue}
-                        >
-                          {t.inspector.split}
-                        </Button>
-                      </Tooltip>
-                    )}
-                    <Button
-                      size="small"
-                      disabled={busy || draftDirty || !nextCue}
-                      onClick={() => void mergeCues(cue)}
-                    >
-                      {t.inspector.mergeNext}
-                    </Button>
-                  </div>
-                  <div className="rule" />
-                  <h3>{t.inspector.dictionary}</h3>
-                  <strong>{t.inspector.dictionaryHits}</strong>
-                  {!draftMatches.length && (
-                    <span className="muted">{t.inspector.dictionaryNone}</span>
-                  )}
-                  {draftMatches.map((m, i) => (
-                    <div key={`${m.entryId}-${i}`} className="dict-hit-row">
-                      <Tag
-                        color={m.kind === "misspelled" ? "error" : "default"}
-                      >
-                        {m.kind === "misspelled"
-                          ? t.dictionary.kindMisspelled
-                          : t.dictionary.kindKnown}
-                      </Tag>
-                      <span>
-                        {m.kind === "misspelled"
-                          ? `${m.text} → ${m.canonical}`
-                          : m.text}
-                      </span>
-                      {m.kind === "misspelled" && cue && (
-                        <Button
-                          size="small"
-                          disabled={busy || draftDirty}
-                          onClick={() =>
-                            void update(() =>
-                              Editor.FixCueFromDictionary(cue.id),
-                            ).then(() => void refreshDictionaryMatches())
-                          }
-                        >
-                          {t.inspector.dictionaryFix}
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Space wrap>
-                    <Button
-                      size="small"
-                      disabled={busy || !p}
-                      onClick={() => {
-                        const el =
-                          textArea.current?.resizableTextArea?.textArea;
-                        const start = el?.selectionStart ?? 0;
-                        const end = el?.selectionEnd ?? 0;
-                        const raw =
-                          el && end > start
-                            ? draft.text.slice(start, end).trim()
-                            : "";
-                        setAddDictText(raw);
-                        setAddDictMode(raw ? "misspelling" : "canonical");
-                        setAddDictTarget(undefined);
-                        setAddDictOpen(true);
-                        if (!raw)
-                          void message.info(t.inspector.dictionaryNeedSelection);
-                      }}
-                    >
-                      {t.inspector.dictionaryAddSelection}
-                    </Button>
-                    <Button
-                      size="small"
-                      type="primary"
-                      disabled={busy || !p}
-                      onClick={() =>
-                        void update(async () => {
-                          const snap = await Editor.CheckDictionary();
-                          const count = (
-                            snap.project?.state.suggestions ?? []
-                          ).filter(
-                            (s) =>
-                              s.source === "dictionary" &&
-                              s.status === "pending",
-                          ).length;
-                          void message.success(t.dictionary.checked(count));
-                          void refreshDictionaryMatches();
-                          return snap;
-                        })
-                      }
-                    >
-                      {t.inspector.dictionaryCheck}
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => void Editor.OpenDictionary()}
-                    >
-                      {t.inspector.dictionaryOpen}
-                    </Button>
-                  </Space>
-                  <div className="rule" />
-                  <h3>{t.inspector.cueSuggestions}</h3>
-                  {cueSuggestions.length ? (
-                    cueSuggestions.map((s) => (
-                      <SuggestionCard
-                        key={s.id}
-                        suggestion={s}
-                        cueIdentifier={cue.identifier}
-                        speakers={speakers}
-                        busy={busy}
-                        draftDirty={draftDirty}
-                        onDecide={decide(s.id)}
-                      />
-                    ))
-                  ) : (
-                    <span className="muted">
-                      {t.inspector.noCueSuggestions}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <Empty
-                  description={
-                    showSample ? t.common.emptyProject : t.common.startImport
-                  }
-                />
-              ))}
-
-            {tab === "speakers" && (
-              <div className="stack">
-                <div>
-                  {speakers.map((s) => (
-                    <div key={s.id} className="speaker-row">
-                      <SpeakerTag speaker={s} />
-                      <span className="muted">
-                        {t.common.cues(
-                          cues.filter((c) => c.speakerIds?.includes(s.id))
-                            .length,
-                        )}
-                      </span>
-                      <div className="spacer" />
-                      <IconButton
-                        size="small"
-                        type="text"
-                        label={t.inspector.rename}
-                        disabled={busy}
-                        onClick={() => {
-                          setSpeakerId(s.id);
-                          setSpeakerName(s.name);
-                        }}
-                        icon={<IconPencil size={16} {...decorative} />}
-                      />
-                    </div>
-                  ))}
-                  <div className="speaker-row">
-                    <SpeakerTag />
-                    <span className="muted">
-                      {t.common.cues(
-                        cues.filter((c) => !c.speakerIds?.length).length,
-                      )}
-                    </span>
-                  </div>
-                </div>
-                <div className="speaker-form">
-                  <Input
-                    size="small"
-                    aria-label={t.inspector.speakerId}
-                    disabled={busy}
-                    value={speakerId}
-                    onChange={(e) => setSpeakerId(e.target.value)}
-                    placeholder={t.inspector.speakerIdPlaceholder}
-                  />
-                  <Input
-                    size="small"
-                    aria-label={t.inspector.displayName}
-                    disabled={busy}
-                    value={speakerName}
-                    onChange={(e) => setSpeakerName(e.target.value)}
-                    placeholder={t.inspector.displayNamePlaceholder}
-                  />
-                  <Button
-                    size="small"
-                    disabled={
-                      busy ||
-                      draftDirty ||
-                      !p ||
-                      !speakerId.trim() ||
-                      !speakerName.trim()
-                    }
-                    onClick={() =>
-                      void update(() =>
-                        Editor.SetSpeaker({
-                          id: speakerId.trim(),
-                          name: speakerName.trim(),
-                          color:
-                            speakers.find((s) => s.id === speakerId)?.color ??
-                            colors[speakers.length % colors.length],
-                        }),
-                      )
-                    }
-                  >
-                    {t.inspector.saveSpeaker}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {tab === "suggestions" && (
-              <div className="stack">
-                {!suggestions.length && (
-                  <Empty
-                    description={
-                      showSample
-                        ? t.inspector.noSuggestions
-                        : t.inspector.analyzeForSuggestions
-                    }
-                  />
-                )}
-                {suggestions.map((s) => (
-                  <SuggestionCard
-                    key={s.id}
-                    suggestion={s}
-                    cueIdentifier={identifierOf(s.cueId)}
-                    speakers={speakers}
-                    busy={busy}
-                    draftDirty={draftDirty}
-                    onDecide={decide(s.id)}
-                    onLocate={() => {
-                      const target = cues.find((c) => c.id === s.cueId);
-                      if (target) selectCue(target);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+            <EditTab
+              applyDraft={applyDraft}
+              assignSelection={assignSelection}
+              busy={busy}
+              changeDraft={changeDraft}
+              changeLines={changeLines}
+              cue={cue}
+              cueSuggestions={cueSuggestions}
+              decide={decide}
+              discardDraft={discardDraft}
+              draft={draft}
+              draftDirty={draftDirty}
+              draftMatches={draftMatches}
+              issuesByCue={issuesByCue}
+              mergeCues={mergeCues}
+              nextCue={nextCue}
+              p={p}
+              paneShown={paneShown}
+              previousCue={previousCue}
+              refreshDictionaryMatches={refreshDictionaryMatches}
+              setAddDictMode={setAddDictMode}
+              setAddDictOpen={setAddDictOpen}
+              setAddDictTarget={setAddDictTarget}
+              setAddDictText={setAddDictText}
+              showSample={showSample}
+              speakerOptions={speakerOptions}
+              speakers={speakers}
+              splitCue={splitCue}
+              tab={tab}
+              textArea={textArea}
+              textField={textField}
+              update={update}
+            />
+            <SpeakersTab
+              speakerId={speakerId}
+              setSpeakerId={setSpeakerId}
+              speakerName={speakerName}
+              setSpeakerName={setSpeakerName}
+              busy={busy}
+              cues={cues}
+              draftDirty={draftDirty}
+              p={p}
+              speakers={speakers}
+              tab={tab}
+              update={update}
+            />
+            <SuggestionsTab
+              busy={busy}
+              cues={cues}
+              decide={decide}
+              draftDirty={draftDirty}
+              identifierOf={identifierOf}
+              selectCue={selectCue}
+              showSample={showSample}
+              speakers={speakers}
+              suggestions={suggestions}
+              tab={tab}
+            />
           </div>
         </aside>
       </div>
