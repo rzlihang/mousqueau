@@ -165,6 +165,13 @@ export const zhTW: Messages = {
     show: (pane) => `顯示${pane}`,
     hide: (pane) => `隱藏${pane}`,
   },
+  recovery: {
+    title: "復原未儲存的內容？",
+    content: (when, cues) =>
+      `Mousqueau 上次結束時有未儲存的修改：共 ${cues} 句，最後修改於 ${when}。捨棄後無法找回。`,
+    restore: "復原",
+    discard: "捨棄",
+  },
   replace: {
     title: "尋找與取代",
     menu: "尋找與取代…",

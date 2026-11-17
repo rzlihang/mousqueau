@@ -72,6 +72,7 @@ var jaJP = map[string]string{
 	// Editor
 	"wait for processing to finish or cancel it":                    "処理が終わるまで待つか、処理をキャンセルしてください",
 	"import SRT subtitles first":                                    "先に SRT 字幕を読み込んでください",
+	"there is no unsaved work to restore":                           "復元できる未保存の内容はありません",
 	"import local media first":                                      "先にローカルのメディアを読み込んでください",
 	"selected media file is unavailable":                            "選択したメディアファイルを使用できません",
 	"choose a new output file to preserve the imported source":      "読み込んだ元のファイルを残すため、新しい出力ファイルを選択してください",

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -85,6 +86,18 @@ type EditorService struct {
 	dictionaryRO   bool
 	dictionaryErr  string
 	importPreview  *dictionary.ImportPreview
+
+	// Unsaved work (recovery.go).
+	recoveryPath    string     // empty in tests: nothing is written
+	recoveryMu      sync.Mutex // orders the writes; taken before mu
+	recoveryHeld    bool       // an earlier session's file awaits an answer
+	recoveryTimer   *time.Timer
+	recoveryPending []byte // nil: remove the file
+	recoveryDue     bool
+	recoverySet     bool
+	recoverySum     [sha256.Size]byte // what the file holds; zero for no file
+	cleanSet        bool
+	cleanSum        [sha256.Size]byte // the project as last opened or saved
 }
 
 func (s *EditorService) ready() error {
@@ -110,6 +123,7 @@ func (s *EditorService) snapshot() Snapshot {
 	if s.project != nil {
 		data, _ := json.Marshal(s.project)
 		_ = json.Unmarshal(data, &result.Project)
+		s.trackRecoveryLocked(data)
 	}
 	return result
 }
@@ -170,6 +184,7 @@ func (s *EditorService) ImportSRT() (Snapshot, error) {
 	}
 	s.project = project.New(cues, path)
 	s.project.VideoPath = s.mediaPath
+	s.markCleanLocked()
 	return s.snapshot(), nil
 }
 func (s *EditorService) OpenProject() (Snapshot, error) {
@@ -197,6 +212,7 @@ func (s *EditorService) OpenProject() (Snapshot, error) {
 	s.mediaPath = p.VideoPath
 	s.mediaRevision++
 	s.rememberProjectLocked(path)
+	s.markCleanLocked()
 	return s.snapshot(), nil
 }
 func (s *EditorService) SaveProject() (string, error) {
@@ -220,6 +236,7 @@ func (s *EditorService) SaveProject() (string, error) {
 		return "", err
 	}
 	s.rememberProjectLocked(path)
+	s.markCleanLocked()
 	return path, nil
 }
 func (s *EditorService) ExportSRT() (string, error) {
@@ -435,6 +452,8 @@ func (s *EditorService) Waveform() (Waveform, error) {
 // ServiceShutdown stops background FFmpeg work when the application quits.
 func (s *EditorService) ServiceShutdown() error {
 	s.Cancel()
+	// Work changed in the last moment before quitting is kept too.
+	s.flushRecovery()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.waveformCancel != nil {
@@ -553,6 +572,7 @@ func (s *EditorService) LoadDemo() (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	s.project.AddAnalysis(analysis.Align(cues, response.Segments, 0, 300))
+	s.markCleanLocked()
 	return s.snapshot(), nil
 }
 func (s *EditorService) DiscoverWeb(raw string) (media.WebInfo, error) {
@@ -649,6 +669,7 @@ func (s *EditorService) ImportWeb(raw string, req WebImport) (Snapshot, error) {
 		}
 		s.project = project.New(cues, raw)
 		s.project.VideoPath = s.mediaPath
+		s.markCleanLocked()
 		return s.snapshot(), nil
 	}
 	return s.GetSnapshot(), nil

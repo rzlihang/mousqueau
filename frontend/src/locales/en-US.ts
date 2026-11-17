@@ -173,6 +173,13 @@ export const enUS: Messages = {
     show: (pane) => `Show ${pane}`,
     hide: (pane) => `Hide ${pane}`,
   },
+  recovery: {
+    title: "Restore unsaved work?",
+    content: (when, cues) =>
+      `Mousqueau closed with unsaved changes: ${plural(cues, "cue", "cues")}, last changed ${when}. Discarding them cannot be undone.`,
+    restore: "Restore",
+    discard: "Discard",
+  },
   replace: {
     title: "Find and Replace",
     menu: "Find and Replace…",

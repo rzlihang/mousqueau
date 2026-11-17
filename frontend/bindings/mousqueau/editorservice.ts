@@ -81,6 +81,13 @@ export function DesktopLook(): $CancellablePromise<omarchy$0.Look> {
     return $Call.ByID(2717544115);
 }
 
+/**
+ * DiscardRecovery deletes the recovery file an earlier session left.
+ */
+export function DiscardRecovery(): $CancellablePromise<void> {
+    return $Call.ByID(505974637);
+}
+
 export function DiscoverWeb(raw: string): $CancellablePromise<media$0.WebInfo> {
     return $Call.ByID(847981655, raw);
 }
@@ -202,6 +209,15 @@ export function PreviewDictionaryImport(): $CancellablePromise<dictionary$0.Impo
     return $Call.ByID(439531149);
 }
 
+/**
+ * RecoveryInfo reports the recovery file an earlier session left, which the
+ * editor offers once at launch. Until RestoreRecovery or DiscardRecovery
+ * answers, this session leaves the file alone.
+ */
+export function RecoveryInfo(): $CancellablePromise<$models.Recovery> {
+    return $Call.ByID(1447718667);
+}
+
 export function Redo(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(2511831216);
 }
@@ -222,6 +238,14 @@ export function RemoveProviderKey(id: string): $CancellablePromise<$models.Setti
  */
 export function ReplaceText(find: string, replacement: string, matchCase: boolean): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(3319825511, find, replacement, matchCase);
+}
+
+/**
+ * RestoreRecovery opens the recovered project. It stays unsaved, so its
+ * recovery file remains until the project is saved.
+ */
+export function RestoreRecovery(): $CancellablePromise<$models.Snapshot> {
+    return $Call.ByID(3280810229);
 }
 
 export function SaveProject(): $CancellablePromise<string> {

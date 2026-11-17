@@ -307,3 +307,11 @@ Not verified, and still needs a real Mac: launching the app, the window-reveal a
 - Frontend `pnpm run typecheck` and `pnpm test` (64 tests) passed.
 - Headless Chromium against the server-mode build with the demo loaded: with the viewer hidden, Enter on a cue focused the text field in the inspector's Edit tab, typing and Ctrl+Enter applied the edit to the cue list; with the viewer and the inspector both hidden in the column arrangement, Enter showed the inspector on its Edit tab with the field focused.
 - Not checked: splitting at the cursor, moving selected words to a speaker's line and adding the selection to the dictionary from the inspector field (they read the same field, but were not exercised), and native GUI on any platform.
+
+## Recovery of unsaved work
+
+- `go test ./internal/...` passed: the recovery file round-trips a project with its history, a second write replaces the first without leaving a temporary file, the file is mode 0600, and a damaged file is reported.
+- `CGO_ENABLED=0 go test -tags server .` passed: an unchanged or merely read project writes nothing, an edit writes the file, a save removes it, quitting with unsaved work leaves it, a file from an earlier session is not overwritten before the user answers, restoring keeps the file and the offer is made once, discarding removes it, and a damaged file is neither offered nor blocks the session.
+- Frontend `pnpm run typecheck` and `pnpm test` (64 tests) passed. Bindings were regenerated.
+- Headless Chromium against the server-mode build with an isolated configuration directory: loading the demo wrote no file; editing a cue wrote `recovery.json` (mode 600) within 2.5 seconds; after `kill -9` of the server and a restart the editor asked "Restore unsaved work?" with the cue count and time; Restore brought back the edited text with Undo available and the project marked edited, and kept the file; after another kill and restart, Discard removed the file and left the editor empty.
+- Not checked: a real crash or quit of the native application on any platform, the dialog in Chinese and Japanese, and a project large enough for the write to take noticeable time.

@@ -174,6 +174,13 @@ export const jaJP: Messages = {
     show: (pane) => `${pane}を表示`,
     hide: (pane) => `${pane}を隠す`,
   },
+  recovery: {
+    title: "未保存の内容を復元しますか？",
+    content: (when, cues) =>
+      `Mousqueau は未保存の変更を残したまま終了しました（${cues} 件、最終変更 ${when}）。破棄すると元に戻せません。`,
+    restore: "復元",
+    discard: "破棄",
+  },
   replace: {
     title: "検索と置換",
     menu: "検索と置換…",
