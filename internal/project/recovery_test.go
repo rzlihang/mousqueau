@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"mousqueau/internal/subtitle"
@@ -37,7 +38,8 @@ func TestRecoveryRoundTripKeepsHistory(t *testing.T) {
 	if len(entries) != 1 || entries[0].Name() != "recovery.json" {
 		t.Fatalf("directory: %v", entries)
 	}
-	if stat, _ := os.Stat(path); stat.Mode().Perm() != 0o600 {
+	// Windows has no owner-only mode bits; the profile folder's ACL applies.
+	if stat, _ := os.Stat(path); runtime.GOOS != "windows" && stat.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v", stat.Mode())
 	}
 }
