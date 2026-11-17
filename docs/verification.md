@@ -299,4 +299,5 @@ Not verified, and still needs a real Mac: launching the app, the window-reveal a
   - Hiding the timeline, the viewer and the inspector each gave the space to the remaining panes, and the choice was stored. With the viewer hidden, Enter on a cue showed it again and focused the subtitle text.
   - In `wide` with the viewer hidden, the inspector divider widened the inspector from 340px to 460px; with the inspector hidden, the cue list and viewer shared the width.
   - Stored viewer sizes larger than the window (`compactViewer` 670 at 480×420, `columnViewer` 700 at 600×620 and 950×1040) left the work area 260px wide and 120px tall, with nothing past the window. At 480×420 the viewer divider stopped at 200px.
+  - At 480×420 the viewer was 220px wide (200px after its divider was moved) and the transport wrapped to two rows with every control inside the viewer; at 630×1040 and 1440×900 it stayed on one row.
 - Not checked: dragging the dividers with a pointer, playback continuing while the viewer is hidden (no media was loaded), the native window under Hyprland tiling, macOS and Windows GUI, and the Chinese and Japanese interface on screen.
