@@ -6,6 +6,9 @@
 - Never upload audio without an explicit user action. Cancel subprocesses and HTTP requests using context. Never log credentials.
 - Use generated Wails bindings; regenerate with `wails3 generate bindings` after changing service methods.
 - Frontend uses pnpm at the version pinned in `frontend/package.json`. Run `go test ./internal/...` at the root, and `pnpm install --frozen-lockfile`, `pnpm run typecheck`, `pnpm test`, and `pnpm run build` in `frontend` as appropriate. Run `node --test scripts/frontend-dependencies.test.mjs` for license tooling changes. Desktop build requires native Wails dependencies.
+- After changing the editor layout, build the server-mode binary and run `node scripts/editor-smoke.mjs <binary>` (needs Chrome or Chromium). It checks the page in a browser, not the native window.
+- `frontend/src/keymap.ts`: keep each command on one line; `TestMenuCommandsMatchTheKeymap` reads the file as text.
+- The server-mode build keeps its project across page reloads, so "Load Demo" on a reloaded page opens the replace-project dialog, which covers the editor until it is answered.
 - Write docs that distinguish verified tests from macOS GUI checks that still need a real Mac.
 - No databases, full-episode automation, accounts, or cloud synchronization in v0.1.
 - Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
