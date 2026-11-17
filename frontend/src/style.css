@@ -126,7 +126,8 @@ h3 {
 .shell {
   height: 100vh;
   display: grid;
-  grid-template-rows: 52px minmax(260px, 1fr) auto 28px;
+  /* The timeline gives up height before the panes above it are cut off. */
+  grid-template-rows: 52px minmax(260px, 1fr) minmax(80px, auto) 28px;
   grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
   font-size: 13px;
@@ -211,7 +212,9 @@ h3 {
 
 .upper {
   display: grid;
-  grid-template-columns: minmax(400px, 1.2fr) minmax(320px, 1fr) 340px;
+  grid-template-columns:
+    var(--left, minmax(400px, 1.2fr)) minmax(320px, 1fr)
+    var(--right, 340px);
   min-height: 0;
   border-bottom: 1px solid var(--line);
 }
@@ -1083,6 +1086,8 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
 }
 .env-button {
   display: flex;
@@ -1603,7 +1608,9 @@ html[data-platform] .track-scroll::-webkit-scrollbar {
 
 @media (max-width: 1280px) {
   .upper {
-    grid-template-columns: minmax(360px, 1fr) minmax(400px, 1fr) 320px;
+    grid-template-columns:
+      var(--left, minmax(300px, 1fr)) minmax(320px, 1fr)
+      var(--right, 320px);
   }
   .clock {
     font-size: 15px;
@@ -1757,6 +1764,8 @@ textarea.subtitle-text,
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* In a short window the tracks scroll rather than crowd out the panes. */
+  max-height: 40vh;
 }
 .timeline-dock > .timeline {
   flex: 1 1 auto;
@@ -1768,6 +1777,69 @@ textarea.subtitle-text,
 .timeline-dock .timeline-toolbar,
 .timeline-dock .zoom-scrollbar {
   flex: none;
+}
+
+/* A tiled or halved window: the viewer and inspector share the top row and
+   the cue list takes the full width below. */
+@media (max-width: 999px) {
+  .upper {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "viewer inspector"
+      "cues cues";
+  }
+  .cue-grid {
+    grid-area: cues;
+    border-right: 0;
+    border-top: 1px solid var(--line);
+  }
+  .viewer {
+    grid-area: viewer;
+  }
+  .inspector {
+    grid-area: inspector;
+    min-width: 0;
+  }
+  .upper .splitter-x {
+    display: none;
+  }
+  .project-title span,
+  .timeline-toolbar > .mono {
+    display: none;
+  }
+  /* The range and its actions drop to a second row when they do not fit. */
+  .timeline-toolbar {
+    height: auto;
+    min-height: 38px;
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding-block: 5px;
+  }
+}
+/* A narrow column: the three panes stack. */
+@media (max-width: 699px) {
+  .upper {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 5fr) minmax(0, 6fr) minmax(0, 8fr);
+    grid-template-areas: "viewer" "cues" "inspector";
+  }
+  .viewer {
+    border-right: 0;
+  }
+  .inspector {
+    border-top: 1px solid var(--line);
+  }
+  .timeline-dock {
+    max-height: 30vh;
+  }
+  .titlebar {
+    gap: 6px;
+    padding-left: 10px;
+  }
+  .toolbar-divider {
+    display: none;
+  }
 }
 
 /* Keyboard shortcuts dialog */
