@@ -155,3 +155,10 @@ vite.config.ts.timestamp-*
 /build/linux/arch/pkg/
 /build/linux/arch/src/
 /build/linux/arch/*.pkg.tar.*
+/build/linux/*.desktop
+
+# Task's checksum cache
+/.task/
+
+# Local tool state
+/.deja/
