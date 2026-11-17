@@ -162,6 +162,8 @@ function EditorApp({
   const [shiftOpen, setShiftOpen] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [zoomRequest, setZoomRequest] = useState<ZoomRequest>();
+  const [speakerId, setSpeakerId] = useState("A");
+  const [speakerName, setSpeakerName] = useState("");
   const panes = usePaneLayout();
   const {
     layout,
@@ -1152,6 +1154,10 @@ function EditorApp({
               update={update}
             />
             <SpeakersTab
+              speakerId={speakerId}
+              setSpeakerId={setSpeakerId}
+              speakerName={speakerName}
+              setSpeakerName={setSpeakerName}
               busy={busy}
               cues={cues}
               draftDirty={draftDirty}

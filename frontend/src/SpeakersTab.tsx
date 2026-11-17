@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button, Input } from "antd";
 import { IconPencil } from "@tabler/icons-react";
 import IconButton from "./IconButton";
@@ -16,6 +15,10 @@ const colors = ["#1677ff", "#52c41a", "#d46b08"];
 // The inspector's Speakers tab: rename a speaker or add one, and see how
 // many cues each has.
 export default function SpeakersTab({
+  speakerId,
+  setSpeakerId,
+  speakerName,
+  setSpeakerName,
   busy,
   cues,
   draftDirty,
@@ -24,6 +27,12 @@ export default function SpeakersTab({
   tab,
   update,
 }: {
+  // The rename form's fields. The editor keeps them: the inspector's body
+  // is rebuilt on every tab change, and a half-typed name must survive that.
+  speakerId: string;
+  setSpeakerId: (id: string) => void;
+  speakerName: string;
+  setSpeakerName: (name: string) => void;
   busy: boolean;
   cues: Cue[];
   draftDirty: boolean;
@@ -33,8 +42,6 @@ export default function SpeakersTab({
   update: (action: () => Promise<Snapshot>) => Promise<Snapshot | undefined>;
 }) {
   const t = useT();
-  const [speakerId, setSpeakerId] = useState("A");
-  const [speakerName, setSpeakerName] = useState("");
   return (
     <>
       {tab === "speakers" && (
