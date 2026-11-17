@@ -289,3 +289,13 @@ Not verified, and still needs a real Mac: launching the app, the window-reveal a
 - Frontend `pnpm run typecheck` and `pnpm test` (51 tests) passed.
 - Headless Chromium against the server-mode build with the demo loaded, English interface: Ctrl+Shift+F opened the dialog, "字幕" showed "2 matches in 2 subtitles", Replace All changed both cues and reported "Replaced 2 matches", and Undo restored them.
 - Not checked: the macOS menu item and ⇧⌘F on a real Mac, and the Chinese and Japanese interface on screen.
+
+## Pane arrangements
+
+- Frontend `pnpm run typecheck` and `pnpm test` (64 tests) passed; `layout.test.ts` covers the choice of arrangement, per-arrangement size keys, hiding panes, and reading stored layouts. `go test ./internal/...` and `CGO_ENABLED=0 go test -tags server .` passed.
+- Headless Chromium against the server-mode build with the demo loaded, English interface, dark theme:
+  - 1440×900 was `wide`, 950×1040, 630×1040 and 1080×1920 were `column`, 950×520 and 480×420 were `compact`; nothing outside the scrolling panes extended past the window, except a 2px overhang of one cue-list header cell at 480×420.
+  - In `column`, the tabs switched the work area between the cue list and the inspector. The viewer divider grew the viewer by 80px from the keyboard and stored `columnViewer`; in `compact` it stored `compactViewer`; returning to `column` restored its own size.
+  - Hiding the timeline, the viewer and the inspector each gave the space to the remaining panes, and the choice was stored. With the viewer hidden, Enter on a cue showed it again and focused the subtitle text.
+  - In `wide` with the viewer hidden, the inspector divider widened the inspector from 340px to 460px; with the inspector hidden, the cue list and viewer shared the width.
+- Not checked: dragging the dividers with a pointer, playback continuing while the viewer is hidden (no media was loaded), the native window under Hyprland tiling, macOS and Windows GUI, and the Chinese and Japanese interface on screen.

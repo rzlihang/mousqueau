@@ -42,6 +42,9 @@ import {
   IconPlayerPlay,
   IconPlayerSkipBack,
   IconPlayerSkipForward,
+  IconLayoutBottombar,
+  IconLayoutSidebarRight,
+  IconMovie,
 } from "@tabler/icons-react";
 import IconButton from "./IconButton";
 import ImportDialog, { type ImportTab } from "./ImportDialog";
@@ -113,6 +116,17 @@ import DictionaryWindow from "./DictionaryWindow";
 import CueRows from "./CueRows";
 import { HighlightedText } from "./dictionaryHighlight";
 import SuggestionCard, { SpeakerTag } from "./SuggestionCard";
+import {
+  type Layout,
+  type Pane,
+  PANES,
+  clamp,
+  layoutMode,
+  loadLayout,
+  timelineSize,
+  togglePane,
+  viewerSize,
+} from "./layout";
 import { issueLimit, qualityIssues, readingRate } from "./quality";
 import Splitter from "./Splitter";
 import Timeline from "./Timeline";
@@ -169,18 +183,21 @@ const colors = ["#1677ff", "#52c41a", "#d46b08"];
 const settingsShortcut = shortcutOf("settings");
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-// Pane sizes the user dragged, in pixels; unset sizes follow the stylesheet.
-type Layout = { left?: number; right?: number; timeline?: number };
 const LAYOUT_KEY = "mousqueau-layout";
 const VIEWER_MIN = 320;
-function loadLayout(): Layout {
+function storedLayout(): Layout {
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "{}");
-    return value && typeof value === "object" ? (value as Layout) : {};
+    return loadLayout(localStorage.getItem(LAYOUT_KEY));
   } catch {
     return {};
   }
 }
+const PANE_ICONS = {
+  viewer: IconMovie,
+  inspector: IconLayoutSidebarRight,
+  timeline: IconLayoutBottombar,
+};
+const windowMode = () => layoutMode(window.innerWidth, window.innerHeight);
 
 function EditorApp({
   dark,
@@ -220,9 +237,23 @@ function EditorApp({
   const [shiftOpen, setShiftOpen] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [zoomRequest, setZoomRequest] = useState<ZoomRequest>();
-  const [layout, setLayout] = useState<Layout>(loadLayout);
+  const [layout, setLayout] = useState<Layout>(storedLayout);
+  const [mode, setMode] = useState(windowMode);
+  useEffect(() => {
+    const resized = () => setMode(windowMode());
+    window.addEventListener("resize", resized);
+    return () => window.removeEventListener("resize", resized);
+  }, []);
+  const paneShown = (pane: Pane) => !layout.hidden?.includes(pane);
+  // Outside the wide arrangement the cue list and the inspector share one
+  // area: the list, or one of the inspector's tabs.
+  const stacked = mode !== "wide";
+  const [listOpen, setListOpen] = useState(true);
+  const inspectorOpen = paneShown("inspector") && !(stacked && listOpen);
+  const listShown = !stacked || listOpen || !paneShown("inspector");
   const upperRef = useRef<HTMLDivElement>(null);
   const cueGridRef = useRef<HTMLElement>(null);
+  const viewerRef = useRef<HTMLElement>(null);
   const inspectorRef = useRef<HTMLElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   const [matchesByCue, setMatchesByCue] = useState<Record<string, Match[]>>(
@@ -546,9 +577,18 @@ function EditorApp({
   function editText() {
     const el = textArea.current?.resizableTextArea?.textArea;
     if (el) {
-      el.focus();
-      el.setSelectionRange(el.value.length, el.value.length);
+      const focus = () => {
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      };
+      // The text field is the viewer's subtitle, so a hidden viewer returns.
+      if (paneShown("viewer")) focus();
+      else {
+        setLayout((l) => togglePane(l, "viewer"));
+        setTimeout(focus);
+      }
     } else if (cue) {
+      if (!paneShown("viewer")) setLayout((l) => togglePane(l, "viewer"));
       focusOverlay.current = true;
       setTab("edit");
       seek(cue.start);
@@ -610,13 +650,27 @@ function EditorApp({
   const widthOf = (el: HTMLElement | null) =>
     el?.getBoundingClientRect().width ?? 0;
   function resizeColumn(side: "left" | "right", size: number) {
-    const other = side === "left" ? inspectorRef.current : cueGridRef.current;
-    const max = widthOf(upperRef.current) - widthOf(other) - VIEWER_MIN;
+    const width = widthOf(upperRef.current);
+    // The cue list keeps 240px when it is the only other column.
+    const max =
+      side === "left"
+        ? width - widthOf(inspectorRef.current) - VIEWER_MIN
+        : width -
+          (paneShown("viewer")
+            ? widthOf(cueGridRef.current) + VIEWER_MIN
+            : 240);
     const min = side === "left" ? 240 : 260;
-    setLayout((l) => ({
-      ...l,
-      [side]: Math.round(Math.max(min, Math.min(size, max))),
-    }));
+    setLayout((l) => ({ ...l, [side]: clamp(size, min, max) }));
+  }
+  // The viewer's width beside the work area, or its height above it.
+  function resizeViewer(size: number) {
+    if (mode === "wide") return;
+    const box = upperRef.current?.getBoundingClientRect();
+    const [min, max] =
+      mode === "compact"
+        ? [240, (box?.width ?? 0) - 280]
+        : [100, (box?.height ?? 0) - 160];
+    setLayout((l) => ({ ...l, [viewerSize(mode)]: clamp(size, min, max) }));
   }
   // The timeline can shrink, with its tracks scrolling, but never grow past
   // its content.
@@ -628,10 +682,7 @@ function EditorApp({
         ? child.scrollHeight
         : child.offsetHeight;
     const max = Math.min(natural || Infinity, window.innerHeight - 340);
-    setLayout((l) => ({
-      ...l,
-      timeline: Math.round(Math.max(80, Math.min(size, max))),
-    }));
+    setLayout((l) => ({ ...l, [timelineSize(mode)]: clamp(size, 80, max) }));
   }
   function resetLayout(key: keyof Layout) {
     setLayout((l) => ({ ...l, [key]: undefined }));
@@ -772,6 +823,14 @@ function EditorApp({
   const canShift = !busy && !draftDirty && !!cues.length;
   // Keyboard shortcuts (keymap.ts). A handler returning false did nothing,
   // so the key keeps its usual effect.
+  const inspectorTabs = [
+    { label: t.inspector.edit, value: "edit" },
+    { label: t.inspector.speakers, value: "speakers" },
+    {
+      label: `${t.inspector.suggestions}${pendingCount ? ` ${pendingCount}` : ""}`,
+      value: "suggestions",
+    },
+  ];
   const keyHandlers = useRef<Handlers>({});
   keyHandlers.current = {
     openProject: () => !busy && void replaceProject(Editor.OpenProject),
@@ -868,6 +927,8 @@ function EditorApp({
   return (
     <div
       className={`shell${isMac ? " mac" : ""}${customChrome ? " custom-chrome" : ""}`}
+      data-layout={mode}
+      data-hide={layout.hidden?.join(" ")}
     >
       <header
         className="titlebar"
@@ -1164,17 +1225,38 @@ function EditorApp({
       <div
         className="upper"
         ref={upperRef}
-        // Dragged widths apply to the three-column layout only; the
-        // stylesheet stacks the panes in narrower windows.
+        // The stylesheet arranges the panes by data-layout and data-hide;
+        // these are the sizes the user dragged in this arrangement.
         style={
           {
             "--left": layout.left && `minmax(240px, ${layout.left}px)`,
             "--right": layout.right && `minmax(260px, ${layout.right}px)`,
+            "--viewer":
+              mode !== "wide" && layout[viewerSize(mode)]
+                ? `minmax(${mode === "compact" ? 240 : 100}px, ${layout[viewerSize(mode)]}px)`
+                : undefined,
           } as CSSProperties
         }
       >
+        {stacked && paneShown("inspector") && (
+          <div className="work-tabs">
+            <Segmented
+              block
+              size="small"
+              value={listOpen ? "cues" : tab}
+              onChange={(v) => {
+                setListOpen(v === "cues");
+                if (v !== "cues") setTab(v as Tab);
+              }}
+              options={[
+                { label: t.cueList.title, value: "cues" },
+                ...inspectorTabs,
+              ]}
+            />
+          </div>
+        )}
         <section
-          className="cue-grid"
+          className={`cue-grid${listShown ? "" : " off"}`}
           ref={cueGridRef}
           aria-label={t.cueList.label}
         >
@@ -1260,15 +1342,32 @@ function EditorApp({
           </CueRows>
         </section>
 
-        <section className="viewer" aria-label={t.viewer.label}>
-          <Splitter
-            axis="x"
-            sign={1}
-            label={t.common.resizeWidth}
-            start={() => widthOf(cueGridRef.current)}
-            onResize={(size) => resizeColumn("left", size)}
-            onReset={() => resetLayout("left")}
-          />
+        <section className="viewer" ref={viewerRef} aria-label={t.viewer.label}>
+          {mode === "wide" ? (
+            <Splitter
+              axis="x"
+              sign={1}
+              label={t.common.resizeWidth}
+              start={() => widthOf(cueGridRef.current)}
+              onResize={(size) => resizeColumn("left", size)}
+              onReset={() => resetLayout("left")}
+            />
+          ) : (
+            <Splitter
+              end
+              axis={mode === "compact" ? "x" : "y"}
+              sign={1}
+              label={
+                mode === "compact" ? t.common.resizeWidth : t.common.resizeHeight
+              }
+              start={() => {
+                const box = viewerRef.current?.getBoundingClientRect();
+                return (mode === "compact" ? box?.width : box?.height) ?? 0;
+              }}
+              onResize={resizeViewer}
+              onReset={() => resetLayout(viewerSize(mode))}
+            />
+          )}
           <div className="viewer-frame">
             {mediaUrl ? (
               <>
@@ -1418,34 +1517,31 @@ function EditorApp({
         </section>
 
         <aside
-          className="inspector"
+          className={`inspector${inspectorOpen ? "" : " off"}`}
           ref={inspectorRef}
           aria-label={t.inspector.label}
         >
-          <Splitter
-            axis="x"
-            sign={-1}
-            label={t.common.resizeWidth}
-            start={() => widthOf(inspectorRef.current)}
-            onResize={(size) => resizeColumn("right", size)}
-            onReset={() => resetLayout("right")}
-          />
-          <div className="inspector-tabs">
-            <Segmented
-              block
-              size="small"
-              value={tab}
-              onChange={(v) => setTab(v as Tab)}
-              options={[
-                { label: t.inspector.edit, value: "edit" },
-                { label: t.inspector.speakers, value: "speakers" },
-                {
-                  label: `${t.inspector.suggestions}${pendingCount ? ` ${pendingCount}` : ""}`,
-                  value: "suggestions",
-                },
-              ]}
-            />
-          </div>
+          {!stacked && (
+            <>
+              <Splitter
+                axis="x"
+                sign={-1}
+                label={t.common.resizeWidth}
+                start={() => widthOf(inspectorRef.current)}
+                onResize={(size) => resizeColumn("right", size)}
+                onReset={() => resetLayout("right")}
+              />
+              <div className="inspector-tabs">
+                <Segmented
+                  block
+                  size="small"
+                  value={tab}
+                  onChange={(v) => setTab(v as Tab)}
+                  options={inspectorTabs}
+                />
+              </div>
+            </>
+          )}
           <div className="inspector-body" key={tab}>
             {tab === "edit" &&
               (cue ? (
@@ -1901,7 +1997,11 @@ function EditorApp({
       <div
         className="timeline-dock"
         ref={dockRef}
-        style={layout.timeline ? { height: layout.timeline } : undefined}
+        style={
+          layout[timelineSize(mode)]
+            ? { height: layout[timelineSize(mode)] }
+            : undefined
+        }
       >
         <Splitter
           axis="y"
@@ -1909,7 +2009,7 @@ function EditorApp({
           label={t.common.resizeHeight}
           start={() => dockRef.current?.getBoundingClientRect().height ?? 0}
           onResize={resizeTimeline}
-          onReset={() => resetLayout("timeline")}
+          onReset={() => resetLayout(timelineSize(mode))}
         />
         <Timeline
           duration={duration}
@@ -2066,8 +2166,33 @@ function EditorApp({
           </Space>
         )}
         <div className="spacer" />
+        <div className="pane-toggles">
+          {PANES.map((pane) => {
+            const Glyph = PANE_ICONS[pane];
+            const name = {
+              viewer: t.viewer.label,
+              inspector: t.inspector.label,
+              timeline: t.timeline.label,
+            }[pane];
+            const label = paneShown(pane)
+              ? t.layout.hide(name)
+              : t.layout.show(name);
+            return (
+              <Tooltip key={pane} title={label}>
+                <button
+                  type="button"
+                  aria-label={label}
+                  aria-pressed={paneShown(pane)}
+                  onClick={() => setLayout((l) => togglePane(l, pane))}
+                >
+                  <Glyph size={14} {...decorative} />
+                </button>
+              </Tooltip>
+            );
+          })}
+        </div>
         {cue && (
-          <span className="mono">
+          <span className="mono selected-info">
             {t.status.selected(cue.identifier)} · {formatTime(cue.start)} →{" "}
             {formatTime(cue.end)}
           </span>

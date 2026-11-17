@@ -170,6 +170,10 @@ export const jaJP: Messages = {
     ok: "ずらす",
     unit: "秒",
   },
+  layout: {
+    show: (pane) => `${pane}を表示`,
+    hide: (pane) => `${pane}を隠す`,
+  },
   replace: {
     title: "検索と置換",
     menu: "検索と置換…",
