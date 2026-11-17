@@ -187,7 +187,8 @@ try {
     await sleep(120);
   }
   const KEY_CODES = { Enter: 13, ArrowLeft: 37, ArrowDown: 40 };
-  const CONTROL = 2;
+  // The keymap's $mod: ⌘ on macOS, Ctrl elsewhere.
+  const MOD = process.platform === "darwin" ? 4 : 2;
 
   // Page-side helpers.
   const rect = (selector) =>
@@ -300,7 +301,7 @@ try {
     await evaluate(`document.activeElement.tagName === "TEXTAREA" && !!document.activeElement.closest(".inspector")`),
   );
   await send("Input.insertText", { text: " smoke" });
-  await press("Enter", "Enter", CONTROL);
+  await press("Enter", "Enter", MOD);
   await evaluate(`document.querySelectorAll(".work-tabs .ant-segmented-item input")[0].click()`);
   await until(`document.querySelector(".cue-row .row-text")?.innerText.endsWith(" smoke")`, "the edit to apply");
   check("the edit reaches the cue list", true);
