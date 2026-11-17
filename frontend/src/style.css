@@ -1841,7 +1841,9 @@ textarea.subtitle-text,
 }
 [data-layout="column"] .upper {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: var(--viewer, minmax(0, 2fr)) auto minmax(0, 3fr);
+  /* The work area keeps some height below a viewer dragged tall in a
+     larger window. */
+  grid-template-rows: var(--viewer, minmax(0, 2fr)) auto minmax(120px, 3fr);
   grid-template-areas: "viewer" "tabs" "work";
 }
 [data-layout="column"] .viewer {

@@ -666,10 +666,13 @@ function EditorApp({
   function resizeViewer(size: number) {
     if (mode === "wide") return;
     const box = upperRef.current?.getBoundingClientRect();
-    const [min, max] =
+    // The work area keeps 280px of width or 160px of height. In a window
+    // too small for the viewer's usual minimum as well, the viewer gives way.
+    const [least, max] =
       mode === "compact"
         ? [240, (box?.width ?? 0) - 280]
         : [100, (box?.height ?? 0) - 160];
+    const min = Math.max(0, Math.min(least, max));
     setLayout((l) => ({ ...l, [viewerSize(mode)]: clamp(size, min, max) }));
   }
   // The timeline can shrink, with its tracks scrolling, but never grow past
@@ -1233,7 +1236,9 @@ function EditorApp({
             "--right": layout.right && `minmax(260px, ${layout.right}px)`,
             "--viewer":
               mode !== "wide" && layout[viewerSize(mode)]
-                ? `minmax(${mode === "compact" ? 240 : 100}px, ${layout[viewerSize(mode)]}px)`
+                ? // No minimum: a size dragged in a larger window must not
+                  // push the work area out of a smaller one.
+                  `minmax(0, ${layout[viewerSize(mode)]}px)`
                 : undefined,
           } as CSSProperties
         }
