@@ -73,6 +73,7 @@ import {
   type Handlers,
   shortcutOf,
 } from "./keymap";
+import ReplaceDialog from "./ReplaceDialog";
 import ShiftDialog from "./ShiftDialog";
 import ShortcutsDialog from "./ShortcutsDialog";
 import type { ZoomRequest } from "./Timeline";
@@ -217,6 +218,7 @@ function EditorApp({
   const [overlayEditing, setOverlayEditing] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [shiftOpen, setShiftOpen] = useState(false);
+  const [replaceOpen, setReplaceOpen] = useState(false);
   const [zoomRequest, setZoomRequest] = useState<ZoomRequest>();
   const [layout, setLayout] = useState<Layout>(loadLayout);
   const upperRef = useRef<HTMLDivElement>(null);
@@ -777,6 +779,7 @@ function EditorApp({
     import: () => !busy && void setImportTab("local"),
     exportSrt: () => !busy && !!p && void save(true),
     shiftCues: () => canShift && setShiftOpen(true),
+    findReplace: () => canShift && setReplaceOpen(true),
     settings: () => void Editor.OpenSettings(),
     dictionary: () => void Editor.OpenDictionary(),
     shortcuts: () => setShortcutsOpen(true),
@@ -974,6 +977,15 @@ function EditorApp({
                       ),
                       disabled: !canShift,
                       onClick: () => setShiftOpen(true),
+                    },
+                    {
+                      key: "replace",
+                      label: t.editor.withShortcut(
+                        t.replace.menu,
+                        shortcutOf("findReplace"),
+                      ),
+                      disabled: !canShift,
+                      onClick: () => setReplaceOpen(true),
                     },
                     {
                       key: "settings",
@@ -2074,6 +2086,19 @@ function EditorApp({
         playhead={cue && mediaUrl ? playhead : undefined}
         onClose={() => setShiftOpen(false)}
         onShift={async (seconds) => !!(await update(() => Editor.ShiftCues(seconds)))}
+      />
+      <ReplaceDialog
+        open={replaceOpen}
+        busy={busy}
+        cues={cues}
+        initial={query}
+        onClose={() => setReplaceOpen(false)}
+        onReplace={async (find, replacement, matchCase, matches) => {
+          if (!(await update(() => Editor.ReplaceText(find, replacement, matchCase))))
+            return false;
+          void message.success(t.replace.done(matches));
+          return true;
+        }}
       />
       <ImportDialog
         open={importTab !== null}

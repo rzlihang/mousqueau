@@ -217,6 +217,13 @@ export function RemoveProviderKey(id: string): $CancellablePromise<$models.Setti
     return $Call.ByID(2665307956, id);
 }
 
+/**
+ * ReplaceText replaces every occurrence of find in the subtitle text.
+ */
+export function ReplaceText(find: string, replacement: string, matchCase: boolean): $CancellablePromise<$models.Snapshot> {
+    return $Call.ByID(3319825511, find, replacement, matchCase);
+}
+
 export function SaveProject(): $CancellablePromise<string> {
     return $Call.ByID(2582404462);
 }

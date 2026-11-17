@@ -925,6 +925,7 @@ var fileCommands = []menuCommand{
 	{i18n.N("Import…"), "CmdOrCtrl+I", "import"},
 	{i18n.N("Export SRT…"), "CmdOrCtrl+E", "exportSrt"},
 	{i18n.N("Shift All Subtitles…"), "CmdOrCtrl+Shift+T", "shiftCues"},
+	{i18n.N("Find and Replace…"), "CmdOrCtrl+Shift+F", "findReplace"},
 }
 
 var helpCommands = []menuCommand{

@@ -74,6 +74,7 @@ export const enUS: Messages = {
       mergePrevious: "Merge with previous",
       toggleReview: "Mark for review",
       shiftCues: "Shift All Subtitles",
+      findReplace: "Find and Replace",
       zoomIn: "Zoom in",
       zoomOut: "Zoom out",
       zoomToCue: "Zoom to the subtitle",
@@ -167,6 +168,18 @@ export const enUS: Messages = {
     align: "Align Selected to Playhead",
     ok: "Shift",
     unit: "s",
+  },
+  replace: {
+    title: "Find and Replace",
+    menu: "Find and Replace…",
+    find: "Find",
+    with: "Replace with",
+    matchCase: "Match case",
+    ok: "Replace All",
+    count: (n, cues) =>
+      `${plural(n, "match", "matches")} in ${plural(cues, "subtitle", "subtitles")}`,
+    none: "No matches",
+    done: (n) => `Replaced ${plural(n, "match", "matches")}`,
   },
   cueList: {
     label: "Subtitle list",

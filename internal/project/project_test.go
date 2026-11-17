@@ -389,3 +389,53 @@ func TestShiftRejectsInvalidOffsets(t *testing.T) {
 		t.Fatalf("shift to zero: %v", err)
 	}
 }
+
+func TestReplaceChangesEveryMatchAsOneUndoStep(t *testing.T) {
+	p := New([]subtitle.Cue{
+		{ID: "c1", Identifier: "1", Start: 1, End: 2, Text: "Editor and editor", SpeakerIDs: []string{}},
+		{ID: "c2", Identifier: "2", Start: 3, End: 4, Text: "- the editor\n- 編集器", SpeakerIDs: []string{"A", "B"},
+			Lines: []subtitle.Line{{Text: "the editor", SpeakerIDs: []string{"A"}}, {Text: "編集器", SpeakerIDs: []string{"B"}}}},
+		{ID: "c3", Identifier: "3", Start: 5, End: 6, Text: "其他", SpeakerIDs: []string{}},
+	}, "original.srt")
+	n, err := p.Replace("editor", "tool", false)
+	if err != nil || n != 3 {
+		t.Fatalf("replace: %d %v", n, err)
+	}
+	got := p.State.Cues
+	if got[0].Text != "tool and tool" || got[1].Text != "- the tool\n- 編集器" || got[1].Lines[0].Text != "the tool" || got[1].Lines[1].SpeakerIDs[0] != "B" || got[2].Text != "其他" {
+		t.Fatalf("replaced cues: %+v", got)
+	}
+	if p.Original[0].Text != "Editor and editor" || len(p.Undo) != 1 {
+		t.Fatal("originals changed or more than one undo step")
+	}
+	p.UndoEdit()
+	if p.State.Cues[0].Text != "Editor and editor" || p.State.Cues[1].Lines[0].Text != "the editor" {
+		t.Fatal("undo")
+	}
+	if n, err := p.Replace("editor", "tool", true); err != nil || n != 2 || p.State.Cues[0].Text != "Editor and tool" {
+		t.Fatalf("match case: %d %v %q", n, err, p.State.Cues[0].Text)
+	}
+	// The pattern is literal text, and so is the replacement.
+	if n, err := p.Replace(".", "$1", true); err == nil || n != 0 {
+		t.Fatalf("literal dot matched: %d %v", n, err)
+	}
+	if n, err := p.Replace("其他", "$1.", true); err != nil || n != 1 || p.State.Cues[2].Text != "$1." {
+		t.Fatalf("literal replacement: %d %v %q", n, err, p.State.Cues[2].Text)
+	}
+}
+
+func TestReplaceRejectsWhatItCannotApply(t *testing.T) {
+	p := New([]subtitle.Cue{
+		{ID: "c1", Identifier: "1", Start: 1, End: 2, Text: "一", SpeakerIDs: []string{}},
+		{ID: "c2", Identifier: "2", Start: 3, End: 4, Text: "- 二\n- 三", SpeakerIDs: []string{},
+			Lines: []subtitle.Line{{Text: "二", SpeakerIDs: []string{}}, {Text: "三", SpeakerIDs: []string{}}}},
+	}, "original.srt")
+	for _, tc := range [][2]string{{"", "x"}, {"四", "x"}, {"一", ""}, {"三", " "}, {"一\n", "x"}, {"一", "x\ny"}} {
+		if n, err := p.Replace(tc[0], tc[1], true); err == nil || n != 0 {
+			t.Fatalf("replace %q with %q accepted", tc[0], tc[1])
+		}
+	}
+	if len(p.Undo) != 0 || p.State.Cues[0].Text != "一" || p.State.Cues[1].Lines[1].Text != "三" {
+		t.Fatal("rejected replace changed the project")
+	}
+}
