@@ -31,7 +31,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^5.2.2",
     "vite": "^8.0.5",
-    "vitest": "^4.0.0"
+    "vitest": "^4.1.12"
   },
   "packageManager": "pnpm@12.10.1"
 }
