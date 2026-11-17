@@ -333,3 +333,9 @@ Not verified, and still needs a real Mac: launching the app, the window-reveal a
 - No behaviour change intended. `pnpm run typecheck`, `pnpm test` (64 tests) and `node scripts/editor-smoke.mjs` (32 checks) passed.
 - Headless Chromium against the server-mode build, English: the cue list's count and search; in the Edit tab, changing End and applying, accepting the cue's suggestion, Merge Next, Undo and Merge Previous; the Speakers tab's counts; the Fixes tab's four cards.
 - Not checked: Split, moving selected words to a speaker's line, the dictionary actions, renaming or adding a speaker, the cue list's filter menu, and native GUI.
+
+## Playback hook and viewer split out of `App.tsx`
+
+- No behaviour change intended. `pnpm run typecheck`, `pnpm test` (64 tests) and `node scripts/editor-smoke.mjs` (32 checks) passed.
+- Headless Chromium against the server-mode build, opening at launch a project that names a generated 20-second WebM clip (320×180 test pattern, sine tone) with four cues: the clock showed the media's 20.003 s; selecting a cue sought to its start; Space played and the button became Pause; K paused; L moved +2 s; Shift+J clamped at 0; ] and [ and the speed menu changed `playbackRate` and the menu's label together; ArrowDown selected the next cue and sought to it; playing across a cue boundary moved the selection and the subtitle over the picture; a click on the timeline sought; with the viewer hidden, playback continued and Space paused it.
+- Not checked: audio-only media (the "audio only" note), the media-error message, the display staying awake, H.264/MP4, and the native WebView's own codecs on any platform.
