@@ -55,6 +55,19 @@ export interface ProviderView {
 }
 
 /**
+ * Recovery describes the recovery file left by an earlier session.
+ */
+export interface Recovery {
+    "available": boolean;
+
+    /**
+     * RFC 3339
+     */
+    "savedAt": string;
+    "cues": number;
+}
+
+/**
  * SettingsView is what the settings and welcome windows show. It never
  * contains an API key, only where one comes from.
  */

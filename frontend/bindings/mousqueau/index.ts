@@ -9,6 +9,7 @@ export {
 export type {
     DictionaryView,
     ProviderView,
+    Recovery,
     SettingsView,
     Snapshot,
     Status,

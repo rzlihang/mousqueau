@@ -163,6 +163,13 @@ export const zhCN = {
     show: (pane: string) => `显示${pane}`,
     hide: (pane: string) => `隐藏${pane}`,
   },
+  recovery: {
+    title: "恢复未保存的内容？",
+    content: (when: string, cues: number) =>
+      `Mousqueau 上次关闭时有未保存的修改：共 ${cues} 句，最后修改于 ${when}。丢弃后无法找回。`,
+    restore: "恢复",
+    discard: "丢弃",
+  },
   replace: {
     title: "查找和替换",
     menu: "查找和替换…",

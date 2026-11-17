@@ -72,6 +72,7 @@ var zhTW = map[string]string{
 	// Editor
 	"wait for processing to finish or cancel it":                    "請等待處理完成，或取消處理",
 	"import SRT subtitles first":                                    "請先匯入 SRT 字幕",
+	"there is no unsaved work to restore":                           "沒有可復原的未儲存內容",
 	"import local media first":                                      "請先匯入本機媒體",
 	"selected media file is unavailable":                            "所選媒體檔案無法使用",
 	"choose a new output file to preserve the imported source":      "請選擇新的輸出檔案，以保留匯入的原始檔案",

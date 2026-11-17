@@ -73,6 +73,7 @@ var zhCN = map[string]string{
 	// Editor
 	"wait for processing to finish or cancel it":                    "请等待处理完成，或取消处理",
 	"import SRT subtitles first":                                    "请先导入 SRT 字幕",
+	"there is no unsaved work to restore":                           "没有可恢复的未保存内容",
 	"import local media first":                                      "请先导入本地媒体",
 	"selected media file is unavailable":                            "所选媒体文件不可用",
 	"choose a new output file to preserve the imported source":      "请选择新的输出文件，以保留导入的原始文件",

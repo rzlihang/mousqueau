@@ -329,7 +329,8 @@ function EditorApp({
   useEffect(() => {
     void Editor.GetSnapshot()
       .then(setSnapshot)
-      .catch((e) => message.error(errorText(e)));
+      .catch((e) => message.error(errorText(e)))
+      .then(offerRecovery);
     void refreshStatus();
     void Editor.GetDictionary()
       .then((v) => setDictEntries(v.entries ?? []))
@@ -452,6 +453,42 @@ function EditorApp({
       setWorking(false);
       void refreshStatus();
     }
+  }
+  // Unsaved work an earlier session left behind is offered once, at launch.
+  // The dialog takes an answer either way: until then Go keeps the file.
+  async function offerRecovery() {
+    const found = await Editor.RecoveryInfo().catch(() => null);
+    if (!found?.available) return;
+    modal.confirm({
+      title: t.recovery.title,
+      content: t.recovery.content(
+        // <html lang> carries the interface language.
+        new Date(found.savedAt).toLocaleString(
+          document.documentElement.lang || undefined,
+        ),
+        found.cues,
+      ),
+      okText: t.recovery.restore,
+      cancelText: t.recovery.discard,
+      closable: false,
+      keyboard: false,
+      maskClosable: false,
+      onOk: async () => {
+        try {
+          const restored = await Editor.RestoreRecovery();
+          setSnapshot(restored);
+          setSelected(restored.project?.state.cues?.[0]?.id ?? "");
+          setDraftDirty(false);
+          setDirty(true);
+        } catch (e) {
+          void message.error(errorText(e));
+        }
+      },
+      onCancel: () =>
+        void Editor.DiscardRecovery().catch((e) =>
+          message.error(errorText(e)),
+        ),
+    });
   }
   async function update(action: () => Promise<Snapshot>) {
     const result = await run(action);

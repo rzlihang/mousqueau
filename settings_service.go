@@ -12,6 +12,7 @@ import (
 	"mousqueau/internal/update"
 	"net/url"
 	"os"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -334,6 +335,10 @@ func (s *EditorService) loadSettings() {
 	if path, err := settings.Path(); err == nil {
 		s.settingsPath = path
 		s.settings, _ = settings.Load(path)
+		s.recoveryPath = filepath.Join(filepath.Dir(path), "recovery.json")
+		if _, err := os.Stat(s.recoveryPath); err == nil {
+			s.recoveryHeld = true
+		}
 	}
 	media.SetToolPath("ffmpeg", s.settings.FFmpegPath)
 	media.SetToolPath("yt-dlp", s.settings.YTDLPPath)
@@ -356,6 +361,7 @@ func (s *EditorService) loadSettings() {
 			s.project = p
 			s.mediaPath = p.VideoPath
 			s.mediaRevision++
+			s.markCleanLocked()
 		}
 	}
 }
