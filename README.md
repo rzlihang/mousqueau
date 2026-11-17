@@ -145,7 +145,10 @@ CGO_ENABLED=0 wails3 generate bindings -ts -i -f '-tags=server'
 CGO_ENABLED=0 go test -tags server ./...
 CGO_ENABLED=0 go build -tags server -o /tmp/mousqueau-headless .
 WAILS_SERVER_HOST=127.0.0.1 WAILS_SERVER_PORT=9246 /tmp/mousqueau-headless
+node scripts/editor-smoke.mjs /tmp/mousqueau-headless
 ```
+
+`scripts/editor-smoke.mjs` starts that build with an empty configuration on a free loopback port and drives it in headless Chrome or Chromium (set `CHROME` if it is not on `PATH`): the arrangement each window shape gets, nothing cut off, the work-area tabs, hiding panes, the dividers, and editing text with the viewer hidden. It needs no packages beyond Node 22.
 
 The headless build uses real Wails bindings and allows a browser to exercise the editor/demo; native file dialogs are unsupported there. Keep it on loopback: this is a desktop application, not a remotely hosted authenticated service. Never claim this verifies macOS GUI behavior. CI checks core/frontend/server, builds native macOS and Windows binaries and runs the Go tests on both, and builds the native Linux desktop app and runs the GUI smoke test above; automated builds do not replace GUI testing on a real Mac or Windows PC.
 

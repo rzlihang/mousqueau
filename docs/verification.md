@@ -315,3 +315,9 @@ Not verified, and still needs a real Mac: launching the app, the window-reveal a
 - Frontend `pnpm run typecheck` and `pnpm test` (64 tests) passed. Bindings were regenerated.
 - Headless Chromium against the server-mode build with an isolated configuration directory: loading the demo wrote no file; editing a cue wrote `recovery.json` (mode 600) within 2.5 seconds; after `kill -9` of the server and a restart the editor asked "Restore unsaved work?" with the cue count and time; Restore brought back the edited text with Undo available and the project marked edited, and kept the file; after another kill and restart, Discard removed the file and left the editor empty.
 - Not checked: a real crash or quit of the native application on any platform, the dialog in Chinese and Japanese, and a project large enough for the write to take noticeable time.
+
+## Editor smoke script
+
+- `node scripts/editor-smoke.mjs <server-mode binary>` passed locally, 32 checks, against Google Chrome in headless mode: the arrangement at seven window sizes with nothing cut off, the work-area tabs, the dividers with a size per arrangement, the transport inside a 200px viewer, hiding the timeline and the viewer, editing text in the inspector with the viewer hidden, and no page errors. CI runs it in the `verify` job.
+- Its first run found a cue-list header cell 2px past a 260px-wide list at 480×420; the list now drops its length and speaker columns below 400px.
+- It is a browser check: the native window, pointer dragging, and playback are not covered.

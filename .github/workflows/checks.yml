@@ -43,6 +43,8 @@ jobs:
       - run: node scripts/notices.mjs && git diff --exit-code -- THIRD_PARTY_NOTICES.txt
       - run: CGO_ENABLED=0 go test -tags server ./...
       - run: CGO_ENABLED=0 go build -tags server -o /tmp/mousqueau-headless .
+      # The pane arrangements in headless Chrome; a browser check only.
+      - run: node scripts/editor-smoke.mjs /tmp/mousqueau-headless
   macos-build:
     runs-on: macos-latest
     steps:
