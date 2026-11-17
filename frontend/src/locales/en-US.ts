@@ -169,6 +169,10 @@ export const enUS: Messages = {
     ok: "Shift",
     unit: "s",
   },
+  layout: {
+    show: (pane) => `Show ${pane}`,
+    hide: (pane) => `Hide ${pane}`,
+  },
   replace: {
     title: "Find and Replace",
     menu: "Find and Replace…",

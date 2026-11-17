@@ -1782,31 +1782,165 @@ textarea.subtitle-text,
   flex: none;
 }
 
-/* A tiled or halved window: the viewer and inspector share the top row and
-   the cue list takes the full width below. */
-@media (max-width: 999px) {
-  .upper {
-    grid-template-columns: minmax(0, 1fr) 320px;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas:
-      "viewer inspector"
-      "cues cues";
+/* Arrangements (layout.ts). The window's shape sets data-layout on the shell
+   and the hidden panes are listed in data-hide. */
+[data-hide~="viewer"] .viewer,
+[data-hide~="inspector"] .inspector,
+.upper > .off {
+  display: none;
+}
+/* Wide: the columns close up around a hidden pane. */
+[data-hide~="viewer"] .upper {
+  grid-template-columns: minmax(240px, 1fr) var(--right, 340px);
+}
+[data-hide~="inspector"] .upper {
+  grid-template-columns: var(--left, minmax(300px, 1fr)) minmax(320px, 1fr);
+}
+[data-hide~="viewer"][data-hide~="inspector"] .upper {
+  grid-template-columns: minmax(0, 1fr);
+}
+/* The timeline keeps its width while hidden, so its zoom survives. */
+.shell[data-hide~="timeline"] {
+  grid-template-rows: 52px minmax(0, 1fr) 0 28px;
+}
+[data-hide~="timeline"] .timeline-dock {
+  height: 0 !important;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+/* Compact and column: the cue list and the inspector share the work area
+   under one row of tabs, beside or below the viewer. */
+.shell:not([data-layout="wide"]) .cue-grid,
+.shell:not([data-layout="wide"]) .inspector {
+  grid-area: work;
+  min-width: 0;
+  border-right: 0;
+}
+.shell:not([data-layout="wide"]) .viewer {
+  grid-area: viewer;
+}
+.work-tabs {
+  grid-area: tabs;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.work-tabs .ant-segmented {
+  width: 100%;
+}
+[data-layout="compact"] .upper {
+  grid-template-columns: var(--viewer, minmax(0, 1fr)) minmax(260px, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "viewer tabs"
+    "viewer work";
+}
+[data-layout="column"] .upper {
+  grid-template-columns: minmax(0, 1fr);
+  /* The work area keeps some height below a viewer dragged tall in a
+     larger window. */
+  grid-template-rows: var(--viewer, minmax(0, 2fr)) auto minmax(120px, 3fr);
+  grid-template-areas: "viewer" "tabs" "work";
+}
+[data-layout="column"] .viewer {
+  border-right: 0;
+  border-bottom: 1px solid var(--line);
+}
+.shell:not([data-layout="wide"])[data-hide~="viewer"] .upper {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "tabs" "work";
+}
+[data-layout="column"] .timeline-dock {
+  max-height: 34vh;
+}
+.splitter-x.splitter-end {
+  left: auto;
+  right: -3px;
+}
+.splitter-y.splitter-end {
+  top: auto;
+  bottom: -3px;
+}
+/* A narrow viewer puts the playback buttons on a row of their own. */
+.viewer {
+  container-type: inline-size;
+}
+@container (max-width: 360px) {
+  .transport {
+    height: auto;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px 8px;
+    padding: 6px 8px;
   }
-  .cue-grid {
-    grid-area: cues;
-    border-right: 0;
-    border-top: 1px solid var(--line);
+  .clock {
+    font-size: 13px;
   }
-  .viewer {
-    grid-area: viewer;
-  }
-  .inspector {
-    grid-area: inspector;
-    min-width: 0;
-  }
-  .upper .splitter-x {
+  .clock .muted {
     display: none;
   }
+  .transport-buttons {
+    order: 1;
+    flex: 1 0 100%;
+  }
+}
+
+/* A narrow cue list drops its heading for the search and the filter. */
+.cue-grid {
+  container-type: inline-size;
+}
+@container (max-width: 400px) {
+  .cue-grid .pane-toolbar > h2,
+  .cue-grid .pane-toolbar > .muted {
+    display: none;
+  }
+  .cue-grid .pane-toolbar .ant-input-affix-wrapper {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* Pane toggles in the status bar */
+.pane-toggles {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+.pane-toggles button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: min(4px, var(--radius, 4px));
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: default;
+}
+.pane-toggles button[aria-pressed="true"] {
+  color: var(--ink);
+  opacity: 1;
+}
+.pane-toggles button:hover,
+.pane-toggles button:focus-visible {
+  background: var(--select);
+  outline: none;
+}
+.selected-info {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 999px) {
   .project-title span,
   .timeline-toolbar > .mono {
     display: none;
@@ -1820,22 +1954,7 @@ textarea.subtitle-text,
     padding-block: 5px;
   }
 }
-/* A narrow column: the three panes stack. */
 @media (max-width: 699px) {
-  .upper {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 5fr) minmax(0, 6fr) minmax(0, 8fr);
-    grid-template-areas: "viewer" "cues" "inspector";
-  }
-  .viewer {
-    border-right: 0;
-  }
-  .inspector {
-    border-top: 1px solid var(--line);
-  }
-  .timeline-dock {
-    max-height: 30vh;
-  }
   .titlebar {
     gap: 6px;
     padding-left: 10px;

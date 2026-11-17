@@ -8,6 +8,7 @@ import type { KeyboardEvent, PointerEvent } from "react";
 export default function Splitter({
   axis,
   sign,
+  end,
   label,
   start,
   onResize,
@@ -15,6 +16,8 @@ export default function Splitter({
 }: {
   axis: "x" | "y";
   sign: 1 | -1;
+  // On the pane's right or bottom edge rather than its left or top.
+  end?: boolean;
   label: string;
   start: () => number;
   onResize: (size: number) => void;
@@ -60,7 +63,7 @@ export default function Splitter({
       aria-orientation={axis === "x" ? "vertical" : "horizontal"}
       aria-label={label}
       title={label}
-      className={`splitter splitter-${axis}`}
+      className={`splitter splitter-${axis}${end ? " splitter-end" : ""}`}
       onPointerDown={down}
       onKeyDown={key}
       onDoubleClick={onReset}

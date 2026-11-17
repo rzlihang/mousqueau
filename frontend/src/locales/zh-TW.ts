@@ -161,6 +161,10 @@ export const zhTW: Messages = {
     ok: "位移",
     unit: "秒",
   },
+  layout: {
+    show: (pane) => `顯示${pane}`,
+    hide: (pane) => `隱藏${pane}`,
+  },
   replace: {
     title: "尋找與取代",
     menu: "尋找與取代…",

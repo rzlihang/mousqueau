@@ -159,6 +159,10 @@ export const zhCN = {
     ok: "偏移",
     unit: "秒",
   },
+  layout: {
+    show: (pane: string) => `显示${pane}`,
+    hide: (pane: string) => `隐藏${pane}`,
+  },
   replace: {
     title: "查找和替换",
     menu: "查找和替换…",
