@@ -1149,15 +1149,14 @@ function EditorApp({
       <div
         className="upper"
         ref={upperRef}
-        style={{
-          gridTemplateColumns: [
-            layout.left
-              ? `minmax(240px, ${layout.left}px)`
-              : "minmax(400px, 1.2fr)",
-            `minmax(${VIEWER_MIN}px, 1fr)`,
-            layout.right ? `minmax(260px, ${layout.right}px)` : "340px",
-          ].join(" "),
-        }}
+        // Dragged widths apply to the three-column layout only; the
+        // stylesheet stacks the panes in narrower windows.
+        style={
+          {
+            "--left": layout.left && `minmax(240px, ${layout.left}px)`,
+            "--right": layout.right && `minmax(260px, ${layout.right}px)`,
+          } as CSSProperties
+        }
       >
         <section
           className="cue-grid"

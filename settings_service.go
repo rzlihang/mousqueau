@@ -826,6 +826,11 @@ func (s *EditorService) TakePendingAction() string {
 	return action
 }
 
+// The editor's smallest usable size. A tiling window manager gives a window
+// less than its minimum anyway and the toolkit then draws past the tile, so
+// the minimum stays low and the frontend stacks its panes instead.
+const minEditorWidth, minEditorHeight = 480, 420
+
 // openWindows creates the editor, and on first launch the welcome window in
 // front of it while the editor stays hidden.
 func (s *EditorService) openWindows() {
@@ -838,7 +843,7 @@ func (s *EditorService) openWindows() {
 	// deferral on its own: || would skip it on first launch, when the editor
 	// is already hidden, and the web view would stay white until it is shown.
 	deferShow := s.deferWindowShow(mainWindow, setupDone)
-	editor := s.app.Window.NewWithOptions(application.WebviewWindowOptions{Name: mainWindow, Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: 1100, MinHeight: 720,
+	editor := s.app.Window.NewWithOptions(application.WebviewWindowOptions{Name: mainWindow, Title: "Mousqueau", Width: 1440, Height: 920, MinWidth: minEditorWidth, MinHeight: minEditorHeight,
 		URL: windowURL(mainWindow, s.theme(), windowSystemTheme(s.app)), BackgroundColour: ground(dark),
 		Hidden: !setupDone || deferShow,
 		// The frontend draws the toolbar under the traffic lights, or with its
