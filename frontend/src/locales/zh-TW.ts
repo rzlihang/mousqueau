@@ -190,7 +190,7 @@ export const zhTW: Messages = {
       lines: "行過多",
     },
     details: {
-      overlap: "開始時間早於上一條字幕的結束時間",
+      overlap: "開始時間早於前面字幕的結束時間",
       short: (limit) => `長度不足 ${limit} 秒`,
       long: (limit) => `長度超過 ${limit} 秒`,
       fast: (limit) => `字速超過 ${limit} 字／秒`,

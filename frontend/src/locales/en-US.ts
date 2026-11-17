@@ -198,7 +198,7 @@ export const enUS: Messages = {
       lines: "Lines",
     },
     details: {
-      overlap: "Starts before the previous subtitle ends",
+      overlap: "Starts before an earlier subtitle ends",
       short: (limit) => `Shorter than ${limit} s`,
       long: (limit) => `Longer than ${limit} s`,
       fast: (limit) => `Faster than ${limit} characters/s`,

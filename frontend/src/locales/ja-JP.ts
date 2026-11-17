@@ -199,7 +199,7 @@ export const jaJP: Messages = {
       lines: "行が多い",
     },
     details: {
-      overlap: "前の字幕が終わる前に始まります",
+      overlap: "それより前の字幕が終わる前に始まります",
       short: (limit) => `長さが ${limit} 秒未満です`,
       long: (limit) => `長さが ${limit} 秒を超えています`,
       fast: (limit) => `${limit} 文字/秒を超えています`,

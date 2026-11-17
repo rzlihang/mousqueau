@@ -188,7 +188,7 @@ export const zhCN = {
       lines: "行过多",
     },
     details: {
-      overlap: "开始时间早于上一条字幕的结束时间",
+      overlap: "开始时间早于前面字幕的结束时间",
       short: (limit: string) => `时长不足 ${limit} 秒`,
       long: (limit: string) => `时长超过 ${limit} 秒`,
       fast: (limit: string) => `字速超过 ${limit} 字／秒`,

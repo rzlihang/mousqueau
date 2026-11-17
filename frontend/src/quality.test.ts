@@ -15,9 +15,13 @@ describe("quality checks", () => {
       [],
     );
   });
-  it("flags a cue that starts before the previous one ends", () => {
+  it("flags a cue that starts before an earlier one ends", () => {
     const cues = [cue("a", 0, 2, "一"), cue("b", 1.5, 3.5, "二"), cue("c", 3.5, 5, "三")];
     expect([...qualityIssues(cues)]).toEqual([["b", ["overlap"]]]);
+  });
+  it("flags a cue inside an earlier one that is still showing", () => {
+    const cues = [cue("a", 0, 6, "一"), cue("b", 1, 2, "二"), cue("c", 3, 4, "三"), cue("d", 6, 7, "四")];
+    expect([...qualityIssues(cues).keys()]).toEqual(["b", "c"]);
   });
   it("flags durations outside the limits, allowing for rounding", () => {
     expect(cueIssues(cue("a", 0, 0.5, "好"))).toEqual(["short"]);

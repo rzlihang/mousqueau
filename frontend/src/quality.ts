@@ -50,12 +50,16 @@ export function readingRate(text: string, start: number, end: number): number {
 
 type CueLike = { id: string; start: number; end: number; text: string };
 
-/** The issues of one cue; `previous` is the cue before it in the list. */
-export function cueIssues(cue: CueLike, previous?: CueLike): QualityIssue[] {
+/**
+ * The issues of one cue; `earlierEnd` is the latest end among the cues before
+ * it in the list, so a cue inside a long earlier one is caught too.
+ */
+export function cueIssues(cue: CueLike, earlierEnd?: number): QualityIssue[] {
   const issues: QualityIssue[] = [];
   const duration = cue.end - cue.start;
   // Half a millisecond absorbs the rounding of SRT timestamps.
-  if (previous && cue.start < previous.end - 0.0005) issues.push("overlap");
+  if (earlierEnd !== undefined && cue.start < earlierEnd - 0.0005)
+    issues.push("overlap");
   if (duration < QUALITY.minDuration - 0.0005) issues.push("short");
   if (duration > QUALITY.maxDuration + 0.0005) issues.push("long");
   const lines = rows(cue.text);
@@ -73,10 +77,12 @@ export function cueIssues(cue: CueLike, previous?: CueLike): QualityIssue[] {
 /** Issues by cue ID, for the cues that have any. */
 export function qualityIssues(cues: CueLike[]): Map<string, QualityIssue[]> {
   const found = new Map<string, QualityIssue[]>();
-  cues.forEach((cue, i) => {
-    const issues = cueIssues(cue, cues[i - 1]);
+  let earlierEnd: number | undefined;
+  for (const cue of cues) {
+    const issues = cueIssues(cue, earlierEnd);
     if (issues.length) found.set(cue.id, issues);
-  });
+    earlierEnd = Math.max(earlierEnd ?? cue.end, cue.end);
+  }
   return found;
 }
 
