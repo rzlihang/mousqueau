@@ -134,3 +134,4 @@ export function usePaneLayout() {
     } as CSSProperties,
   };
 }
+export type PaneLayout = ReturnType<typeof usePaneLayout>;

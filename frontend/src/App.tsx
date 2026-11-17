@@ -23,17 +23,9 @@ import {
   Space,
   theme,
 } from "antd";
-import {
-  IconPlayerPause,
-  IconPlayerPlay,
-  IconPlayerSkipBack,
-  IconPlayerSkipForward,
-} from "@tabler/icons-react";
-import IconButton from "./IconButton";
 import ImportDialog, { type ImportTab } from "./ImportDialog";
 import {
   antdIconConfig,
-  decorative,
   numberControls,
   statusIcon,
   useAntApp,
@@ -56,7 +48,6 @@ import {
   type CommandId,
   lastRun,
   type Handlers,
-  shortcutOf,
 } from "./keymap";
 import ReplaceDialog from "./ReplaceDialog";
 import ShiftDialog from "./ShiftDialog";
@@ -95,7 +86,7 @@ import {
 } from "./preferences";
 import SettingsWindow from "./SettingsWindow";
 import DictionaryWindow from "./DictionaryWindow";
-import { timelineSize, viewerSize } from "./layout";
+import { timelineSize } from "./layout";
 import { qualityIssues } from "./quality";
 import { type Draft, EMPTY_DRAFT, type Tab, draftOf } from "./draft";
 import CueList from "./CueList";
@@ -106,7 +97,9 @@ import Splitter from "./Splitter";
 import StatusBar from "./StatusBar";
 import Timeline from "./Timeline";
 import TitleBar from "./TitleBar";
+import Viewer from "./Viewer";
 import { usePaneLayout } from "./usePaneLayout";
+import { usePlayback } from "./usePlayback";
 import {
   customChrome,
   isMac,
@@ -124,7 +117,6 @@ type Wave =
   | { url: string; peaks: number[]; rate: number }
   | { url: string; error: string }
   | null;
-const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 
 function EditorApp({
@@ -145,11 +137,10 @@ function EditorApp({
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [draftDirty, setDraftDirty] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [playhead, setPlayhead] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const [rate, setRate] = useState(1);
-  const [mediaDuration, setMediaDuration] = useState(0);
-  const [hasVideo, setHasVideo] = useState(true);
+  const mediaUrl = snapshot?.mediaUrl ?? "";
+  const playback = usePlayback(mediaUrl);
+  const { video, playhead, playing, mediaDuration, seek, togglePlay, stepRate } =
+    playback;
   const [wave, setWave] = useState<Wave>(null);
   const [rangeStart, setRangeStart] = useState(0);
   const [rangeEnd, setRangeEnd] = useState(60);
@@ -176,10 +167,9 @@ function EditorApp({
     inspectorOpen,
     widthOf,
     resizeColumn,
-    resizeViewer,
     resizeTimeline,
   } = panes;
-  const { upperRef, cueGridRef, viewerRef, inspectorRef, dockRef } = panes.refs;
+  const { upperRef, cueGridRef, inspectorRef, dockRef } = panes.refs;
   const resetLayout = panes.reset;
   const [matchesByCue, setMatchesByCue] = useState<Record<string, Match[]>>(
     {},
@@ -193,7 +183,6 @@ function EditorApp({
   const [addDictText, setAddDictText] = useState("");
   const [addDictTarget, setAddDictTarget] = useState<string>();
   const [addDictCategory, setAddDictCategory] = useState("term");
-  const video = useRef<HTMLVideoElement>(null);
   const textArea = useRef<ComponentRef<typeof Input.TextArea>>(null);
   const focusOverlay = useRef(false);
   const p = snapshot?.project;
@@ -208,7 +197,6 @@ function EditorApp({
   // The viewer keeps showing the cue being edited even if the playhead leaves it.
   const overlayCue = overlayEditing || draftDirty ? cue : active;
   const busy = working || !!status?.busy;
-  const mediaUrl = snapshot?.mediaUrl ?? "";
   const pendingCount = suggestions.filter((s) => s.status === "pending").length;
   const todoCount = cues.filter((c) => cueStatus(c, suggestions)).length;
   const dictIssueIds = useMemo(
@@ -319,9 +307,6 @@ function EditorApp({
   // The waveform is decoded locally by FFmpeg in Go; nothing is uploaded.
   useEffect(() => {
     setWave(null);
-    setMediaDuration(0);
-    setHasVideo(true);
-    setPlaying(false);
     if (!mediaUrl) return;
     let current = true;
     Editor.Waveform()
@@ -340,25 +325,9 @@ function EditorApp({
       current = false;
     };
   }, [mediaUrl]);
-  // Follow the playhead smoothly while playing; timeupdate alone is too coarse.
-  useEffect(() => {
-    if (!playing) return;
-    let frame = 0;
-    const tick = () => {
-      if (video.current) setPlayhead(video.current.currentTime);
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [playing]);
   useEffect(() => {
     if (playing && active && !draftDirty) setSelected(active.id);
   }, [playing, active?.id, draftDirty]);
-  // A web view's video does not keep the display awake, so Go holds it
-  // while playing; failing to only means the screen saver may start.
-  useEffect(() => {
-    void Editor.KeepAwake(playing).catch(() => undefined);
-  }, [playing]);
 
   async function run<T>(action: () => Promise<T>): Promise<T | undefined> {
     setWorking(true);
@@ -480,10 +449,6 @@ function EditorApp({
     !!next && next.project !== null && !sameProject(next.project, p);
   const mediaChanged = (next: Snapshot | undefined) =>
     !!next && next.mediaUrl !== snapshot?.mediaUrl;
-  function seek(time: number) {
-    if (video.current) video.current.currentTime = time;
-    setPlayhead(time);
-  }
   function selectCue(next: Cue) {
     const select = () => {
       video.current?.pause();
@@ -508,25 +473,10 @@ function EditorApp({
     const next = cues[Math.min(cues.length - 1, Math.max(0, index + delta))];
     if (next) selectCue(next);
   }
-  function togglePlay() {
-    const v = video.current;
-    if (!v) return;
-    if (v.paused) void v.play().catch((e) => message.error(errorText(e)));
-    else v.pause();
-  }
   function nudge(seconds: number) {
     if (!mediaUrl) return false;
     const end = mediaDuration || duration;
     seek(Math.min(end, Math.max(0, playhead + seconds)));
-  }
-  function setSpeed(value: number) {
-    setRate(value);
-    if (video.current) video.current.playbackRate = value;
-  }
-  function stepRate(delta: number) {
-    const next = RATES[RATES.indexOf(rate) + delta];
-    if (next === undefined) return false;
-    setSpeed(next);
   }
   // Puts the text cursor in the selected cue's text: the viewer subtitle, or
   // the inspector's field while the viewer is hidden.
@@ -941,157 +891,24 @@ function EditorApp({
           todoCount={todoCount}
         />
 
-        <section className="viewer" ref={viewerRef} aria-label={t.viewer.label}>
-          {mode === "wide" ? (
-            <Splitter
-              axis="x"
-              sign={1}
-              label={t.common.resizeWidth}
-              start={() => widthOf(cueGridRef.current)}
-              onResize={(size) => resizeColumn("left", size)}
-              onReset={() => resetLayout("left")}
-            />
-          ) : (
-            <Splitter
-              end
-              axis={mode === "compact" ? "x" : "y"}
-              sign={1}
-              label={
-                mode === "compact" ? t.common.resizeWidth : t.common.resizeHeight
-              }
-              start={() => {
-                const box = viewerRef.current?.getBoundingClientRect();
-                return (mode === "compact" ? box?.width : box?.height) ?? 0;
-              }}
-              onResize={resizeViewer}
-              onReset={() => resetLayout(viewerSize(mode))}
-            />
-          )}
-          <div className="viewer-frame">
-            {mediaUrl ? (
-              <>
-                <video
-                  ref={video}
-                  key={mediaUrl}
-                  src={mediaUrl}
-                  onClick={togglePlay}
-                  onLoadedMetadata={(e) => {
-                    const v = e.currentTarget;
-                    setMediaDuration(
-                      Number.isFinite(v.duration) ? v.duration : 0,
-                    );
-                    setHasVideo(v.videoWidth > 0);
-                    v.playbackRate = rate;
-                  }}
-                  onPlay={() => setPlaying(true)}
-                  onPause={() => setPlaying(false)}
-                  onEnded={() => setPlaying(false)}
-                  onSeeked={(e) => setPlayhead(e.currentTarget.currentTime)}
-                  onTimeUpdate={(e) =>
-                    !playing && setPlayhead(e.currentTarget.currentTime)
-                  }
-                  onError={() => {
-                    // A media error can stop playback without a pause event.
-                    setPlaying(false);
-                    void message.error(t.viewer.mediaError);
-                  }}
-                />
-                {!hasVideo && (
-                  <span className="viewer-note">{t.viewer.audioOnly}</span>
-                )}
-              </>
-            ) : (
-              <div className="viewer-empty">
-                <span>{t.viewer.empty}</span>
-                <Button
-                  size="small"
-                  disabled={busy || draftDirty}
-                  onClick={() => void update(Editor.ImportVideo)}
-                >
-                  {t.common.importMedia}
-                </Button>
-              </div>
-            )}
-            {overlayCue && (
-              <div className="subtitle-overlay">
-                {overlayCue.id === cue?.id ? (
-                  paneShown("viewer") && textField(false)
-                ) : (
-                  <button
-                    type="button"
-                    className="subtitle-edit"
-                    title={t.viewer.clickToEdit}
-                    disabled={busy}
-                    onClick={() => {
-                      focusOverlay.current = true;
-                      setTab("edit");
-                      selectCue(overlayCue);
-                    }}
-                  >
-                    {overlayCue.text}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="transport">
-            <div className="clock">
-              <span>{formatTime(playhead)}</span>
-              <span className="muted small">
-                / {formatTime(mediaDuration || duration)}
-              </span>
-            </div>
-            <div className="transport-buttons">
-              <IconButton
-                label={t.viewer.previous}
-                tooltip={t.editor.withShortcut(
-                  t.viewer.previous,
-                  shortcutOf("previousCue"),
-                )}
-                icon={<IconPlayerSkipBack size={18} {...decorative} />}
-                disabled={busy || !cues.length}
-                onClick={() => stepCue(-1)}
-              />
-              <IconButton
-                label={playing ? t.viewer.pause : t.viewer.play}
-                tooltip={t.editor.withShortcut(
-                  playing ? t.viewer.pause : t.viewer.play,
-                  shortcutOf("playPause"),
-                )}
-                icon={
-                  playing ? (
-                    <IconPlayerPause size={18} {...decorative} />
-                  ) : (
-                    <IconPlayerPlay size={18} {...decorative} />
-                  )
-                }
-                disabled={!mediaUrl}
-                onClick={togglePlay}
-              />
-              <IconButton
-                label={t.viewer.next}
-                tooltip={t.editor.withShortcut(
-                  t.viewer.next,
-                  shortcutOf("nextCue"),
-                )}
-                icon={<IconPlayerSkipForward size={18} {...decorative} />}
-                disabled={busy || !cues.length}
-                onClick={() => stepCue(1)}
-              />
-            </div>
-            <Select
-              size="small"
-              aria-label={t.viewer.speed}
-              value={rate}
-              style={{ width: 72 }}
-              onChange={setSpeed}
-              options={RATES.map((v) => ({
-                value: v,
-                label: `${v.toFixed(v % 0.5 ? 2 : 1)}×`,
-              }))}
-            />
-          </div>
-        </section>
+        <Viewer
+          playback={playback}
+          panes={panes}
+          busy={busy}
+          draftDirty={draftDirty}
+          cue={cue}
+          cueCount={cues.length}
+          duration={duration}
+          overlayCue={overlayCue}
+          textField={textField}
+          stepCue={stepCue}
+          onImportMedia={() => void update(Editor.ImportVideo)}
+          onEditOverlay={(target) => {
+            focusOverlay.current = true;
+            setTab("edit");
+            selectCue(target);
+          }}
+        />
 
         <aside
           className={`inspector${inspectorOpen ? "" : " off"}`}
