@@ -9,7 +9,7 @@ type CueLike = {
 type SuggestionLike = { cueId: string; status: string; review: boolean };
 
 export type CueStatus = "review" | "pending" | null;
-export type CueFilter = "all" | "todo" | "unknown" | "dictionary";
+export type CueFilter = "all" | "todo" | "unknown" | "dictionary" | "quality";
 
 // A cue needs review when it is flagged or a pending suggestion asks for it;
 // any other pending suggestion only awaits a decision.
@@ -30,6 +30,7 @@ export function filterCues<T extends CueLike>(
   query: string,
   filter: CueFilter,
   dictionaryCueIds?: ReadonlySet<string>,
+  qualityCueIds?: { has(id: string): boolean },
 ): T[] {
   const q = query.trim().toLowerCase();
   return cues.filter((c) => {
@@ -37,6 +38,7 @@ export function filterCues<T extends CueLike>(
     if (filter === "todo") return cueStatus(c, suggestions) !== null;
     if (filter === "unknown") return !c.speakerIds?.length;
     if (filter === "dictionary") return !!dictionaryCueIds?.has(c.id);
+    if (filter === "quality") return !!qualityCueIds?.has(c.id);
     return true;
   });
 }

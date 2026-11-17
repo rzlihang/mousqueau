@@ -327,6 +327,9 @@ h3 {
 [data-theme="dark"] .dict-misspelled {
   text-decoration-color: #ff7875;
 }
+.quality-issue {
+  color: #d46b08;
+}
 .dict-preview {
   margin: 0;
   padding: 6px 8px;

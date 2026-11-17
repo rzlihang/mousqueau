@@ -188,6 +188,25 @@ export const jaJP: Messages = {
     noMatch: "一致する字幕はありません。",
     review: "要確認",
   },
+  quality: {
+    filter: "品質に問題あり",
+    tags: {
+      overlap: "重なり",
+      short: "短すぎ",
+      long: "長すぎ",
+      fast: "速すぎ",
+      wide: "行が長い",
+      lines: "行が多い",
+    },
+    details: {
+      overlap: "前の字幕が終わる前に始まります",
+      short: (limit) => `長さが ${limit} 秒未満です`,
+      long: (limit) => `長さが ${limit} 秒を超えています`,
+      fast: (limit) => `${limit} 文字/秒を超えています`,
+      wide: (limit) => `1 行が ${limit} 文字を超えています`,
+      lines: (limit) => `${limit} 行を超えています`,
+    },
+  },
   viewer: {
     label: "ビューア",
     mediaError:

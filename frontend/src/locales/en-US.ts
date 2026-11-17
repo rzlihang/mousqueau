@@ -187,6 +187,25 @@ export const enUS: Messages = {
     noMatch: "No subtitles match.",
     review: "Review",
   },
+  quality: {
+    filter: "Quality issues",
+    tags: {
+      overlap: "Overlap",
+      short: "Short",
+      long: "Long",
+      fast: "Fast",
+      wide: "Wide",
+      lines: "Lines",
+    },
+    details: {
+      overlap: "Starts before the previous subtitle ends",
+      short: (limit) => `Shorter than ${limit} s`,
+      long: (limit) => `Longer than ${limit} s`,
+      fast: (limit) => `Faster than ${limit} characters/s`,
+      wide: (limit) => `A line is longer than ${limit} characters`,
+      lines: (limit) => `More than ${limit} lines`,
+    },
+  },
   viewer: {
     label: "Viewer",
     mediaError:

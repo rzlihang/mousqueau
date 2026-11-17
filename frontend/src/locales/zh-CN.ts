@@ -177,6 +177,25 @@ export const zhCN = {
     noMatch: "没有符合条件的字幕。",
     review: "待复核",
   },
+  quality: {
+    filter: "有质量问题",
+    tags: {
+      overlap: "重叠",
+      short: "过短",
+      long: "过长",
+      fast: "过快",
+      wide: "行过长",
+      lines: "行过多",
+    },
+    details: {
+      overlap: "开始时间早于上一条字幕的结束时间",
+      short: (limit: string) => `时长不足 ${limit} 秒`,
+      long: (limit: string) => `时长超过 ${limit} 秒`,
+      fast: (limit: string) => `字速超过 ${limit} 字／秒`,
+      wide: (limit: string) => `单行超过 ${limit} 字`,
+      lines: (limit: string) => `超过 ${limit} 行`,
+    },
+  },
   viewer: {
     label: "查看器",
     mediaError:

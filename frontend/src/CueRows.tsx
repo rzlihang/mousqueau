@@ -10,6 +10,7 @@ import { HighlightedText } from "./dictionaryHighlight";
 import { formatTime } from "./editor";
 import { useT } from "./i18n";
 import { SpeakerTags } from "./SuggestionCard";
+import type { QualityIssue } from "./quality";
 import { cueStatus, rowWindow } from "./workspace";
 
 // Matches .cue-row's height in style.css.
@@ -20,6 +21,7 @@ type Props = {
   speakers: Speaker[];
   suggestions: Suggestion[];
   matchesByCue?: Record<string, Match[]>;
+  issuesByCue?: ReadonlyMap<string, QualityIssue[]>;
   selectedId: string;
   activeId: string;
   busy: boolean;
@@ -34,6 +36,7 @@ export default function CueRows(props: Props) {
     speakers,
     suggestions,
     matchesByCue,
+    issuesByCue,
     selectedId,
     activeId,
     busy,
@@ -74,6 +77,8 @@ export default function CueRows(props: Props) {
         <div className="grid-rows" style={{ height: cues.length * ROW }}>
           {cues.slice(first, last).map((c, k) => {
             const st = cueStatus(c, suggestions);
+            // Open work comes first; a quality issue shows once it is done.
+            const issues = issuesByCue?.get(c.id);
             return (
               <button
                 key={c.id}
@@ -105,6 +110,9 @@ export default function CueRows(props: Props) {
                         ? t.cueList.review
                         : t.common.pendingDecision}
                     </Tag>
+                  )}
+                  {!st && issues && (
+                    <Tag color="gold">{t.quality.tags[issues[0]]}</Tag>
                   )}
                 </span>
               </button>

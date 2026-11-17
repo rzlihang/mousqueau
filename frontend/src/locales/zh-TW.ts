@@ -179,6 +179,25 @@ export const zhTW: Messages = {
     noMatch: "沒有符合條件的字幕。",
     review: "待複核",
   },
+  quality: {
+    filter: "有品質問題",
+    tags: {
+      overlap: "重疊",
+      short: "過短",
+      long: "過長",
+      fast: "過快",
+      wide: "行過長",
+      lines: "行過多",
+    },
+    details: {
+      overlap: "開始時間早於上一條字幕的結束時間",
+      short: (limit) => `長度不足 ${limit} 秒`,
+      long: (limit) => `長度超過 ${limit} 秒`,
+      fast: (limit) => `字速超過 ${limit} 字／秒`,
+      wide: (limit) => `單行超過 ${limit} 字`,
+      lines: (limit) => `超過 ${limit} 行`,
+    },
+  },
   viewer: {
     label: "檢視器",
     mediaError:

@@ -56,6 +56,11 @@ describe("workspace helpers", () => {
         "todo",
       ).map((c) => c.id),
     ).toEqual(["a", "c"]);
+    expect(
+      filterCues(cues, [], "", "quality", undefined, new Set(["b"])).map(
+        (c) => c.id,
+      ),
+    ).toEqual(["b"]);
     const dictIds = dictionaryIssueIds([
       {
         cueId: "a",
